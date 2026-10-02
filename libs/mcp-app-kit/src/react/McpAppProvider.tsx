@@ -3,6 +3,7 @@ import {
   type FC,
   type ReactNode,
   useEffect,
+  useLayoutEffect,
   useSyncExternalStore,
 } from 'react';
 import { applyHostContext } from '../core/applyHostContext';
@@ -15,7 +16,8 @@ type McpAppProviderProps = { app: McpAppStore; children: ReactNode };
 
 /**
  * Provides the MCP App store to hooks, applies the host context to the
- * document on every change, and keeps `<html>` height in sync while inline.
+ * document on every change (in a layout effect, so the theme lands before
+ * paint), and keeps `<html>` height in sync while inline.
  * @param props.app - store from `createMcpApp`
  */
 export const McpAppProvider: FC<McpAppProviderProps> = ({ app, children }) => {
@@ -25,7 +27,7 @@ export const McpAppProvider: FC<McpAppProviderProps> = ({ app, children }) => {
   );
   const isInline = (hostContext?.displayMode ?? 'inline') === 'inline';
 
-  useEffect(
+  useLayoutEffect(
     () => (hostContext ? applyHostContext(hostContext) : undefined),
     [hostContext],
   );

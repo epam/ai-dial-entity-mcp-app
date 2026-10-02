@@ -1,12 +1,27 @@
 import {
   applyHostStyleVariables,
   type McpUiHostContext,
+  type McpUiStyles,
 } from '@modelcontextprotocol/ext-apps';
 import { detectHostKind } from './host/hostKind';
 import { resolveSafeArea } from './host/safeArea';
 
 const FONT_STYLE_ATTR = 'data-mcp-host-fonts';
 const SIDES = ['top', 'right', 'bottom', 'left'] as const;
+
+const SKIPPED_VARIABLE_PREFIX = '--shadow-';
+
+/**
+ * Drops host `--shadow-*` variables: MCP sends full `box-shadow` values under
+ * names ui-kit reads as shadow colours, so applying them breaks ui-kit shadows.
+ * @param variables - host style variables
+ */
+const withoutShadows = (variables: McpUiStyles): McpUiStyles =>
+  Object.fromEntries(
+    Object.entries(variables).filter(
+      ([name]) => !name.startsWith(SKIPPED_VARIABLE_PREFIX),
+    ),
+  ) as McpUiStyles;
 
 const setFontCss = (css: string): (() => void) => {
   const style = document.createElement('style');
@@ -19,8 +34,10 @@ const setFontCss = (css: string): (() => void) => {
 /**
  * Applies a host context to the document: theme, host CSS variables, host
  * font CSS, display-mode / platform data attributes, container size and
- * safe-area CSS variables. Call the returned function before applying the
- * next context so stale values never linger.
+ * safe-area CSS variables. Host `--shadow-*` variables are skipped (they are
+ * full box-shadow values; ui-kit uses the same names for shadow colours).
+ * Call the returned function before applying the next context so stale
+ * values never linger.
  * @param context - host context from `ui/initialize` or a context-changed notification
  * @param root - element to write to (defaults to `<html>`)
  */
@@ -48,8 +65,9 @@ export const applyHostContext = (
     });
   }
 
-  const variables = context.styles?.variables;
-  if (variables) {
+  const hostVariables = context.styles?.variables;
+  if (hostVariables) {
+    const variables = withoutShadows(hostVariables);
     applyHostStyleVariables(variables, root);
     cleanups.push(() =>
       Object.keys(variables).forEach((name) => root.style.removeProperty(name)),

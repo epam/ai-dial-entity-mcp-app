@@ -1,5 +1,5 @@
 import { act, render, renderHook, screen } from '@testing-library/react';
-import type { FC, ReactNode } from 'react';
+import { type FC, type ReactNode, useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { McpAppPhase, type ParseResult } from '../../core';
 import { createFakeMcpApp } from '../../testing';
@@ -115,6 +115,23 @@ describe('McpAppProvider', () => {
     expect(document.documentElement.getAttribute('data-theme')).toBe('dark');
     act(() => app.setSnapshot({ hostContext: { theme: 'light' } }));
     expect(document.documentElement.getAttribute('data-theme')).toBe('light');
+  });
+
+  it('applies host context before paint, ahead of child effects', () => {
+    const app = createFakeMcpApp({ hostContext: { theme: 'dark' } });
+    const seenThemes: Array<string | null> = [];
+    const ThemeProbe: FC = () => {
+      useEffect(() => {
+        seenThemes.push(document.documentElement.getAttribute('data-theme'));
+      }, []);
+      return null;
+    };
+    render(
+      <McpAppProvider app={app}>
+        <ThemeProbe />
+      </McpAppProvider>,
+    );
+    expect(seenThemes).toEqual(['dark']);
   });
 
   it('throws a clear error when a hook is used outside the provider', () => {

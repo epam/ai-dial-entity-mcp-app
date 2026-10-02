@@ -29,4 +29,71 @@ export default defineConfig(
     files: ['**/*.spec.{ts,tsx}', '**/test-setup.ts'],
     rules: { 'prefer-arrow-callback': 'off' },
   },
+  {
+    files: ['libs/mcp-app-kit/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/apps/**',
+                'ai-dial-skill-mcp-app',
+                'ai-dial-skill-mcp-app/*',
+              ],
+              message: 'The kit must not import app code.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['apps/*/src/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@modelcontextprotocol/*'],
+              message: 'Use @epam/ai-dial-mcp-app-kit instead of the MCP SDK.',
+            },
+            {
+              group: ['**/libs/**'],
+              message: 'Import the kit by package name.',
+            },
+          ],
+        },
+      ],
+      'no-restricted-properties': [
+        'error',
+        {
+          object: 'window',
+          property: 'parent',
+          message: 'Talk to the host through the kit.',
+        },
+        {
+          object: 'globalThis',
+          property: 'parent',
+          message: 'Talk to the host through the kit.',
+        },
+        {
+          object: 'self',
+          property: 'parent',
+          message: 'Talk to the host through the kit.',
+        },
+        {
+          property: 'postMessage',
+          message: 'Talk to the host through the kit.',
+        },
+      ],
+      'no-restricted-globals': [
+        'error',
+        { name: 'parent', message: 'Talk to the host through the kit.' },
+        { name: 'postMessage', message: 'Talk to the host through the kit.' },
+      ],
+    },
+  },
 );

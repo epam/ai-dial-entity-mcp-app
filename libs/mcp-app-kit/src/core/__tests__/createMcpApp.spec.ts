@@ -5,7 +5,7 @@ import {
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { describe, expect, it, vi } from 'vitest';
 import { createMcpApp } from '../createMcpApp';
-import { McpAppError, McpAppPhase } from '../types';
+import { McpAppError, McpAppPhase, type McpAppStore } from '../types';
 
 const setup = async (hostContext: McpUiHostContext = { theme: 'dark' }) => {
   const [appTransport, hostTransport] = InMemoryTransport.createLinkedPair();
@@ -175,4 +175,39 @@ describe('createMcpApp', () => {
       McpAppError,
     );
   });
+  it.each([
+    ['callTool', (store: McpAppStore) => store.callTool('search', { q: 1 })],
+    ['sendMessage', (store: McpAppStore) => store.sendMessage('hi')],
+  ])(
+    '%s throws McpAppError when the host has no handler',
+    async (_, action) => {
+      const { store } = await setup();
+      store.start();
+      await expect(action(store)).rejects.toBeInstanceOf(McpAppError);
+    },
+  );
+
+  it.each([
+    ['callTool', (store: McpAppStore) => store.callTool('search', { q: 1 })],
+    [
+      'requestDisplayMode',
+      (store: McpAppStore) => store.requestDisplayMode('fullscreen'),
+    ],
+    ['sendMessage', (store: McpAppStore) => store.sendMessage('hi')],
+  ])(
+    '%s throws McpAppError with the host message when the handler throws',
+    async (_, action) => {
+      const { store, bridge } = await setup();
+      const fail = async () => {
+        throw new Error('host exploded');
+      };
+      bridge.oncalltool = fail;
+      bridge.onrequestdisplaymode = fail;
+      bridge.onmessage = fail;
+      store.start();
+      const attempt = action(store);
+      await expect(attempt).rejects.toBeInstanceOf(McpAppError);
+      await expect(attempt).rejects.toThrow(/host exploded/);
+    },
+  );
 });

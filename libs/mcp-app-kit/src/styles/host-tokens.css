@@ -1,72 +1,143 @@
 /*
  * Maps MCP Apps standard host variables onto @epam/ai-dial-ui-kit variables.
- * No fallback in :root: an absent host variable makes the ui-kit variable
- * invalid, so ui-kit's own (dark) Tailwind fallback applies.
- * The light block repeats the mapping with light literals for hosts that
- * request a light theme without sending variables.
- * Accent tokens are not mapped: the MCP standard has no accent variable.
- * They get light literals only, in the light block; otherwise ui-kit's dark
- * accents would remain and contrast poorly on light backgrounds.
+ * Every mapping is `--ui-kit: var(--mcp, <literal>)`: host variables always
+ * win; the literal applies only when the host sends none.
+ *
+ * - :root holds LIGHT literals. It also covers hosts that send no theme, so
+ *   every ui-kit variable the app reads is always set and no utility falls
+ *   back to a literal from another theme.
+ * - :root[data-theme='dark'] holds DARK literals, repeated for theme-less
+ *   hosts whose user prefers a dark colour scheme.
+ *
+ * Accent tokens have no MCP variable, so they are plain literals per theme.
+ * The primary button keeps ui-kit's colours in light; the dark block sets
+ * lighter ones. Variables ui-kit reads with suitable fallbacks
+ * (--controls-text-permanent, --controls-bg-disable-accent,
+ * --controls-text-accent-disable, --stroke-focus-black) are left alone.
+ * Host --shadow-* variables are never applied (see applyHostContext), so
+ * ui-kit's shadow colours are not mapped.
  */
 :root {
-  --bg-layer-0: var(--color-background-primary);
-  --bg-layer-1: var(--color-background-primary);
-  --bg-layer-2: var(--color-background-secondary);
-  --bg-layer-3: var(--color-background-tertiary);
-  --bg-layer-4: var(--color-background-tertiary);
-  --bg-inverted: var(--color-background-inverse);
-  --bg-error: var(--color-background-danger);
-  --bg-warning: var(--color-background-warning);
-  --bg-info: var(--color-background-info);
-  --bg-success: var(--color-background-success);
-  --text-primary: var(--color-text-primary);
-  --text-secondary: var(--color-text-secondary);
-  --text-error: var(--color-text-danger);
-  --text-warning: var(--color-text-warning);
-  --text-info: var(--color-text-info);
-  --text-success: var(--color-text-success);
-  --stroke-primary: var(--color-border-primary);
-  --stroke-secondary: var(--color-border-secondary);
-  --stroke-tertiary: var(--color-border-tertiary);
-  --stroke-error: var(--color-border-danger);
-  --stroke-warning: var(--color-border-warning);
-  --stroke-info: var(--color-border-info);
-  --stroke-success: var(--color-border-success);
-  --stroke-focus: var(--color-ring-primary);
-  --controls-bg-disable: var(--color-background-disabled);
-  --controls-text-disable: var(--color-text-disabled);
-  --theme-font: var(--font-sans);
-}
-
-:root[data-theme='light'] {
   --bg-layer-0: var(--color-background-primary, #ffffff);
   --bg-layer-1: var(--color-background-primary, #ffffff);
   --bg-layer-2: var(--color-background-secondary, #f3f4f6);
   --bg-layer-3: var(--color-background-tertiary, #fcfcfc);
   --bg-layer-4: var(--color-background-tertiary, #fcfcfc);
-  --bg-inverted: var(--color-background-inverse, #141a23);
-  --bg-error: var(--color-background-danger, #fbeaec);
-  --bg-warning: var(--color-background-warning, #fbf6e5);
-  --bg-info: var(--color-background-info, #e9f0fd);
+  --bg-layer-raised: var(--color-background-secondary, #eef1f7);
   --bg-success: var(--color-background-success, #e5f6f4);
+  --bg-warning: var(--color-background-warning, #fbf6e5);
+  --bg-error: var(--color-background-danger, #fbeaec);
+  --bg-info: var(--color-background-info, #e9f0fd);
   --text-primary: var(--color-text-primary, #141a23);
   --text-secondary: var(--color-text-secondary, #6c7380);
-  --text-error: var(--color-text-danger, #c22d2d);
-  --text-warning: var(--color-text-warning, #a15c07);
-  --text-info: var(--color-text-info, #2764d9);
+  --text-tertiary: var(--color-text-tertiary, #848e9c);
   --text-success: var(--color-text-success, #1a7f5e);
+  --text-warning: var(--color-text-warning, #a15c07);
+  --text-error: var(--color-text-danger, #c22d2d);
+  --text-info: var(--color-text-info, #2764d9);
   --stroke-primary: var(--color-border-primary, #c3c7cf);
   --stroke-secondary: var(--color-border-secondary, #dde1e6);
   --stroke-tertiary: var(--color-border-tertiary, #eceef1);
-  --stroke-error: var(--color-border-danger, #c22d2d);
-  --stroke-warning: var(--color-border-warning, #a15c07);
-  --stroke-info: var(--color-border-info, #2764d9);
+  --stroke-default: var(--color-border-primary, #b2c2dd);
   --stroke-success: var(--color-border-success, #1a7f5e);
-  --stroke-focus: var(--color-ring-primary, #2764d9);
+  --stroke-warning: var(--color-border-warning, #a15c07);
+  --stroke-error: var(--color-border-danger, #c22d2d);
+  --stroke-info: var(--color-border-info, #2764d9);
+  --stroke-focus: var(--color-ring-primary, var(--color-text-primary, #2764d9));
+  --controls-text-neutral: var(--color-text-primary, #161b2d);
+  --controls-bg-neutral-hover: var(--color-background-secondary, #d1dbea);
+  --controls-bg-neutral-active: var(--color-background-tertiary, #9fa6bd);
   --controls-bg-disable: var(--color-background-disabled, #eceef1);
-  --controls-text-disable: var(--color-text-disabled, #a3a9b3);
+  --controls-text-primary-disable: var(--color-text-disabled, #a3a9b3);
   --theme-font: var(--font-sans, Inter, system-ui, sans-serif);
   --text-accent-primary: #2764d9;
   --bg-accent-primary-alpha: #2764d91a;
   --stroke-accent-primary: #2764d9;
+}
+
+:root[data-theme='dark'] {
+  --bg-layer-0: var(--color-background-primary, #000000);
+  --bg-layer-1: var(--color-background-primary, #0c101d);
+  --bg-layer-2: var(--color-background-secondary, #161b2d);
+  --bg-layer-3: var(--color-background-tertiary, #1d2439);
+  --bg-layer-4: var(--color-background-tertiary, #242c42);
+  --bg-layer-raised: var(--color-background-secondary, #242c42);
+  --bg-success: var(--color-background-success, #1d3841);
+  --bg-warning: var(--color-background-warning, #3f3d25);
+  --bg-error: var(--color-background-danger, #402027);
+  --bg-info: var(--color-background-info, #1c2c47);
+  --text-primary: var(--color-text-primary, #eef1f7);
+  --text-secondary: var(--color-text-secondary, #9fa6bd);
+  --text-tertiary: var(--color-text-tertiary, #7c8293);
+  --text-success: var(--color-text-success, #37babc);
+  --text-warning: var(--color-text-warning, #eec840);
+  --text-error: var(--color-text-danger, #f76464);
+  --text-info: var(--color-text-info, #7da4ff);
+  --stroke-primary: var(--color-border-primary, #696e7c);
+  --stroke-secondary: var(--color-border-secondary, #242c42);
+  --stroke-tertiary: var(--color-border-tertiary, #0c101d);
+  --stroke-default: var(--color-border-primary, #696e7c);
+  --stroke-success: var(--color-border-success, #37babc);
+  --stroke-warning: var(--color-border-warning, #eec840);
+  --stroke-error: var(--color-border-danger, #f76464);
+  --stroke-info: var(--color-border-info, #7da4ff);
+  --stroke-focus: var(--color-ring-primary, var(--color-text-primary, #eef1f7));
+  --controls-text-neutral: var(--color-text-primary, #fcfcfc);
+  --controls-bg-neutral-hover: var(--color-background-secondary, #242c42);
+  --controls-bg-neutral-active: var(--color-background-tertiary, #575f73);
+  --controls-bg-disable: var(--color-background-disabled, #242c42);
+  --controls-text-primary-disable: var(--color-text-disabled, #7c8293);
+  --theme-font: var(--font-sans, Inter, system-ui, sans-serif);
+  --text-accent-primary: #7da4ff;
+  --bg-accent-primary-alpha: #7da4ff26;
+  --stroke-accent-primary: #7da4ff;
+  --controls-bg-accent-primary: #3664e2;
+  --controls-bg-accent-primary-hover: #2656d9;
+  --controls-bg-accent-primary-active: #124ace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme]) {
+    --bg-layer-0: var(--color-background-primary, #000000);
+    --bg-layer-1: var(--color-background-primary, #0c101d);
+    --bg-layer-2: var(--color-background-secondary, #161b2d);
+    --bg-layer-3: var(--color-background-tertiary, #1d2439);
+    --bg-layer-4: var(--color-background-tertiary, #242c42);
+    --bg-layer-raised: var(--color-background-secondary, #242c42);
+    --bg-success: var(--color-background-success, #1d3841);
+    --bg-warning: var(--color-background-warning, #3f3d25);
+    --bg-error: var(--color-background-danger, #402027);
+    --bg-info: var(--color-background-info, #1c2c47);
+    --text-primary: var(--color-text-primary, #eef1f7);
+    --text-secondary: var(--color-text-secondary, #9fa6bd);
+    --text-tertiary: var(--color-text-tertiary, #7c8293);
+    --text-success: var(--color-text-success, #37babc);
+    --text-warning: var(--color-text-warning, #eec840);
+    --text-error: var(--color-text-danger, #f76464);
+    --text-info: var(--color-text-info, #7da4ff);
+    --stroke-primary: var(--color-border-primary, #696e7c);
+    --stroke-secondary: var(--color-border-secondary, #242c42);
+    --stroke-tertiary: var(--color-border-tertiary, #0c101d);
+    --stroke-default: var(--color-border-primary, #696e7c);
+    --stroke-success: var(--color-border-success, #37babc);
+    --stroke-warning: var(--color-border-warning, #eec840);
+    --stroke-error: var(--color-border-danger, #f76464);
+    --stroke-info: var(--color-border-info, #7da4ff);
+    --stroke-focus: var(
+      --color-ring-primary,
+      var(--color-text-primary, #eef1f7)
+    );
+    --controls-text-neutral: var(--color-text-primary, #fcfcfc);
+    --controls-bg-neutral-hover: var(--color-background-secondary, #242c42);
+    --controls-bg-neutral-active: var(--color-background-tertiary, #575f73);
+    --controls-bg-disable: var(--color-background-disabled, #242c42);
+    --controls-text-primary-disable: var(--color-text-disabled, #7c8293);
+    --theme-font: var(--font-sans, Inter, system-ui, sans-serif);
+    --text-accent-primary: #7da4ff;
+    --bg-accent-primary-alpha: #7da4ff26;
+    --stroke-accent-primary: #7da4ff;
+    --controls-bg-accent-primary: #3664e2;
+    --controls-bg-accent-primary-hover: #2656d9;
+    --controls-bg-accent-primary-active: #124ace;
+  }
 }

@@ -28,6 +28,26 @@ describe('applyHostContext', () => {
     expect(root.style.getPropertyValue('--mcp-safe-area-top')).toBe('12px');
   });
 
+  it('does not apply host shadow variables, which ui-kit reads as colours', () => {
+    root.style.setProperty('--shadow-sm', '#123456');
+    cleanup = applyHostContext({
+      styles: {
+        variables: {
+          '--shadow-sm': '0 1px 2px rgba(0, 0, 0, 0.1)',
+          '--color-text-primary': '#fff',
+        } as McpUiStyles,
+      },
+    });
+    expect(root.style.getPropertyValue('--shadow-sm')).toBe('#123456');
+    expect(root.style.getPropertyValue('--color-text-primary')).toBe('#fff');
+
+    cleanup();
+    cleanup = undefined;
+    expect(root.style.getPropertyValue('--shadow-sm')).toBe('#123456');
+    expect(root.style.getPropertyValue('--color-text-primary')).toBe('');
+    root.style.removeProperty('--shadow-sm');
+  });
+
   it('injects host font css into a single managed style element', () => {
     cleanup = applyHostContext({ styles: { css: { fonts: '@font-face{}' } } });
     const styles = document.head.querySelectorAll('style[data-mcp-host-fonts]');

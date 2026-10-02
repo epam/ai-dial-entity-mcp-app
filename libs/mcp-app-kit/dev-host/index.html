@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>MCP App dev host</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <aside class="panel">
+      <h1>MCP App dev host</h1>
+      <label
+        >Source
+        <select id="source">
+          <option value="dev">Dev server (HMR)</option>
+          <option value="built">Built file (srcdoc)</option>
+        </select>
+      </label>
+      <label
+        >Fixture
+        <select id="fixture"></select
+      ></label>
+      <label
+        >Theme
+        <select id="theme">
+          <option value="light">Light</option>
+          <option value="dark">Dark</option>
+        </select>
+      </label>
+      <label
+        >Host preset
+        <select id="preset"></select
+      ></label>
+      <label
+        >Display mode
+        <select id="displayMode">
+          <option value="inline">inline</option>
+          <option value="fullscreen">fullscreen</option>
+          <option value="pip">pip</option>
+        </select>
+      </label>
+      <label
+        >Width (px)
+        <input id="width" type="number" value="720" min="280" step="20"
+      /></label>
+      <label
+        >Result delay (ms)
+        <input id="delay" type="number" value="600" min="0" step="100"
+      /></label>
+      <div class="buttons">
+        <button id="reload" type="button">Reload app</button>
+        <button id="send" type="button">Send tool result</button>
+        <button id="cancel" type="button">Cancel tool</button>
+      </div>
+      <h2>Messages</h2>
+      <ol id="log"></ol>
+    </aside>
+    <main id="stage"></main>
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>

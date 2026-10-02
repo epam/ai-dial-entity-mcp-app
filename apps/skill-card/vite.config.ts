@@ -3,6 +3,6 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: mcpAppVite(),
-  server: { port: 4300, strictPort: true, cors: true },
+  server: { port: 4300, strictPort: true },
   preview: { port: 4300, strictPort: true },
 });

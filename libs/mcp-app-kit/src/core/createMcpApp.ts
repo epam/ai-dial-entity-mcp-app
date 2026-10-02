@@ -39,6 +39,20 @@ export const createMcpApp = ({
     return sdkApp;
   };
 
+  /**
+   * Runs a host request on the connected app and rethrows any host or
+   * transport failure as `McpAppError`.
+   * @param request - the SDK call to make
+   */
+  const hostRequest = async <T>(request: (app: App) => Promise<T>) => {
+    const app = await requireApp();
+    try {
+      return await request(app);
+    } catch (error) {
+      throw new McpAppError(toMessage(error));
+    }
+  };
+
   const start = () => {
     if (sdkApp) return;
     const app = new App(
@@ -103,31 +117,27 @@ export const createMcpApp = ({
     },
     getSnapshot: () => snapshot,
     openLink: async (url) => {
-      const app = await requireApp();
-      let result: { isError?: boolean };
-      try {
-        result = await app.openLink({ url });
-      } catch (error) {
-        throw new McpAppError(toMessage(error));
-      }
+      const result = await hostRequest((app) => app.openLink({ url }));
       if (result.isError)
         throw new McpAppError('Host refused to open the link');
     },
-    callTool: async (toolName, args) => {
-      const app = await requireApp();
-      return app.callServerTool({ name: toolName, arguments: args });
-    },
+    callTool: (toolName, args) =>
+      hostRequest((app) =>
+        app.callServerTool({ name: toolName, arguments: args }),
+      ),
     requestDisplayMode: async (mode) => {
-      const app = await requireApp();
-      const result = await app.requestDisplayMode({ mode });
+      const result = await hostRequest((app) =>
+        app.requestDisplayMode({ mode }),
+      );
       return result.mode;
     },
     sendMessage: async (text) => {
-      const app = await requireApp();
-      await app.sendMessage({
-        role: 'user',
-        content: [{ type: 'text', text }],
-      });
+      await hostRequest((app) =>
+        app.sendMessage({
+          role: 'user',
+          content: [{ type: 'text', text }],
+        }),
+      );
     },
   };
 };

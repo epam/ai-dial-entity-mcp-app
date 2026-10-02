@@ -1,0 +1,19 @@
+# @epam/ai-dial-mcp-app-kit
+
+Reusable plumbing for MCP App UIs. Any app in this repo (and later, outside
+it) builds on this; treat every export as public API.
+
+- Follow the MCP Apps spec and `@modelcontextprotocol/ext-apps` behaviour.
+  Check the spec and SDK types (Context7, `node_modules/@modelcontextprotocol/ext-apps/dist/src/*.d.ts`)
+  before adding protocol handling.
+- `src/core` has no framework dependency. React lives only in `src/react`,
+  Vite only in `src/vite`, test helpers only in `src/testing`.
+- Host-specific workarounds go in `src/core/host/` only, each with a JSDoc
+  naming the host and why it's needed.
+- Theme is applied by `src/core/applyHostContext.ts` writing `data-theme` and
+  `color-scheme` on `<html>` directly, not via the SDK's `applyDocumentTheme`.
+- `availableDisplayModes` defaults to `['inline']`; never widen the default.
+- Changing an export, a CSS variable mapping, or a snapshot field: update
+  `README.md` in the same change and check every app under `apps/`.
+- `dev-host/` is a real `AppBridge` host — never add dev-only branches to apps
+  to make the harness work.

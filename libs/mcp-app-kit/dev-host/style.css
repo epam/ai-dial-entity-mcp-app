@@ -1,0 +1,60 @@
+body {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  height: 100vh;
+  font:
+    13px system-ui,
+    sans-serif;
+}
+.panel {
+  overflow: auto;
+  padding: 12px;
+  border-right: 1px solid #ddd;
+  background: #fafafa;
+  color: #111;
+}
+.panel h1 {
+  font-size: 15px;
+  margin: 0 0 12px;
+}
+.panel h2 {
+  font-size: 13px;
+  margin: 16px 0 6px;
+}
+.panel label {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+#log {
+  padding-left: 18px;
+  font:
+    11px ui-monospace,
+    monospace;
+}
+#log li {
+  margin-bottom: 4px;
+  word-break: break-all;
+}
+#log li.highlight {
+  background: #fff3b0;
+}
+#stage {
+  overflow: auto;
+  padding: 24px;
+}
+#stage[data-theme='dark'] {
+  background: #1a1a1a;
+}
+#stage iframe {
+  display: block;
+  border: 1px dashed #999;
+  height: 200px;
+}
