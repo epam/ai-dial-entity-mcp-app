@@ -1,0 +1,51 @@
+{
+  "name": "@epam/ai-dial-mcp-app-kit",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/core/index.ts",
+    "./react": "./src/react/index.ts",
+    "./testing": "./src/testing/index.ts",
+    "./vite": "./src/vite/index.ts",
+    "./tailwind": "./src/tailwind/preset.js",
+    "./styles/host-tokens.css": "./src/styles/host-tokens.css",
+    "./styles/layout.css": "./src/styles/layout.css"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json",
+    "dev-host": "vite --configLoader runner --config dev-host/vite.config.ts"
+  },
+  "peerDependencies": {
+    "@vitejs/plugin-react": "^6.0.0",
+    "react": "^19.2.0",
+    "vite": "^8.1.0",
+    "vite-plugin-singlefile": "^2.3.0"
+  },
+  "peerDependenciesMeta": {
+    "@vitejs/plugin-react": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    },
+    "vite-plugin-singlefile": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.7.5",
+    "@modelcontextprotocol/sdk": "^1.31.0",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^6.1.1",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "vite": "^8.3.2",
+    "vite-plugin-singlefile": "^2.3.3"
+  }
+}

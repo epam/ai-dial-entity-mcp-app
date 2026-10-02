@@ -1,0 +1,72 @@
+/*
+ * Maps MCP Apps standard host variables onto @epam/ai-dial-ui-kit variables.
+ * No fallback in :root: an absent host variable makes the ui-kit variable
+ * invalid, so ui-kit's own (dark) Tailwind fallback applies.
+ * The light block repeats the mapping with light literals for hosts that
+ * request a light theme without sending variables.
+ * Accent tokens are not mapped: the MCP standard has no accent variable.
+ * They get light literals only, in the light block; otherwise ui-kit's dark
+ * accents would remain and contrast poorly on light backgrounds.
+ */
+:root {
+  --bg-layer-0: var(--color-background-primary);
+  --bg-layer-1: var(--color-background-primary);
+  --bg-layer-2: var(--color-background-secondary);
+  --bg-layer-3: var(--color-background-tertiary);
+  --bg-layer-4: var(--color-background-tertiary);
+  --bg-inverted: var(--color-background-inverse);
+  --bg-error: var(--color-background-danger);
+  --bg-warning: var(--color-background-warning);
+  --bg-info: var(--color-background-info);
+  --bg-success: var(--color-background-success);
+  --text-primary: var(--color-text-primary);
+  --text-secondary: var(--color-text-secondary);
+  --text-error: var(--color-text-danger);
+  --text-warning: var(--color-text-warning);
+  --text-info: var(--color-text-info);
+  --text-success: var(--color-text-success);
+  --stroke-primary: var(--color-border-primary);
+  --stroke-secondary: var(--color-border-secondary);
+  --stroke-tertiary: var(--color-border-tertiary);
+  --stroke-error: var(--color-border-danger);
+  --stroke-warning: var(--color-border-warning);
+  --stroke-info: var(--color-border-info);
+  --stroke-success: var(--color-border-success);
+  --stroke-focus: var(--color-ring-primary);
+  --controls-bg-disable: var(--color-background-disabled);
+  --controls-text-disable: var(--color-text-disabled);
+  --theme-font: var(--font-sans);
+}
+
+:root[data-theme='light'] {
+  --bg-layer-0: var(--color-background-primary, #ffffff);
+  --bg-layer-1: var(--color-background-primary, #ffffff);
+  --bg-layer-2: var(--color-background-secondary, #f3f4f6);
+  --bg-layer-3: var(--color-background-tertiary, #fcfcfc);
+  --bg-layer-4: var(--color-background-tertiary, #fcfcfc);
+  --bg-inverted: var(--color-background-inverse, #141a23);
+  --bg-error: var(--color-background-danger, #fbeaec);
+  --bg-warning: var(--color-background-warning, #fbf6e5);
+  --bg-info: var(--color-background-info, #e9f0fd);
+  --bg-success: var(--color-background-success, #e5f6f4);
+  --text-primary: var(--color-text-primary, #141a23);
+  --text-secondary: var(--color-text-secondary, #6c7380);
+  --text-error: var(--color-text-danger, #c22d2d);
+  --text-warning: var(--color-text-warning, #a15c07);
+  --text-info: var(--color-text-info, #2764d9);
+  --text-success: var(--color-text-success, #1a7f5e);
+  --stroke-primary: var(--color-border-primary, #c3c7cf);
+  --stroke-secondary: var(--color-border-secondary, #dde1e6);
+  --stroke-tertiary: var(--color-border-tertiary, #eceef1);
+  --stroke-error: var(--color-border-danger, #c22d2d);
+  --stroke-warning: var(--color-border-warning, #a15c07);
+  --stroke-info: var(--color-border-info, #2764d9);
+  --stroke-success: var(--color-border-success, #1a7f5e);
+  --stroke-focus: var(--color-ring-primary, #2764d9);
+  --controls-bg-disable: var(--color-background-disabled, #eceef1);
+  --controls-text-disable: var(--color-text-disabled, #a3a9b3);
+  --theme-font: var(--font-sans, Inter, system-ui, sans-serif);
+  --text-accent-primary: #2764d9;
+  --bg-accent-primary-alpha: #2764d91a;
+  --stroke-accent-primary: #2764d9;
+}

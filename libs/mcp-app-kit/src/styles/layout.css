@@ -1,0 +1,27 @@
+/*
+ * Base layout for an embedded MCP App. The page sizes to its content and
+ * keeps the host safe area clear. The extra :root raises specificity above
+ * host-injected `#root { padding: 0 }` resets.
+ */
+html,
+body {
+  margin: 0;
+  background: transparent;
+}
+
+body {
+  font-family: var(--theme-font, system-ui, sans-serif);
+  color: var(--text-primary, #eef1f7);
+  -webkit-font-smoothing: antialiased;
+}
+
+:root #root {
+  box-sizing: border-box;
+  padding: var(--mcp-safe-area-top, 0px) var(--mcp-safe-area-right, 0px)
+    var(--mcp-safe-area-bottom, 0px) var(--mcp-safe-area-left, 0px);
+}
+
+:root[data-display-mode='fullscreen'] #root,
+:root[data-display-mode='pip'] #root {
+  min-height: var(--mcp-container-height, 100dvh);
+}
