@@ -9,6 +9,9 @@ export default defineConfig({
     __MCP_APP_URL__: JSON.stringify(
       process.env.MCP_APP_URL ?? 'http://localhost:4300/_mcp-app/index.html',
     ),
+    __MCP_DEFAULT_FIXTURE__: JSON.stringify(
+      process.env.MCP_DEFAULT_FIXTURE ?? '',
+    ),
   },
   server: { port: 4301, strictPort: true, open: true },
 });

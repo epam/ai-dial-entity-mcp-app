@@ -7,6 +7,7 @@ import {
 import { HOST_PRESETS, HostPresetId } from './presets';
 
 declare const __MCP_APP_URL__: string;
+declare const __MCP_DEFAULT_FIXTURE__: string;
 
 const $ = <T extends HTMLElement>(id: string) =>
   document.getElementById(id) as T;
@@ -144,6 +145,9 @@ const init = async () => {
   controls.preset.value = HostPresetId.Dial;
   const fixtures: string[] = await (await fetch('/__fixtures')).json();
   fixtures.forEach((name) => controls.fixture.add(new Option(name, name)));
+  if (fixtures.includes(__MCP_DEFAULT_FIXTURE__)) {
+    controls.fixture.value = __MCP_DEFAULT_FIXTURE__;
+  }
 
   [
     controls.theme,

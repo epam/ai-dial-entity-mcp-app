@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "concurrently -n app,host -c blue,magenta \"npm:dev:app\" \"npm:dev:host\"",
     "dev:app": "vite --configLoader runner",
-    "dev:host": "MCP_APP_URL=http://localhost:4300/_mcp-app/index.html MCP_FIXTURES_DIR=$PWD/fixtures MCP_BUILT_FILE=$PWD/dist/index.html npm run dev-host -w @epam/ai-dial-mcp-app-kit",
+    "dev:host": "MCP_APP_URL=http://localhost:4300/_mcp-app/index.html MCP_FIXTURES_DIR=$PWD/fixtures MCP_BUILT_FILE=$PWD/dist/index.html MCP_DEFAULT_FIXTURE=with-failures.json npm run dev-host -w @epam/ai-dial-mcp-app-kit",
     "build": "tsc -p tsconfig.json && vite build --configLoader runner && node scripts/check-single-file.mjs",
     "preview": "vite preview --configLoader runner",
     "typecheck": "tsc -p tsconfig.json"

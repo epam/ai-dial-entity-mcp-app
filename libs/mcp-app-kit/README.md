@@ -178,14 +178,16 @@ Vite server and run:
 MCP_APP_URL=http://localhost:4300/_mcp-app/index.html \
 MCP_FIXTURES_DIR=$PWD/fixtures \
 MCP_BUILT_FILE=$PWD/dist/index.html \
+MCP_DEFAULT_FIXTURE=with-failures.json \
 npm run dev-host -w @epam/ai-dial-mcp-app-kit
 ```
 
-| Variable           | Purpose                                                                                             |
-| ------------------ | --------------------------------------------------------------------------------------------------- |
-| `MCP_APP_URL`      | App URL for the "Dev server (HMR)" source. Defaults to `http://localhost:4300/_mcp-app/index.html`. |
-| `MCP_FIXTURES_DIR` | Directory of `*.json` tool payloads listed in the Fixture picker.                                   |
-| `MCP_BUILT_FILE`   | Built single-file app for the "Built file (srcdoc)" source. Run the app build first.                |
+| Variable              | Purpose                                                                                             |
+| --------------------- | --------------------------------------------------------------------------------------------------- |
+| `MCP_APP_URL`         | App URL for the "Dev server (HMR)" source. Defaults to `http://localhost:4300/_mcp-app/index.html`. |
+| `MCP_FIXTURES_DIR`    | Directory of `*.json` tool payloads listed in the Fixture picker.                                   |
+| `MCP_BUILT_FILE`      | Built single-file app for the "Built file (srcdoc)" source. Run the app build first.                |
+| `MCP_DEFAULT_FIXTURE` | Fixture file name selected on load (e.g. `with-failures.json`). Defaults to the first fixture.      |
 
 The harness panel switches the source (dev server, or the built file loaded via
 `srcdoc`), fixture, light/dark theme, host preset (Claude-like, ChatGPT-like,
