@@ -15,6 +15,15 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+/*
+ * ui-kit ships its `[hidden] { display: none }` reset inside `@layer ui`, and
+ * unlayered utilities (e.g. Tailwind `.flex`) always beat layered rules, so a
+ * `hidden` element with a display utility would stay visible.
+ */
+[hidden] {
+  display: none !important;
+}
+
 :root #root {
   box-sizing: border-box;
   padding: var(--mcp-safe-area-top, 0px) var(--mcp-safe-area-right, 0px)
