@@ -9,5 +9,6 @@
   "bracketSpacing": true,
   "jsxSingleQuote": false,
   "quoteProps": "as-needed",
-  "plugins": ["prettier-plugin-tailwindcss"]
+  "plugins": ["prettier-plugin-tailwindcss"],
+  "tailwindConfig": "./apps/skill-card/tailwind.config.js"
 }

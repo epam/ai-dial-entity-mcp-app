@@ -1,0 +1,30 @@
+{
+  "skill": {
+    "name": "good-morning-breakfast",
+    "description": "Evaluates investment opportunities against firm criteria. Analyzes deal summaries across key dimensions including market size, founding team quality, product-market fit signals, financial metrics, competitive positioning, and valuation."
+  },
+  "actions": {
+    "tryUrl": "https://example.com/skills/good-morning-breakfast/try",
+    "editUrl": "https://example.com/skills/good-morning-breakfast/edit"
+  },
+  "qualityCheck": {
+    "passedPercent": 92,
+    "items": [
+      { "id": "trigger-phrases", "label": "Trigger phrases", "passed": true },
+      {
+        "id": "firm-standards",
+        "label": "Inherits firm standards",
+        "passed": false,
+        "hint": "Inherit firm writing style / compliance standards where relevant."
+      },
+      {
+        "id": "instructions",
+        "label": "Instructions (3+ steps)",
+        "passed": true
+      },
+      { "id": "output", "label": "Output & naming defined", "passed": true },
+      { "id": "tests", "label": "Test cases provided", "passed": true },
+      { "id": "errors", "label": "Error handling", "passed": true }
+    ]
+  }
+}
