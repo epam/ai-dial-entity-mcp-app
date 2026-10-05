@@ -8,7 +8,7 @@ type SkillCardProps = { data: SkillCardData };
 
 const SkillCard: FC<SkillCardProps> = ({ data }) => (
   <div className="flex flex-col gap-4">
-    <article className="rounded-xl bg-layer-1 p-5">
+    <article className="bg-layer-1 rounded-xl p-5">
       <SkillHeader skill={data.skill} />
       <ActionButtons actions={data.actions} />
     </article>

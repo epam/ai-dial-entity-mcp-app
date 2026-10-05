@@ -6,7 +6,7 @@ type StatusNoticeProps = { message: string };
 const StatusNotice: FC<StatusNoticeProps> = ({ message }) => (
   <div
     role="status"
-    className="flex items-center gap-2 rounded-xl bg-layer-2 p-4 text-sm text-secondary"
+    className="bg-layer-2 flex items-center gap-2 rounded-xl p-4 text-sm text-secondary"
   >
     <IconAlertCircle
       size={18}

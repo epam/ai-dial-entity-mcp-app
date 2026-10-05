@@ -5,7 +5,7 @@ const SkillCardSkeleton: FC = () => (
   <div
     data-testid="skill-card-skeleton"
     aria-busy="true"
-    className="rounded-xl bg-layer-1 p-5"
+    className="bg-layer-1 rounded-xl p-5"
   >
     <Skeleton active avatar paragraph={{ rows: 3 }} />
   </div>

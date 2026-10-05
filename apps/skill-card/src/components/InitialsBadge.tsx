@@ -5,7 +5,7 @@ type InitialsBadgeProps = { initials: string };
 const InitialsBadge: FC<InitialsBadgeProps> = ({ initials }) => (
   <div
     aria-hidden="true"
-    className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-accent-primary-alpha text-lg font-semibold text-accent-primary"
+    className="bg-accent-primary-alpha text-accent-primary flex size-11 shrink-0 items-center justify-center rounded-lg text-lg font-semibold"
   >
     {initials}
   </div>

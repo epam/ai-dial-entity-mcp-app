@@ -8,7 +8,7 @@ const SkillHeader: FC<SkillHeaderProps> = ({ skill }) => (
   <header className="flex min-w-0 gap-4">
     <InitialsBadge initials={skill.initials} />
     <div className="min-w-0 flex-1">
-      <p className="text-xs font-semibold uppercase tracking-wider text-accent-primary">
+      <p className="text-accent-primary text-xs font-semibold uppercase tracking-wider">
         {skill.kindLabel}
       </p>
       <h1 className="mt-1 break-words text-base font-semibold text-primary">

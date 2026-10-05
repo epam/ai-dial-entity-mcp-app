@@ -19,7 +19,7 @@ const QualityCheck: FC<QualityCheckProps> = ({ qualityCheck }) => {
   const handleToggle = useCallback(() => setIsExpanded((value) => !value), []);
 
   return (
-    <section className="rounded-xl border border-secondary bg-layer-2 p-4">
+    <section className="bg-layer-2 rounded-xl border border-secondary p-4">
       <div className="flex items-center gap-3">
         <button
           type="button"
