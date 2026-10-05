@@ -84,6 +84,8 @@ const preferredDarkBlock = findBlock(':root:not([data-theme])', [
   '@media (prefers-color-scheme: dark)',
 ]);
 const derivedBlock = findBlock('html');
+const neutralButtonBlock = findBlock('.dial-kit-neutral-solid-button');
+const accordionBlock = findBlock('.dial-kit-accordion');
 const toneBlocks = {
   success: findBlock('.mcp-tone-success'),
   warning: findBlock('.mcp-tone-warning'),
@@ -231,24 +233,6 @@ describe('theme-independent derivations (html block)', () => {
     });
   });
 
-  it('maps nearest slots without fallbacks, so ui-kit defaults apply without host tokens', () => {
-    expect(valueOf(derivedBlock, '--bg-control-accent-alpha')).toBe(
-      'var(--color-background-tertiary)',
-    );
-    expect(valueOf(derivedBlock, '--bg-control-accent-alpha-hover')).toBe(
-      'color-mix(in srgb, var(--color-background-tertiary) 92%, var(--color-text-primary, #000))',
-    );
-    expect(valueOf(derivedBlock, '--bg-control-accent-alpha-active')).toBe(
-      'color-mix(in srgb, var(--color-background-tertiary) 84%, var(--color-text-primary, #000))',
-    );
-    expect(valueOf(derivedBlock, '--stroke-accent-alpha')).toBe(
-      'var(--color-border-secondary)',
-    );
-    expect(valueOf(derivedBlock, '--text-accent')).toBe(
-      'var(--color-text-primary)',
-    );
-  });
-
   it('derives the primary glow from the text colour', () => {
     expect(valueOf(derivedBlock, '--shadow-xs-1')).toBe(
       'color-mix(in srgb, var(--color-text-primary) 10%, transparent)',
@@ -265,6 +249,63 @@ describe('theme-independent derivations (html block)', () => {
     derivedBlock.forEach(({ name, value }) =>
       sourcesOf(value).forEach((source) =>
         expect(MCP_KEYS, `${name} → ${source}`).toContain(source),
+      ),
+    );
+  });
+});
+
+describe('component-scoped derivations', () => {
+  /** Variables ui-kit also reads outside the neutral button, e.g. the Avatar palette. */
+  const SCOPED = [
+    '--text-accent',
+    '--bg-control-accent-alpha',
+    '--bg-control-accent-alpha-hover',
+    '--bg-control-accent-alpha-active',
+    '--stroke-accent-alpha',
+  ];
+
+  it('maps nearest slots without fallbacks, so ui-kit defaults apply without host tokens', () => {
+    expect(valueOf(neutralButtonBlock, '--bg-control-accent-alpha')).toBe(
+      'var(--color-background-tertiary)',
+    );
+    expect(valueOf(neutralButtonBlock, '--bg-control-accent-alpha-hover')).toBe(
+      'color-mix(in srgb, var(--color-background-tertiary) 92%, var(--color-text-primary, #000))',
+    );
+    expect(
+      valueOf(neutralButtonBlock, '--bg-control-accent-alpha-active'),
+    ).toBe(
+      'color-mix(in srgb, var(--color-background-tertiary) 84%, var(--color-text-primary, #000))',
+    );
+    expect(valueOf(neutralButtonBlock, '--stroke-accent-alpha')).toBe(
+      'var(--color-border-secondary)',
+    );
+    expect(valueOf(neutralButtonBlock, '--text-accent')).toBe(
+      'var(--color-text-primary)',
+    );
+  });
+
+  it('re-points the Accordion header hover at the same tertiary mix', () => {
+    expect(accordionBlock).toEqual([
+      {
+        name: '--bg-control-accent-alpha-hover',
+        value:
+          'color-mix(in srgb, var(--color-background-tertiary) 92%, var(--color-text-primary, #000))',
+      },
+    ]);
+  });
+
+  it('never declares the scoped variables on :root or html', () => {
+    [lightBlock, darkBlock, preferredDarkBlock, derivedBlock].forEach((block) =>
+      SCOPED.forEach((name) => expect(namesOf(block)).not.toContain(name)),
+    );
+  });
+
+  it('reads only MCP variables', () => {
+    [neutralButtonBlock, accordionBlock].forEach((block) =>
+      block.forEach(({ name, value }) =>
+        sourcesOf(value).forEach((source) =>
+          expect(MCP_KEYS, `${name} → ${source}`).toContain(source),
+        ),
       ),
     );
   });
@@ -320,19 +361,37 @@ describe('ui-kit coverage guard', () => {
     '.text-brown-2',
     '.bg-red',
     '.text-red',
+    '.bg-blue',
+    '.text-accent',
+    '.bg-green-1',
+    '.text-green-2',
+    '.text-green-3',
+    '.bg-violet-1',
+    '.bg-violet-2',
+    '.text-violet-1',
+    '.text-violet-2',
     '.hover\\:bg-control-accent-alpha-hover',
     '.focus-visible\\:outline-focus',
   ];
 
   /** Read by ui-kit but intentionally left to it: shadowed or wrapped by a variable we set. */
-  const isUiKitDefault = (name: string) =>
+  const isShadowedByOurs = (name: string) =>
     name === '--stroke-focus' ||
     name.startsWith('--bg-control-accent-gradient-') ||
     name.startsWith('--tw-');
 
+  /** The Avatar palette: kept at ui-kit values so initials stay legible on every host. */
+  const isAvatarPalette = (name: string) =>
+    name === '--text-accent' || /^--(bg|text)-visual-/.test(name);
+
+  const isUiKitDefault = (name: string) =>
+    isShadowedByOurs(name) || isAvatarPalette(name);
+
   const setByUs = new Set([
     ...namesOf(lightBlock),
     ...namesOf(derivedBlock),
+    ...namesOf(neutralButtonBlock),
+    ...namesOf(accordionBlock),
     ...Object.values(toneBlocks).flatMap(namesOf),
   ]);
 
@@ -347,6 +406,27 @@ describe('ui-kit coverage guard', () => {
         )
         .flatMap((rule) => sourcesOf(rule.body)),
     );
+
+  it('Avatar palette variables are left to ui-kit (never set on :root/html)', () => {
+    const avatarVars = [
+      '.bg-blue',
+      '.text-accent',
+      '.bg-green-1',
+      '.text-green-2',
+      '.text-green-3',
+      '.bg-violet-1',
+      '.bg-violet-2',
+      '.text-violet-1',
+      '.text-violet-2',
+    ].flatMap((selector) => [...readVars(selector)]);
+    expect(avatarVars.length).toBeGreaterThan(0);
+    avatarVars.forEach((name) => {
+      expect(isAvatarPalette(name), name).toBe(true);
+      [lightBlock, darkBlock, preferredDarkBlock, derivedBlock].forEach(
+        (block) => expect(namesOf(block), name).not.toContain(name),
+      );
+    });
+  });
 
   it.each(GUARDED_SELECTORS)(
     'host-tokens.css covers every variable %s reads',

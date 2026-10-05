@@ -140,12 +140,15 @@ through the variables it sends; there is no host detection.
   DIAL's own DIAL → MCP mapping, so DIAL's values come back unchanged (a
   round-trip test guards this). Each line is `--ui-kit: var(--mcp, <literal>)`;
   light literals are ui-kit's own fallbacks, dark literals are approximate.
-- **Derived variables** (`html` block) have no colour fallback, so without
-  host tokens ui-kit's defaults apply:
+- **Derived variables** (`html` block, except where scoped) have no colour
+  fallback, so without host tokens ui-kit's defaults apply:
   - primary button: solid `--color-background-inverse` with
     `--color-text-inverse` label; hover/active mix the two;
   - neutral button ("Edit"): fill `--color-background-tertiary`, border
-    `--color-border-secondary`, label `--color-text-primary`;
+    `--color-border-secondary`, label `--color-text-primary` — scoped to
+    `.dial-kit-neutral-solid-button` (and the matching hover to
+    `.dial-kit-accordion`), because ui-kit reads the same variables
+    elsewhere (e.g. the `Avatar` palette);
   - button glow: `--color-text-primary` at 10% / 4%;
   - radii: `--radius-control` ← `--border-radius-md`, small ←
     `--border-radius-sm`, `--mcp-card-radius` ← `--border-radius-xl`.

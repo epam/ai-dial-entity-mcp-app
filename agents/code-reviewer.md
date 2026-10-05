@@ -11,8 +11,9 @@ Check, in order:
 2. **Contract** — payload changes reflected in `contract.ts`, fixtures, parser
    tests and the README; parser rejects bad input with a clear reason; URLs
    restricted to http(s).
-3. **Host behaviour** — host context applied and cleaned up; new host quirks
-   live in `libs/mcp-app-kit/src/core/host/` with a JSDoc naming the host;
+3. **Host behaviour** — host context applied and cleaned up; protocol-level
+   quirks live in `libs/mcp-app-kit/src/core/host/` with a JSDoc naming the
+   behaviour; no host-specific code;
    declared display modes are supported by the UI.
 4. **Theming** — no hardcoded colours; ui-kit 2.0 components or kit preset
    classes; no host-name checks or per-host CSS; no shared `rounded-*` scale
