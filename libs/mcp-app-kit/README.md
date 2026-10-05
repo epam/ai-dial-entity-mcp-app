@@ -201,12 +201,7 @@ protocol message; `ui/open-link` requests are highlighted and not navigated.
   instead of `ui/notifications/size-changed`, so the SDK's auto-resize alone
   never reports that content shrank. In inline mode the provider keeps
   `<html>`'s height equal to the content height.
-- **Inline safe-area fallback.** Host-sent `safeAreaInsets` always win. Claude
-  and AI DIAL render inline apps edge-to-edge without insets, so in inline mode
-  the kit pads content by 12px on desktop and 8px on `platform: 'mobile'`.
-  Non-inline modes get no fallback.
-- **ChatGPT detection.** ChatGPT exposes `window.openai` in its widget iframe;
-  `detectHostKind` uses that to skip the safe-area fallback, because ChatGPT
-  already pads its widget frame.
+- **Safe area.** Insets come only from `hostContext.safeAreaInsets`; a host
+  that sends none gets no padding. There is no per-host fallback.
 - **Result envelopes.** `getStructuredContent` normalises the different
   tool-result shapes hosts deliver (see above).

@@ -3,7 +3,6 @@ import {
   type McpUiHostContext,
   type McpUiStyles,
 } from '@modelcontextprotocol/ext-apps';
-import { detectHostKind } from './host/hostKind';
 import { resolveSafeArea } from './host/safeArea';
 
 const FONT_STYLE_ATTR = 'data-mcp-host-fonts';
@@ -87,7 +86,7 @@ export const applyHostContext = (
   if (typeof height === 'number')
     setVar('--mcp-container-height', `${height}px`);
 
-  const safeArea = resolveSafeArea(context, detectHostKind());
+  const safeArea = resolveSafeArea(context);
   SIDES.forEach((side) =>
     setVar(`--mcp-safe-area-${side}`, `${safeArea[side]}px`),
   );
