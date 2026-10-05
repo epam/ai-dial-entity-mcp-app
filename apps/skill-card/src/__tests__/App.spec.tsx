@@ -75,4 +75,20 @@ describe('App', () => {
     );
     expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load skill");
   });
+
+  it('shows an error message for an error tool result without warning', () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => undefined);
+    renderApp(
+      createFakeMcpApp({
+        phase: McpAppPhase.Ready,
+        toolResult: {
+          isError: true,
+          content: [{ type: 'text', text: 'skill not found' }],
+        },
+      }),
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load skill");
+    expect(warn).not.toHaveBeenCalled();
+    warn.mockRestore();
+  });
 });

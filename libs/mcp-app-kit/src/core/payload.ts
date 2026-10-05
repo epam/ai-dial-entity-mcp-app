@@ -21,6 +21,9 @@ const parseJson = (text: string): unknown => {
   }
 };
 
+const unwrap = (result: Record<string, unknown>): Record<string, unknown> =>
+  isRecord(result.result) ? result.result : result;
+
 /**
  * Extracts the app-facing payload from a tool result, tolerating host envelope
  * differences: a nested `result` wrapper, `structuredContent` vs
@@ -29,9 +32,21 @@ const parseJson = (text: string): unknown => {
  */
 export const getStructuredContent = (result: unknown): unknown => {
   if (!isRecord(result)) return undefined;
-  const inner = isRecord(result.result) ? result.result : result;
+  const inner = unwrap(result);
   if (inner.structuredContent != null) return inner.structuredContent;
   if (inner.structured_content != null) return inner.structured_content;
   const text = findFirstText(inner.content);
   return text === undefined ? undefined : parseJson(text);
+};
+
+/**
+ * Returns the error message of a tool result flagged `isError` (its first text
+ * block, else a generic message), or `undefined` for a successful result.
+ * @param result - raw tool result as delivered by `ui/notifications/tool-result`
+ */
+export const getToolError = (result: unknown): string | undefined => {
+  if (!isRecord(result)) return undefined;
+  const inner = unwrap(result);
+  if (inner.isError !== true) return undefined;
+  return findFirstText(inner.content) ?? 'Tool failed';
 };

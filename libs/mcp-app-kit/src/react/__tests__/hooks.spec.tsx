@@ -1,11 +1,13 @@
 import { act, render, renderHook, screen } from '@testing-library/react';
 import { type FC, type ReactNode, useEffect } from 'react';
 import { describe, expect, it, vi } from 'vitest';
-import { McpAppPhase, type ParseResult } from '../../core';
+import { McpAppError, McpAppPhase, type ParseResult } from '../../core';
 import { createFakeMcpApp } from '../../testing';
 import {
   McpAppProvider,
   ToolResultStatus,
+  useHostContext,
+  useMcpApp,
   useOpenLink,
   useToolResult,
 } from '..';
@@ -90,6 +92,22 @@ describe('useToolResult', () => {
       error: 'boom',
     });
   });
+  it('reports an error result even when the phase is ready', () => {
+    const app = createFakeMcpApp({
+      phase: McpAppPhase.Ready,
+      toolResult: {
+        isError: true,
+        content: [{ type: 'text', text: 'boom' }],
+      },
+    });
+    const { result } = renderHook(() => useToolResult(parse), {
+      wrapper: withApp(app),
+    });
+    expect(result.current).toEqual({
+      status: ToolResultStatus.Error,
+      error: 'boom',
+    });
+  });
 });
 
 describe('useOpenLink', () => {
@@ -100,6 +118,45 @@ describe('useOpenLink', () => {
     });
     await result.current('https://a.test');
     expect(app.openedLinks).toEqual(['https://a.test']);
+  });
+
+  it('rejects with McpAppError when the host refuses', async () => {
+    const app = createFakeMcpApp();
+    app.failOpenLink();
+    const { result } = renderHook(() => useOpenLink(), {
+      wrapper: withApp(app),
+    });
+    await expect(result.current('https://a.test')).rejects.toBeInstanceOf(
+      McpAppError,
+    );
+    expect(app.openedLinks).toEqual([]);
+  });
+});
+
+describe('useMcpApp', () => {
+  it('returns the store snapshot and follows changes', () => {
+    const app = createFakeMcpApp({ phase: McpAppPhase.ToolPending });
+    const { result } = renderHook(() => useMcpApp(), {
+      wrapper: withApp(app),
+    });
+    expect(result.current).toBe(app.getSnapshot());
+    act(() => app.setSnapshot({ phase: McpAppPhase.Ready }));
+    expect(result.current.phase).toBe(McpAppPhase.Ready);
+    expect(result.current).toBe(app.getSnapshot());
+  });
+});
+
+describe('useHostContext', () => {
+  it('returns the host context from the snapshot', () => {
+    const app = createFakeMcpApp();
+    const { result } = renderHook(() => useHostContext(), {
+      wrapper: withApp(app),
+    });
+    expect(result.current).toBeUndefined();
+    act(() =>
+      app.setSnapshot({ hostContext: { theme: 'dark', platform: 'web' } }),
+    );
+    expect(result.current).toEqual({ theme: 'dark', platform: 'web' });
   });
 });
 

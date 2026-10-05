@@ -28,6 +28,27 @@ describe('applyHostContext', () => {
     expect(root.style.getPropertyValue('--mcp-safe-area-top')).toBe('0px');
   });
 
+  it('applies container height and safe-area insets and cleans them up', () => {
+    const undo = applyHostContext({
+      containerDimensions: { height: 480, maxWidth: 900 },
+      safeAreaInsets: { top: 12, right: 4, bottom: 20, left: 0 },
+    });
+    expect(root.style.getPropertyValue('--mcp-container-height')).toBe('480px');
+    expect(root.style.getPropertyValue('--mcp-safe-area-top')).toBe('12px');
+    expect(root.style.getPropertyValue('--mcp-safe-area-right')).toBe('4px');
+    expect(root.style.getPropertyValue('--mcp-safe-area-bottom')).toBe('20px');
+    expect(root.style.getPropertyValue('--mcp-safe-area-left')).toBe('0px');
+
+    undo();
+    [
+      '--mcp-container-height',
+      '--mcp-safe-area-top',
+      '--mcp-safe-area-right',
+      '--mcp-safe-area-bottom',
+      '--mcp-safe-area-left',
+    ].forEach((name) => expect(root.style.getPropertyValue(name)).toBe(''));
+  });
+
   it('does not apply host shadow variables, which ui-kit reads as colours', () => {
     root.style.setProperty('--shadow-sm', '#123456');
     cleanup = applyHostContext({

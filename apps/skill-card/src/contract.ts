@@ -1,20 +1,5 @@
 import type { ParseResult } from '@epam/ai-dial-mcp-app-kit';
 
-/** Wire format of the tool's `structuredContent`. */
-export type SkillCardPayload = {
-  skill: {
-    name: string;
-    description: string;
-    initials?: string;
-    kindLabel?: string;
-  };
-  actions: { tryUrl?: string; editUrl?: string };
-  qualityCheck?: {
-    passedPercent: number;
-    items: { id: string; label: string; passed: boolean; hint?: string }[];
-  };
-};
-
 export type QualityCheckItem = {
   id: string;
   label: string;
@@ -52,8 +37,8 @@ const fail = (reason: string): ParseResult<never> => ({ ok: false, reason });
 const safeUrl = (value: unknown): string | undefined => {
   if (typeof value !== 'string') return undefined;
   try {
-    const { protocol } = new URL(value);
-    return protocol === 'http:' || protocol === 'https:' ? value : undefined;
+    const { protocol, href } = new URL(value);
+    return protocol === 'http:' || protocol === 'https:' ? href : undefined;
   } catch {
     return undefined;
   }

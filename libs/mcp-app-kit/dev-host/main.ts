@@ -111,15 +111,15 @@ const mount = async () => {
     addLog('open-link handled (no navigation):', url);
     return {};
   };
-  next.onsizechange = ({ height }) => {
+  next.addEventListener('sizechange', ({ height }) => {
     if (typeof height === 'number' && iframe)
       iframe.style.height = `${height}px`;
-  };
+  });
   next.onrequestdisplaymode = async () => ({ mode: 'inline' });
   next.onmessage = async () => ({});
-  next.oninitialized = () => {
+  next.addEventListener('initialized', () => {
     void sendResult();
-  };
+  });
   bridge = next;
 
   await next.connect(transport);

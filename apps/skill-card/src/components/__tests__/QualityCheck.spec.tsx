@@ -19,7 +19,9 @@ const qualityCheck = {
 };
 
 const badgeFor = (percent: number) =>
-  screen.getByText(`${percent}% passed`).parentElement!;
+  screen
+    .getByText(`${percent}% passed`)
+    .closest<HTMLElement>('.dial-kit-badge')!;
 
 const contentOf = (toggle: HTMLElement) =>
   document.getElementById(toggle.getAttribute('aria-controls')!)!;

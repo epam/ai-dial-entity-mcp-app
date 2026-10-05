@@ -23,7 +23,7 @@ describe('tailwind preset', () => {
       ...Object.values(extend.backgroundColor),
       ...Object.values(extend.textColor),
       ...Object.values(extend.borderColor),
-    ] as string[];
+    ];
     expect(colours.length).toBe(17);
     colours.forEach((value) => {
       const [, name, literal] = value.match(

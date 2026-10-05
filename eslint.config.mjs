@@ -5,13 +5,46 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
+const appHostGlobals = [
+  { name: 'parent', message: 'Talk to the host through the kit.' },
+  { name: 'postMessage', message: 'Talk to the host through the kit.' },
+];
+
+const kitNoAppImports = {
+  group: ['**/apps/**', 'ai-dial-skill-mcp-app', 'ai-dial-skill-mcp-app/*'],
+  message: 'The kit must not import app code.',
+};
+
+const kitNoBuildToolImports = {
+  group: [
+    'vite',
+    'vite/*',
+    '@vitejs/*',
+    'vite-plugin-singlefile',
+    'vite-plugin-singlefile/*',
+  ],
+  message: 'Build tooling belongs in the kit vite layer.',
+};
+
+/**
+ * Relative import patterns that reach a sibling kit layer from any depth
+ * under `libs/mcp-app-kit/src/<layer>/`.
+ * @param layers - sibling layer directory names
+ */
+const relativeLayers = (layers) =>
+  layers.flatMap((layer) =>
+    ['..', '../..', '../../..'].flatMap((up) => [
+      `${up}/${layer}`,
+      `${up}/${layer}/*`,
+    ]),
+  );
+
 export default defineConfig(
   { ignores: ['**/dist/**', '**/node_modules/**', '**/coverage/**'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {
     files: ['**/*.{ts,tsx}'],
-    languageOptions: { globals: { ...globals.browser, ...globals.node } },
     plugins: { 'react-hooks': reactHooks },
     rules: {
       ...reactHooks.configs.recommended.rules,
@@ -22,7 +55,22 @@ export default defineConfig(
   },
   { files: ['**/*.tsx'], ...jsxA11y.flatConfigs.recommended },
   {
-    files: ['**/*.{js,mjs,cjs}'],
+    files: [
+      'apps/*/src/**/*.{ts,tsx}',
+      'libs/mcp-app-kit/src/{core,react,testing,styles}/**/*.{ts,tsx}',
+      'libs/mcp-app-kit/src/test-setup.ts',
+      'libs/mcp-app-kit/dev-host/{main,presets}.ts',
+    ],
+    languageOptions: { globals: globals.browser },
+  },
+  {
+    files: [
+      '**/*.{js,mjs,cjs}',
+      '**/{vite,vitest}.config.ts',
+      'libs/mcp-app-kit/src/vite/**/*.ts',
+      'libs/mcp-app-kit/dev-host/devHostServer.ts',
+      '**/*.spec.{ts,tsx}',
+    ],
     languageOptions: { globals: globals.node },
   },
   {
@@ -32,17 +80,44 @@ export default defineConfig(
   {
     files: ['libs/mcp-app-kit/**/*.{ts,tsx}'],
     rules: {
+      'no-restricted-imports': ['error', { patterns: [kitNoAppImports] }],
+    },
+  },
+  {
+    files: ['libs/mcp-app-kit/src/core/**/*.{ts,tsx}'],
+    rules: {
       'no-restricted-imports': [
         'error',
         {
           patterns: [
+            kitNoAppImports,
             {
-              group: [
-                '**/apps/**',
-                'ai-dial-skill-mcp-app',
-                'ai-dial-skill-mcp-app/*',
-              ],
-              message: 'The kit must not import app code.',
+              group: ['react', 'react/*', 'react-dom', 'react-dom/*'],
+              message: 'Kit core is framework-free; React belongs in ../react.',
+            },
+            kitNoBuildToolImports,
+            {
+              group: relativeLayers(['react', 'vite', 'testing']),
+              message:
+                'Kit core must not depend on the react, vite or testing layers.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['libs/mcp-app-kit/src/react/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            kitNoAppImports,
+            kitNoBuildToolImports,
+            {
+              group: relativeLayers(['vite']),
+              message: 'The kit react layer must not depend on the vite layer.',
             },
           ],
         },
@@ -89,10 +164,28 @@ export default defineConfig(
           message: 'Talk to the host through the kit.',
         },
       ],
+      'no-restricted-globals': ['error', ...appHostGlobals],
+    },
+  },
+  {
+    files: ['apps/*/src/**/*.{ts,tsx}'],
+    ignores: ['**/__tests__/**', '**/*.spec.{ts,tsx}', '**/test-setup.ts'],
+    rules: {
       'no-restricted-globals': [
         'error',
-        { name: 'parent', message: 'Talk to the host through the kit.' },
-        { name: 'postMessage', message: 'Talk to the host through the kit.' },
+        ...appHostGlobals,
+        ...[
+          'fetch',
+          'XMLHttpRequest',
+          'WebSocket',
+          'EventSource',
+          'top',
+          'opener',
+        ].map((name) => ({
+          name,
+          message:
+            'The app talks to the outside only through the host via the kit.',
+        })),
       ],
     },
   },

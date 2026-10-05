@@ -54,6 +54,17 @@ describe('parseSkillCardPayload', () => {
     expect(data.skill.initials).toBe('OS');
   });
 
+  it.each([
+    [' https://a.test/x ', 'https://a.test/x'],
+    ['HTTPS://A.test', 'https://a.test/'],
+  ])('normalises the url %j to %j', (raw, expected) => {
+    const data = ok({
+      ...withFailures,
+      actions: { tryUrl: raw, editUrl: raw },
+    });
+    expect(data.actions).toEqual({ tryUrl: expected, editUrl: expected });
+  });
+
   it('rejects the malformed fixture with a reason', () => {
     expect(parseSkillCardPayload(malformed)).toEqual({
       ok: false,

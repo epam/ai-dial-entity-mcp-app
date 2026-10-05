@@ -4,7 +4,7 @@ export default defineProject({
   test: {
     name: 'kit',
     environment: 'jsdom',
-    include: ['src/**/*.spec.{ts,tsx}'],
+    include: ['src/**/*.spec.{ts,tsx}', 'dev-host/**/*.spec.ts'],
     setupFiles: ['./src/test-setup.ts'],
   },
 });

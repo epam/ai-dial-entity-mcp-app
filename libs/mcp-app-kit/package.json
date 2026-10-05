@@ -18,12 +18,16 @@
     "dev-host": "vite --configLoader runner --config dev-host/vite.config.ts"
   },
   "peerDependencies": {
+    "@epam/ai-dial-ui-kit": ">=0.15.0-dev.36 <0.16.0",
     "@vitejs/plugin-react": "^6.0.0",
     "react": "^19.2.0",
     "vite": "^8.1.0",
     "vite-plugin-singlefile": "^2.3.0"
   },
   "peerDependenciesMeta": {
+    "@epam/ai-dial-ui-kit": {
+      "optional": true
+    },
     "@vitejs/plugin-react": {
       "optional": true
     },
@@ -43,6 +47,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@epam/ai-dial-ui-kit": "0.15.0-dev.36",
     "@vitejs/plugin-react": "^6.1.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { getStructuredContent } from '../payload';
+import { getStructuredContent, getToolError } from '../payload';
 
 describe('getStructuredContent', () => {
   it('returns structuredContent from a flat result', () => {
@@ -49,5 +49,36 @@ describe('getStructuredContent', () => {
         content: [{ type: 'text', text: '{"a":6}' }],
       }),
     ).toEqual({ a: 5 });
+  });
+});
+
+describe('getToolError', () => {
+  it('returns undefined for a successful result', () => {
+    expect(getToolError({ content: [{ type: 'text', text: 'ok' }] })).toBe(
+      undefined,
+    );
+    expect(getToolError(undefined)).toBeUndefined();
+  });
+
+  it('returns the first text block of an error result', () => {
+    expect(
+      getToolError({
+        isError: true,
+        content: [
+          { type: 'image', data: 'x' },
+          { type: 'text', text: 'nope' },
+        ],
+      }),
+    ).toBe('nope');
+  });
+
+  it('falls back to a generic message', () => {
+    expect(getToolError({ isError: true })).toBe('Tool failed');
+  });
+
+  it('unwraps a nested result envelope', () => {
+    expect(getToolError({ result: { isError: true, content: [] } })).toBe(
+      'Tool failed',
+    );
   });
 });

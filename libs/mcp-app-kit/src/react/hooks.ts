@@ -1,6 +1,10 @@
 import type { McpUiHostContext } from '@modelcontextprotocol/ext-apps';
 import { useCallback, useContext, useMemo, useSyncExternalStore } from 'react';
-import { getStructuredContent, type ParseResult } from '../core/payload';
+import {
+  getStructuredContent,
+  getToolError,
+  type ParseResult,
+} from '../core/payload';
 import {
   type McpAppSnapshot,
   type McpAppStore,
@@ -58,6 +62,9 @@ export const useToolResult = <T>(
     if (phase !== McpAppPhase.Ready || toolResult === undefined) {
       return { status: ToolResultStatus.Loading };
     }
+    const toolError = getToolError(toolResult);
+    if (toolError !== undefined)
+      return { status: ToolResultStatus.Error, error: toolError };
     const parsed = parse(getStructuredContent(toolResult));
     return parsed.ok
       ? { status: ToolResultStatus.Ready, data: parsed.data }

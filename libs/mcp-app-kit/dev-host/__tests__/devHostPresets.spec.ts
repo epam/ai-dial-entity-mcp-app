@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { HOST_PRESETS, HostPresetId } from '../../../dev-host/presets';
-import { MCP_STYLE_VARIABLE_KEYS } from '../../testing';
+import { HOST_PRESETS, HostPresetId } from '../presets';
+import { MCP_STYLE_VARIABLE_KEYS } from '../../src/testing';
 
 const KEYS = new Set<string>(MCP_STYLE_VARIABLE_KEYS);
 

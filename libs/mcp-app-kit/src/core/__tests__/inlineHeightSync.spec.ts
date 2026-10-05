@@ -1,7 +1,12 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { startInlineHeightSync } from '../host/inlineHeightSync';
 
 describe('startInlineHeightSync', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
   it('writes the measured height to <html> and resets it on stop', () => {
     const observe = vi.fn();
     const disconnect = vi.fn();
@@ -27,6 +32,9 @@ describe('startInlineHeightSync', () => {
     stop();
     expect(disconnect).toHaveBeenCalled();
     expect(root.style.height).toBe('');
-    vi.unstubAllGlobals();
+  });
+
+  it('runs with the setup ResizeObserver stub after globals are restored', () => {
+    expect(vi.isMockFunction(globalThis.ResizeObserver)).toBe(true);
   });
 });

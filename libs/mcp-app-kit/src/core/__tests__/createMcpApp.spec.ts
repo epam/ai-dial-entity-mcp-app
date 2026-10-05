@@ -3,6 +3,7 @@ import {
   type McpUiHostContext,
 } from '@modelcontextprotocol/ext-apps/app-bridge';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
+import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { describe, expect, it, vi } from 'vitest';
 import { createMcpApp } from '../createMcpApp';
 import { McpAppError, McpAppPhase, type McpAppStore } from '../types';
@@ -17,10 +18,10 @@ const setup = async (hostContext: McpUiHostContext = { theme: 'dark' }) => {
   );
   const onInitialized = vi.fn();
   const initialized = new Promise<void>((resolve) => {
-    bridge.oninitialized = () => {
+    bridge.addEventListener('initialized', () => {
       onInitialized();
       resolve();
-    };
+    });
   });
   await bridge.connect(hostTransport);
   const store = createMcpApp({
@@ -69,6 +70,31 @@ describe('createMcpApp', () => {
       structuredContent: { a: 1 },
     });
     expect(listener).toHaveBeenCalled();
+  });
+
+  it('goes to error with the first text block when the tool result is an error', async () => {
+    const { store, bridge, initialized } = await setup();
+    store.start();
+    await initialized;
+    const result = {
+      isError: true,
+      content: [{ type: 'text' as const, text: 'skill not found' }],
+    };
+    await bridge.sendToolResult(result);
+    await waitForPhase(store, McpAppPhase.Error);
+    expect(store.getSnapshot()).toMatchObject({
+      error: 'skill not found',
+      toolResult: result,
+    });
+  });
+
+  it('uses a generic message for an error result without text', async () => {
+    const { store, bridge, initialized } = await setup();
+    store.start();
+    await initialized;
+    await bridge.sendToolResult({ isError: true, content: [] });
+    await waitForPhase(store, McpAppPhase.Error);
+    expect(store.getSnapshot().error).toBe('Tool failed');
   });
 
   it('clears the previous result on new tool input', async () => {
@@ -121,6 +147,47 @@ describe('createMcpApp', () => {
     expect(store.getSnapshot().phase).toBe(McpAppPhase.Ready);
     expect(warn).toHaveBeenCalled();
     warn.mockRestore();
+  });
+
+  it('goes to error with the message when the handshake fails', async () => {
+    const transport: Transport = {
+      start: async () => {
+        throw new Error('no host');
+      },
+      send: async () => undefined,
+      close: async () => undefined,
+    };
+    const store = createMcpApp({
+      name: 'test-app',
+      version: '1.0.0',
+      transport,
+    });
+    store.start();
+    await waitForPhase(store, McpAppPhase.Error);
+    expect(store.getSnapshot().error).toBe('no host');
+  });
+
+  it('treats a transport error during the handshake as fatal', async () => {
+    const { store, appTransport, initialized } = await setup();
+    store.start();
+    appTransport.onerror?.(new Error('bad frame'));
+    expect(store.getSnapshot()).toMatchObject({
+      phase: McpAppPhase.Error,
+      error: 'bad frame',
+    });
+    await initialized;
+    await vi.waitFor(() =>
+      expect(store.getSnapshot().hostContext).toBeDefined(),
+    );
+    expect(store.getSnapshot().phase).toBe(McpAppPhase.Error);
+  });
+
+  it('moves to torndown when the host tears the app down', async () => {
+    const { store, bridge, initialized } = await setup();
+    store.start();
+    await initialized;
+    await bridge.teardownResource({});
+    expect(store.getSnapshot().phase).toBe(McpAppPhase.TornDown);
   });
 
   it('keeps the snapshot reference stable when nothing changes', async () => {

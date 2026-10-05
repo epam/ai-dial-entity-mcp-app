@@ -1,4 +1,5 @@
 import { App } from '@modelcontextprotocol/ext-apps';
+import { getToolError } from './payload';
 import {
   type CreateMcpAppOptions,
   type McpAppSnapshot,
@@ -62,24 +63,29 @@ export const createMcpApp = ({
     );
     sdkApp = app;
 
-    app.ontoolinput = (params) => {
+    app.addEventListener('toolinput', (params) => {
       patch({
         phase: McpAppPhase.ToolPending,
         toolInput: params.arguments,
         toolResult: undefined,
         error: undefined,
       });
-    };
-    app.ontoolresult = (params) => {
-      patch({ phase: McpAppPhase.Ready, toolResult: params, error: undefined });
-    };
-    app.ontoolcancelled = (params) => {
+    });
+    app.addEventListener('toolresult', (params) => {
+      const error = getToolError(params);
+      patch({
+        phase: error === undefined ? McpAppPhase.Ready : McpAppPhase.Error,
+        toolResult: params,
+        error,
+      });
+    });
+    app.addEventListener('toolcancelled', (params) => {
       const suffix = params.reason ? `: ${params.reason}` : '';
       patch({ phase: McpAppPhase.Error, error: `Tool cancelled${suffix}` });
-    };
-    app.onhostcontextchanged = (context) => {
+    });
+    app.addEventListener('hostcontextchanged', (context) => {
       patch({ hostContext: { ...snapshot.hostContext, ...context } });
-    };
+    });
     app.onerror = (error) => {
       if (snapshot.phase === McpAppPhase.Connecting) {
         patch({ phase: McpAppPhase.Error, error: toMessage(error) });
