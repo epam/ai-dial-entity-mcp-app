@@ -51,3 +51,5 @@ export const createFakeMcpApp = (
     sendMessage: async () => undefined,
   };
 };
+
+export * from './mcpStyleKeys';

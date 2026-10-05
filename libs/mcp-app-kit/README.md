@@ -17,7 +17,7 @@ map — there is no build step. Because of that, Vite must run with
 | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
 | `@epam/ai-dial-mcp-app-kit`                                            | Framework-free core: `createMcpApp`, `applyHostContext`, `getStructuredContent`, `ParseResult`, `McpAppPhase`, `McpAppError`, host helpers. |
 | `@epam/ai-dial-mcp-app-kit/react`                                      | `McpAppProvider`, `useMcpApp`, `useHostContext`, `useOpenLink`, `useToolResult`, `ToolResultStatus`.                                        |
-| `@epam/ai-dial-mcp-app-kit/testing`                                    | `createFakeMcpApp` — an in-memory store for component tests.                                                                                |
+| `@epam/ai-dial-mcp-app-kit/testing`                                    | `createFakeMcpApp` — an in-memory store for component tests; `MCP_STYLE_VARIABLE_KEYS` — the 76 standard style keys.                        |
 | `@epam/ai-dial-mcp-app-kit/vite`                                       | `mcpAppVite()` plugin list, `mcpAppEndpoint()`, `MCP_APP_PATH` (`/_mcp-app/index.html`).                                                    |
 | `@epam/ai-dial-mcp-app-kit/tailwind`                                   | Tailwind preset exposing ui-kit colour tokens as utilities (`bg-layer-2`, `text-secondary`, `border-primary`, …).                           |
 | `@epam/ai-dial-mcp-app-kit/styles/host-tokens.css`                     | Maps MCP host variables onto ui-kit variables.                                                                                              |
@@ -190,8 +190,11 @@ npm run dev-host -w @epam/ai-dial-mcp-app-kit
 | `MCP_DEFAULT_FIXTURE` | Fixture file name selected on load (e.g. `with-failures.json`). Defaults to the first fixture.      |
 
 The harness panel switches the source (dev server, or the built file loaded via
-`srcdoc`), fixture, light/dark theme, host preset (Claude-like, ChatGPT-like,
-AI DIAL-like, or no variables), display mode, width and result delay. It can
+`srcdoc`), fixture, light/dark theme, host preset (ChatGPT — dark captured
+from the real host, light approximate; Claude-like, approximate; AI DIAL —
+DIAL's D18 values, dark approximate; Reference design — the values a host sends
+to match the reference design, light only; or no variables), display mode,
+width and result delay. It can
 reload the app, resend the tool result or cancel the tool, and logs every
 protocol message; `ui/open-link` requests are highlighted and not navigated.
 
