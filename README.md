@@ -1,4 +1,4 @@
-# ai-dial-skill-mcp-app-frontend
+# ai-dial-entity-mcp-app
 
 ## What this is
 
@@ -12,8 +12,8 @@ are inlined — so a host can embed it without loading anything else.
 
 Repository layout (npm workspaces):
 
-- `apps/skill-card` — the skill card app (`ai-dial-skill-mcp-app`). Its build
-  output is `apps/skill-card/dist/index.html`.
+- `apps/entity-card` — the entity card app (`ai-dial-entity-card`); today it renders the skill card. Its build
+  output is `apps/entity-card/dist/index.html`.
 - `libs/mcp-app-kit` — `@epam/ai-dial-mcp-app-kit`, the reusable layer every MCP
   App here is built on: host connection, React hooks, host theming, Vite and
   Tailwind presets, test helpers and a local dev host. See
@@ -65,7 +65,7 @@ reports unformatted files.
 The tool must return the card data as its `structuredContent` (hosts that only
 forward a JSON text block are handled too). It is parsed by
 `parseSkillCardPayload` in
-[`apps/skill-card/src/contract.ts`](apps/skill-card/src/contract.ts). The
+[`apps/entity-card/src/contract.ts`](apps/entity-card/src/contract.ts). The
 payload is an object with:
 
 - `skill` (required): `name` and `description` (strings), plus optional
@@ -93,7 +93,7 @@ Validation rules applied by `parseSkillCardPayload`:
   the "Couldn't display this skill" notice.
 
 A full example is in
-[`apps/skill-card/fixtures/with-failures.json`](apps/skill-card/fixtures/with-failures.json);
+[`apps/entity-card/fixtures/with-failures.json`](apps/entity-card/fixtures/with-failures.json);
 the other files in `fixtures/` cover the passing, no-quality-check, missing-URL
 and malformed cases.
 
@@ -136,7 +136,7 @@ also check the built file in real hosts:
 1. Run `npm run build`.
 2. Run MCPJam Inspector with `npx @mcpjam/inspector` and connect a local MCP
    server whose tool returns one of the fixtures as `structuredContent` and
-   whose `ui://` resource returns the built `apps/skill-card/dist/index.html`
+   whose `ui://` resource returns the built `apps/entity-card/dist/index.html`
    with MIME type `text/html;profile=mcp-app`.
 3. Repeat in Claude, ChatGPT (developer mode) and AI DIAL. In each host check
    that the card renders, the theme follows the host's light/dark setting, and

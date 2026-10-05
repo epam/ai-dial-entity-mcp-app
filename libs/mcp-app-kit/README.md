@@ -204,9 +204,9 @@ of the host container in `fullscreen` and `pip`.
 
 ## Dev host
 
-`npm run dev` in `apps/skill-card` starts the app on port 4300 and the harness
+`npm run dev` in `apps/entity-card` starts the app on port 4300 and the harness
 on port 4301 together. To run the harness for another app, start the app's
-Vite server and run, from the app directory (e.g. `apps/skill-card`):
+Vite server and run, from the app directory (e.g. `apps/entity-card`):
 
 ```sh
 MCP_APP_URL=http://localhost:4300/_mcp-app/index.html \

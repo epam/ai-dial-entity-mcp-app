@@ -95,7 +95,7 @@ const parseQualityCheck = (
 };
 
 /**
- * Validates and normalises the skill-card tool payload. Unknown fields are
+ * Validates and normalises the skill card tool payload. Unknown fields are
  * ignored; non-http(s) URLs are dropped so their buttons are not rendered.
  * @param raw - structured content from the tool result
  */

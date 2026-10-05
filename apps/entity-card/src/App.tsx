@@ -19,7 +19,7 @@ const App: FC = () => {
 
   useEffect(() => {
     if (invalidReason)
-      console.warn('[skill-card] invalid payload:', invalidReason);
+      console.warn('[entity-card] invalid payload:', invalidReason);
   }, [invalidReason]);
 
   switch (result.status) {

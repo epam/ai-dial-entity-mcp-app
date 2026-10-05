@@ -11,7 +11,7 @@ const appHostGlobals = [
 ];
 
 const kitNoAppImports = {
-  group: ['**/apps/**', 'ai-dial-skill-mcp-app', 'ai-dial-skill-mcp-app/*'],
+  group: ['**/apps/**', 'ai-dial-entity-card', 'ai-dial-entity-card/*'],
   message: 'The kit must not import app code.',
 };
 

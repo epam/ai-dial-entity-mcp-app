@@ -1,5 +1,5 @@
 {
-  "name": "ai-dial-skill-mcp-app-frontend",
+  "name": "ai-dial-entity-mcp-app",
   "private": true,
   "type": "module",
   "engines": {
@@ -10,8 +10,8 @@
     "apps/*"
   ],
   "scripts": {
-    "dev": "npm run dev -w ai-dial-skill-mcp-app",
-    "build": "npm run build -w ai-dial-skill-mcp-app",
+    "dev": "npm run dev -w ai-dial-entity-card",
+    "build": "npm run build -w ai-dial-entity-card",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",

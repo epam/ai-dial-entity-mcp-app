@@ -1,4 +1,4 @@
-# ai-dial-skill-mcp-app-frontend
+# ai-dial-entity-mcp-app
 
 MCP App UI for the skill tool. An **MCP App** is a web page that an MCP server
 exposes as a `ui://` resource for one of its tools; MCP Apps hosts (Claude,
@@ -8,11 +8,11 @@ notifications, `ui/open-link`, host-context changes).
 
 ## Repo map
 
-- `apps/skill-card/` — the skill card app. Builds to one self-contained
+- `apps/entity-card/` — the entity card app (today it renders the skill card). Builds to one self-contained
   `dist/index.html`.
   - `src/contract.ts` — tool payload type + parser (the contract we own).
   - `src/components/` — UI.
-- `apps/skill-card/fixtures/` — payload samples for tests and the dev host.
+- `apps/entity-card/fixtures/` — payload samples for tests and the dev host.
 - `libs/mcp-app-kit/` (`@epam/ai-dial-mcp-app-kit`) — reusable MCP App plumbing.
   Read `libs/mcp-app-kit/AGENTS.md` before changing it.
 - `Dockerfile`, `nginx.conf` — serve the file at `/_mcp-app/index.html`.
@@ -36,7 +36,7 @@ notifications, `ui/open-link`, host-context changes).
   `apps/*/src`; it also enforces the kit layering.
 - The app makes no network calls. Anything server-side goes through host tool calls.
 - The build must stay a single file. Never relax
-  `apps/skill-card/scripts/check-single-file.mjs`.
+  `apps/entity-card/scripts/check-single-file.mjs`.
 - Every display mode the app declares must be supported by its UI. The app
   declares `inline` only.
 

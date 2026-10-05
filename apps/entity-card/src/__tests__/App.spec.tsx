@@ -63,7 +63,7 @@ describe('App', () => {
       "Couldn't display this skill",
     );
     expect(warn).toHaveBeenCalledWith(
-      '[skill-card] invalid payload:',
+      '[entity-card] invalid payload:',
       'skill.name must be a non-empty string',
     );
     warn.mockRestore();

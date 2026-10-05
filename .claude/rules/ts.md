@@ -14,4 +14,4 @@ applyTo: '**/*.ts,**/*.tsx'
   `@param` per parameter. React components get JSDoc only when their behaviour
   isn't obvious from the name and props; never restate the code.
   No inline `//` comments unless they record a non-obvious constraint.
-- No `any`. Validate unknown input with type guards (see `apps/skill-card/src/contract.ts`).
+- No `any`. Validate unknown input with type guards (see `apps/entity-card/src/contract.ts`).

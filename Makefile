@@ -1,4 +1,4 @@
-IMAGE ?= ai-dial-skill-mcp-app-frontend
+IMAGE ?= ai-dial-entity-mcp-app
 PORT ?= 8080
 
 .PHONY: docker-build docker-run
