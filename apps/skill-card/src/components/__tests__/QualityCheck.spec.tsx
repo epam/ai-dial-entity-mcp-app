@@ -18,12 +18,18 @@ const qualityCheck = {
   ],
 };
 
+const badgeFor = (percent: number) =>
+  screen.getByText(`${percent}% passed`).parentElement!;
+
+const contentOf = (toggle: HTMLElement) =>
+  document.getElementById(toggle.getAttribute('aria-controls')!)!;
+
 describe('QualityCheck', () => {
   it('renders expanded with the percent badge and all items', () => {
     render(<QualityCheck qualityCheck={qualityCheck} />);
     const toggle = screen.getByRole('button', { name: /quality check/i });
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText('92% passed')).toBeInTheDocument();
+    expect(toggle).toContainElement(badgeFor(92));
     expect(screen.getAllByRole('listitem')).toHaveLength(3);
     expect(screen.getByText('Duplicate id item')).toBeInTheDocument();
   });
@@ -36,16 +42,17 @@ describe('QualityCheck', () => {
     expect(second).toHaveTextContent('Inherit style.');
   });
 
-  it('collapses and expands with mouse and keyboard', async () => {
+  it('makes collapsed content inert and restores it on expand (mouse and keyboard)', async () => {
     render(<QualityCheck qualityCheck={qualityCheck} />);
     const toggle = screen.getByRole('button', { name: /quality check/i });
+    expect(contentOf(toggle).closest('[inert]')).toBeNull();
     await userEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByRole('list')).toBeNull();
+    expect(contentOf(toggle).closest('[inert]')).not.toBeNull();
     toggle.focus();
     await userEvent.keyboard('{Enter}');
     expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByRole('list')).toBeInTheDocument();
+    expect(contentOf(toggle).closest('[inert]')).toBeNull();
   });
 
   it('shows a fractional server percentage rounded', () => {
@@ -57,21 +64,20 @@ describe('QualityCheck', () => {
     if (!parsed.ok || !parsed.data.qualityCheck)
       throw new Error('fixture must parse');
     render(<QualityCheck qualityCheck={parsed.data.qualityCheck} />);
-    expect(screen.getByText('92% passed')).toHaveAttribute(
-      'data-tone',
-      'success',
-    );
+    expect(badgeFor(92)).toHaveAttribute('data-tone', 'success');
   });
 
   it.each([
-    [92, 'success'],
-    [60, 'warning'],
-    [10, 'error'],
-  ])('uses the %d%% tone %s on the badge', (passedPercent, tone) => {
-    render(<QualityCheck qualityCheck={{ passedPercent, items: [] }} />);
-    expect(screen.getByText(`${passedPercent}% passed`)).toHaveAttribute(
-      'data-tone',
-      tone,
-    );
-  });
+    [92, 'success', 'mcp-tone-success'],
+    [60, 'warning', 'mcp-tone-warning'],
+    [10, 'error', 'mcp-tone-danger'],
+  ])(
+    'gives a %d percent badge tone %s via %s',
+    (passedPercent, tone, toneClass) => {
+      render(<QualityCheck qualityCheck={{ passedPercent, items: [] }} />);
+      const badge = badgeFor(passedPercent);
+      expect(badge).toHaveAttribute('data-tone', tone);
+      expect(badge).toHaveClass(toneClass);
+    },
+  );
 });
