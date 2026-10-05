@@ -38,4 +38,29 @@ describe('SkillCard', () => {
     renderCard(toData(noQualityCheck));
     expect(screen.queryByRole('button', { name: /quality check/i })).toBeNull();
   });
+
+  it('renders a static 2.0 card: no hover lift, no shadow, token radius', () => {
+    renderCard(toData(withFailures));
+    const card = screen.getByRole('article');
+    expect(card).toHaveClass(
+      'shadow-none',
+      'hover:translate-y-0',
+      'hover:shadow-none',
+      'rounded-[var(--mcp-card-radius,20px)]',
+    );
+    [
+      'shadow-md',
+      'hover:-translate-y-[3px]',
+      'hover:shadow-lg',
+      'rounded-[20px]',
+    ].forEach((builtIn) => expect(card).not.toHaveClass(builtIn));
+  });
+
+  it('shows the initials in a decorative 2.0 avatar and the kind label', () => {
+    renderCard(toData(withFailures));
+    expect(
+      screen.getByText('GM').closest('[aria-hidden="true"]'),
+    ).not.toBeNull();
+    expect(screen.getByText('Skill')).toHaveClass('text-info');
+  });
 });

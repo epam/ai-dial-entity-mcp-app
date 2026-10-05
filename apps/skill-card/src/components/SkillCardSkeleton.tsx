@@ -1,14 +1,21 @@
-import { Skeleton } from '@epam/ai-dial-ui-kit';
+import { CardShell, Skeleton } from '@epam/ai-dial-ui-kit';
 import { type FC, memo } from 'react';
+import { STATIC_CARD_CLASS } from './cardSurface';
 
+/**
+ * Skeleton bars are `bg-layer-raised`, the card's own colour; the wrapper
+ * re-points that variable at the sunken layer so the bars stay visible.
+ */
 const SkillCardSkeleton: FC = () => (
-  <div
+  <CardShell
     data-testid="skill-card-skeleton"
     aria-busy="true"
-    className="bg-layer-1 rounded-xl p-5"
+    className={STATIC_CARD_CLASS}
   >
-    <Skeleton active avatar paragraph={{ rows: 3 }} />
-  </div>
+    <div className="[--bg-layer-raised:var(--bg-layer-sunken)]">
+      <Skeleton active avatar paragraph={{ rows: 3 }} />
+    </div>
+  </CardShell>
 );
 
 export default memo(SkillCardSkeleton);

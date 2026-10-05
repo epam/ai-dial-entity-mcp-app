@@ -33,7 +33,7 @@ const ActionButtons: FC<ActionButtonsProps> = ({ actions }) => {
   if (!tryUrl && !editUrl) return null;
 
   return (
-    <div className="mt-4 flex flex-col gap-2 pl-[60px]">
+    <div className="flex flex-col gap-2 pl-[60px]">
       <div className="flex flex-wrap gap-2">
         {tryUrl && (
           <PrimaryButton
