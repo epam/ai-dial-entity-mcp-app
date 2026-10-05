@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { MCP_STYLE_VARIABLE_KEYS } from '../../testing';
 
 type CssRule = { context: string[]; selector: string; body: string };
 type Declaration = { name: string; value: string };
@@ -12,11 +13,13 @@ const readLocal = (path: string) =>
 
 const hostTokensCss = readLocal('../host-tokens.css');
 const layoutCss = readLocal('../layout.css');
-const presetSource = readLocal('../../tailwind/preset.js');
+const dialCss = readLocal('./fixtures/dial-mcp-vars.css');
 const uiKitCss = readFileSync(
   createRequire(import.meta.url).resolve('@epam/ai-dial-ui-kit/styles.css'),
   'utf8',
 );
+
+const MCP_KEYS = new Set<string>(MCP_STYLE_VARIABLE_KEYS);
 
 /**
  * Splits CSS into rules with balanced braces, so native nesting (as in the
@@ -80,203 +83,287 @@ const darkBlock = findBlock(":root[data-theme='dark']");
 const preferredDarkBlock = findBlock(':root:not([data-theme])', [
   '@media (prefers-color-scheme: dark)',
 ]);
+const derivedBlock = findBlock('html');
+const toneBlocks = {
+  success: findBlock('.mcp-tone-success'),
+  warning: findBlock('.mcp-tone-warning'),
+  danger: findBlock('.mcp-tone-danger'),
+};
 const themeBlocks = { lightBlock, darkBlock, preferredDarkBlock };
-
-const MCP_KEYS = new Set([
-  '--color-background-primary',
-  '--color-background-secondary',
-  '--color-background-tertiary',
-  '--color-background-inverse',
-  '--color-background-ghost',
-  '--color-background-info',
-  '--color-background-danger',
-  '--color-background-success',
-  '--color-background-warning',
-  '--color-background-disabled',
-  '--color-text-primary',
-  '--color-text-secondary',
-  '--color-text-tertiary',
-  '--color-text-inverse',
-  '--color-text-ghost',
-  '--color-text-info',
-  '--color-text-danger',
-  '--color-text-success',
-  '--color-text-warning',
-  '--color-text-disabled',
-  '--color-border-primary',
-  '--color-border-secondary',
-  '--color-border-tertiary',
-  '--color-border-inverse',
-  '--color-border-ghost',
-  '--color-border-info',
-  '--color-border-danger',
-  '--color-border-success',
-  '--color-border-warning',
-  '--color-border-disabled',
-  '--color-ring-primary',
-  '--font-sans',
-]);
-
-/** Accent tokens have no MCP variable, so both blocks set plain literals. */
-const ACCENT_LITERALS = [
-  '--text-accent-primary',
-  '--bg-accent-primary-alpha',
-  '--stroke-accent-primary',
-];
-
-/** Primary-button colours stay on ui-kit defaults in light, overridden in dark. */
-const DARK_ONLY_LITERALS = [
-  '--controls-bg-accent-primary',
-  '--controls-bg-accent-primary-hover',
-  '--controls-bg-accent-primary-active',
-];
-
-/** ui-kit variables the app's components read but intentionally leaves to ui-kit defaults. */
-const UI_KIT_DEFAULTS = new Set([
-  '--controls-text-permanent',
-  '--controls-bg-disable-accent',
-  '--controls-text-accent-disable',
-  '--stroke-focus-black',
-]);
-
-const REMOVED_KEYS = ['--bg-inverted', '--controls-text-disable'];
 
 const namesOf = (block: Declaration[]) =>
   block.map((declaration) => declaration.name).sort();
-
-const fallbackOf = (block: Declaration[], name: string) => {
-  const value = block.find((declaration) => declaration.name === name)?.value;
-  return value
+const valueOf = (block: Declaration[], name: string) =>
+  block.find((declaration) => declaration.name === name)?.value;
+const sourcesOf = (value: string) =>
+  [...value.matchAll(/var\((--[a-z0-9-]+)/g)].map(([, source]) => source!);
+const fallbackOf = (block: Declaration[], name: string) =>
+  valueOf(block, name)
     ?.match(/,\s*([^,()]+)\)+$/)?.[1]
     ?.trim()
     .toLowerCase();
-};
 
-describe('host-tokens.css', () => {
-  it.each(Object.entries(themeBlocks))(
-    '%s gives every var() a fallback',
-    (_, block) => {
-      expect(block.length).toBeGreaterThan(30);
-      block.forEach(({ name, value }) => {
-        expect(value, name).not.toMatch(/var\(--[a-z0-9-]+\s*\)/);
-      });
-    },
+/** Literal fallbacks ui-kit's own CSS uses for a variable, e.g. `#fcfcfc`. */
+const uiKitFallbacks = (name: string) =>
+  new Set(
+    [
+      ...uiKitCss.matchAll(new RegExp(`var\\(${name},(#[0-9a-f]+)\\)`, 'gi')),
+    ].map(([, literal]) => literal!.toLowerCase()),
   );
 
+describe('host-tokens.css theme blocks', () => {
   it.each(Object.entries(themeBlocks))(
-    '%s reads only MCP standard variables',
+    '%s gives every var() a fallback and reads only MCP variables',
     (_, block) => {
+      expect(block.length).toBe(30);
       block.forEach(({ name, value }) => {
-        [...value.matchAll(/var\((--[a-z0-9-]+)/g)].forEach(([, source]) => {
-          expect(MCP_KEYS, `${name} → ${source}`).toContain(source);
-        });
+        expect(value, name).not.toMatch(/var\(--[a-z0-9-]+\)/);
+        sourcesOf(value).forEach((source) =>
+          expect(MCP_KEYS, `${name} → ${source}`).toContain(source),
+        );
       });
     },
   );
 
   it('light and dark blocks set the same ui-kit variables', () => {
-    const darkWithoutExceptions = namesOf(darkBlock).filter(
-      (name) => !DARK_ONLY_LITERALS.includes(name),
-    );
-    expect(namesOf(lightBlock)).toEqual(darkWithoutExceptions);
-    DARK_ONLY_LITERALS.forEach((name) => {
-      expect(namesOf(darkBlock)).toContain(name);
-      expect(namesOf(lightBlock)).not.toContain(name);
-    });
+    expect(namesOf(lightBlock)).toEqual(namesOf(darkBlock));
   });
 
   it('repeats the dark block for prefers-color-scheme: dark', () => {
     expect(preferredDarkBlock).toEqual(darkBlock);
   });
 
-  it('sets accent tokens as literals in both themes', () => {
-    [lightBlock, darkBlock].forEach((block) =>
-      ACCENT_LITERALS.forEach((name) => {
-        expect(fallbackOf(block, name) ?? '', name).toBe('');
-        expect(
-          block.find((declaration) => declaration.name === name)?.value,
-          name,
-        ).toMatch(/^#[0-9a-f]+$/i);
-      }),
+  it("light literals are ui-kit's own fallbacks", () => {
+    lightBlock.forEach(({ name }) => {
+      const fallback = fallbackOf(lightBlock, name);
+      if (!fallback?.startsWith('#')) return;
+      expect(uiKitFallbacks(name), name).toContain(fallback);
+    });
+  });
+
+  it('no longer sets the 1.0-only variables', () => {
+    const removed = [
+      '--bg-layer-0',
+      '--bg-layer-1',
+      '--bg-layer-2',
+      '--bg-layer-3',
+      '--bg-layer-4',
+      '--controls-text-neutral',
+      '--controls-bg-neutral-hover',
+      '--controls-bg-neutral-active',
+      '--controls-bg-disable',
+      '--controls-text-primary-disable',
+      '--controls-bg-accent-primary',
+      '--stroke-default',
+      '--stroke-focus',
+      '--text-accent-primary',
+      '--bg-accent-primary-alpha',
+      '--stroke-accent-primary',
+    ];
+    [lightBlock, darkBlock, derivedBlock].forEach((block) =>
+      removed.forEach((name) => expect(namesOf(block)).not.toContain(name)),
+    );
+  });
+});
+
+describe('round trip with DIAL (D18)', () => {
+  /** DIAL variable → MCP keys DIAL derives from it (many-to-one allowed). */
+  const dialSources = new Map<string, Set<string>>();
+  declarationsOf(
+    parseRules(dialCss).find((rule) => rule.selector === ':root')!.body,
+  )
+    .filter(({ name }) => MCP_KEYS.has(name))
+    .forEach(({ name, value }) => {
+      const outermost = value.match(/^var\((--[a-z0-9-]+)/)?.[1];
+      if (!outermost) return;
+      dialSources.set(
+        outermost,
+        (dialSources.get(outermost) ?? new Set()).add(name),
+      );
+    });
+
+  it('parses DIAL variables from the fixture', () => {
+    expect(dialSources.size).toBe(29);
+    expect(dialSources.get('--text-tertiary')).toEqual(
+      new Set(['--color-text-tertiary', '--color-text-ghost']),
     );
   });
 
-  it('drops mappings ui-kit does not read', () => {
-    [lightBlock, darkBlock].forEach((block) =>
-      REMOVED_KEYS.forEach((name) =>
-        expect(namesOf(block)).not.toContain(name),
+  it.each([...dialSources.keys()])(
+    'maps %s back from an MCP key DIAL derives from it',
+    (dialVariable) => {
+      [lightBlock, darkBlock].forEach((block) => {
+        const value = valueOf(block, dialVariable);
+        expect(value, dialVariable).toBeDefined();
+        expect(dialSources.get(dialVariable)).toContain(sourcesOf(value!)[0]);
+      });
+    },
+  );
+});
+
+describe('theme-independent derivations (html block)', () => {
+  it('derives radii with ui-kit shapes as fallbacks', () => {
+    expect(valueOf(derivedBlock, '--radius-control')).toBe(
+      'var(--border-radius-md, 9999px)',
+    );
+    expect(valueOf(derivedBlock, '--radius-control-small')).toBe(
+      'var(--border-radius-sm, 9999px)',
+    );
+    expect(valueOf(derivedBlock, '--mcp-card-radius')).toBe(
+      'var(--border-radius-xl, 20px)',
+    );
+  });
+
+  it('paints the primary button solid from the inverse pair, with no fallback colour', () => {
+    expect(valueOf(derivedBlock, '--bg-gradient-1')).toBe(
+      'var(--color-background-inverse)',
+    );
+    expect(valueOf(derivedBlock, '--bg-gradient-2')).toBe(
+      'var(--color-background-inverse)',
+    );
+    ['-1', '-2'].forEach((stop) => {
+      expect(valueOf(derivedBlock, `--bg-gradient${stop}-hover`)).toBe(
+        'color-mix(in srgb, var(--color-background-inverse) 88%, var(--color-text-inverse, #fff))',
+      );
+      expect(valueOf(derivedBlock, `--bg-gradient${stop}-active`)).toBe(
+        'color-mix(in srgb, var(--color-background-inverse) 80%, var(--color-text-inverse, #fff))',
+      );
+    });
+  });
+
+  it('maps nearest slots without fallbacks, so ui-kit defaults apply without host tokens', () => {
+    expect(valueOf(derivedBlock, '--bg-control-accent-alpha')).toBe(
+      'var(--color-background-tertiary)',
+    );
+    expect(valueOf(derivedBlock, '--bg-control-accent-alpha-hover')).toBe(
+      'color-mix(in srgb, var(--color-background-tertiary) 92%, var(--color-text-primary, #000))',
+    );
+    expect(valueOf(derivedBlock, '--bg-control-accent-alpha-active')).toBe(
+      'color-mix(in srgb, var(--color-background-tertiary) 84%, var(--color-text-primary, #000))',
+    );
+    expect(valueOf(derivedBlock, '--stroke-accent-alpha')).toBe(
+      'var(--color-border-secondary)',
+    );
+    expect(valueOf(derivedBlock, '--text-accent')).toBe(
+      'var(--color-text-primary)',
+    );
+  });
+
+  it('derives the primary glow from the text colour', () => {
+    expect(valueOf(derivedBlock, '--shadow-xs-1')).toBe(
+      'color-mix(in srgb, var(--color-text-primary) 10%, transparent)',
+    );
+    expect(valueOf(derivedBlock, '--shadow-xs-2')).toBe(
+      'color-mix(in srgb, var(--color-text-primary) 4%, transparent)',
+    );
+    expect(valueOf(derivedBlock, '--shadow-md')).toBe(
+      'color-mix(in srgb, var(--color-text-primary) 4%, transparent)',
+    );
+  });
+
+  it('reads only MCP variables', () => {
+    derivedBlock.forEach(({ name, value }) =>
+      sourcesOf(value).forEach((source) =>
+        expect(MCP_KEYS, `${name} → ${source}`).toContain(source),
       ),
     );
   });
+});
 
-  it('keeps the previously invisible controls readable in each theme', () => {
-    expect(fallbackOf(lightBlock, '--bg-layer-1')).toBe('#ffffff');
-    expect(fallbackOf(darkBlock, '--bg-layer-1')).toBe('#0c101d');
-    expect(fallbackOf(lightBlock, '--bg-layer-raised')).toBe('#eef1f7');
-    expect(fallbackOf(darkBlock, '--bg-layer-raised')).toBe('#242c42');
-    expect(fallbackOf(darkBlock, '--controls-text-neutral')).toBe('#fcfcfc');
-    expect(fallbackOf(lightBlock, '--stroke-focus')).toBe('#2764d9');
-    expect(fallbackOf(darkBlock, '--stroke-focus')).toBe('#eef1f7');
+describe('badge tone classes', () => {
+  it.each([
+    ['success', '--bg-visual-green-2', '--text-visual-green-1'],
+    ['warning', '--bg-visual-brown', '--text-visual-brown-2'],
+    ['danger', '--bg-visual-red', '--text-visual-red'],
+  ] as const)(
+    '%s re-points its badge colours at the host tone',
+    (tone, bg, text) => {
+      expect(toneBlocks[tone]).toEqual([
+        { name: bg, value: `var(--color-background-${tone})` },
+        { name: text, value: `var(--color-text-${tone})` },
+      ]);
+    },
+  );
+
+  it('never remaps the visual palette globally (the Avatar shares it)', () => {
+    [lightBlock, darkBlock, derivedBlock].forEach((block) =>
+      namesOf(block).forEach((name) =>
+        expect(name).not.toMatch(/^--(bg|text)-visual-/),
+      ),
+    );
   });
 });
 
 describe('ui-kit coverage guard', () => {
+  /** ui-kit selectors the rendered 2.0 components rely on. */
   const GUARDED_SELECTORS = [
-    '.dial-primary-solid-button',
-    '.dial-neutral-outlined-button',
+    '.dial-kit-primary-solid-button',
+    '.dial-kit-neutral-solid-button',
+    '.dial-kit-base-button',
     '.bg-layer-raised',
+    '.bg-layer-sunken',
+    '.bg-error',
+    '.bg-warning',
+    '.bg-info',
+    '.bg-success',
+    '.text-primary',
+    '.text-secondary',
+    '.text-error',
+    '.text-warning',
+    '.text-info',
+    '.text-success',
+    '.border-secondary',
+    '.border-tertiary',
+    '.bg-green-2',
+    '.text-green-1',
+    '.bg-brown',
+    '.text-brown-2',
+    '.bg-red',
+    '.text-red',
+    '.hover\\:bg-control-accent-alpha-hover',
+    '.focus-visible\\:outline-focus',
   ];
+
+  /** Read by ui-kit but intentionally left to it: shadowed or wrapped by a variable we set. */
+  const isUiKitDefault = (name: string) =>
+    name === '--stroke-focus' ||
+    name.startsWith('--bg-control-accent-gradient-') ||
+    name.startsWith('--tw-');
+
+  const setByUs = new Set([
+    ...namesOf(lightBlock),
+    ...namesOf(derivedBlock),
+    ...Object.values(toneBlocks).flatMap(namesOf),
+  ]);
 
   const readVars = (selector: string) =>
     new Set(
       parseRules(uiKitCss)
         .filter((rule) =>
-          rule.selector
-            .split(',')
-            .some((part) => part.trim().startsWith(selector)),
+          rule.selector.split(',').some((part) => {
+            const trimmed = part.trim();
+            return trimmed === selector || trimmed.startsWith(`${selector}:`);
+          }),
         )
-        .flatMap((rule) =>
-          [...rule.body.matchAll(/var\((--[a-z0-9-]+)/g)].map(
-            ([, name]) => name!,
-          ),
-        ),
+        .flatMap((rule) => sourcesOf(rule.body)),
     );
 
   it.each(GUARDED_SELECTORS)(
-    'host-tokens.css sets every variable %s reads',
+    'host-tokens.css covers every variable %s reads',
     (selector) => {
       const read = [...readVars(selector)];
       expect(read.length).toBeGreaterThan(0);
       read
-        .filter((name) => !UI_KIT_DEFAULTS.has(name))
-        .forEach((name) => {
-          expect(namesOf(darkBlock), `${selector} reads ${name}`).toContain(
-            name,
-          );
-          if (!DARK_ONLY_LITERALS.includes(name))
-            expect(namesOf(lightBlock), `${selector} reads ${name}`).toContain(
-              name,
-            );
-        });
+        .filter((name) => !isUiKitDefault(name))
+        .forEach((name) =>
+          expect(setByUs, `${selector} reads ${name}`).toContain(name),
+        );
     },
   );
 });
 
-describe('light defaults outside host-tokens.css', () => {
-  it('tailwind preset fallbacks match the light block', () => {
-    const fallbacks = [
-      ...presetSource.matchAll(/var\((--[a-z0-9-]+),\s*(#[0-9a-f]+)\)/gi),
-    ];
-    expect(fallbacks.length).toBeGreaterThan(15);
-    fallbacks.forEach(([, name, literal]) => {
-      const expected =
-        fallbackOf(lightBlock, name!) ??
-        lightBlock.find((declaration) => declaration.name === name)?.value;
-      expect(literal!.toLowerCase(), name).toBe(expected?.toLowerCase());
-    });
-  });
-
-  it('layout.css body colour falls back to the light text colour', () => {
+describe('layout.css', () => {
+  it('body colour falls back to the light text colour', () => {
     expect(layoutCss).toMatch(
       new RegExp(
         `color:\\s*var\\(--text-primary,\\s*${fallbackOf(lightBlock, '--text-primary')}\\)`,

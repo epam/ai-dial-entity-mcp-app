@@ -131,39 +131,48 @@ on `<html>`, applies the host's style variables and font CSS, and sets
 `--mcp-safe-area-*` variables. Host `--shadow-*` variables are not applied:
 MCP sends full `box-shadow` values under names ui-kit reads as shadow colours.
 
-`host-tokens.css` then maps the MCP Apps standard variables onto the ui-kit
-variables the components use, for example:
+`host-tokens.css` maps the MCP standard variables onto the ui-kit 2.0
+variables. **Tokens only:** every host, AI DIAL included, styles the app
+through the variables it sends; there is no host detection.
 
-- `--color-background-primary|secondary|tertiary` → `--bg-layer-*`,
-  `--bg-layer-raised` (skeletons) and the neutral button hover/active colours
-- `--color-text-*` → `--text-*`, `--color-border-*` → `--stroke-*`
-  (`--color-border-primary` also → `--stroke-default`)
-- status colours (`danger`, `warning`, `info`, `success`) → the matching
-  `--bg-*`, `--text-*` and `--stroke-*` variables
-- `--color-text-primary` → `--controls-text-neutral`, `--color-background-disabled`
-  / `--color-text-disabled` → `--controls-bg-disable` /
-  `--controls-text-primary-disable`
-- `--color-ring-primary` (else `--color-text-primary`) → `--stroke-focus`,
-  `--font-sans` → `--theme-font`
+- **Theme blocks** (`:root`, `:root[data-theme='dark']`, and the dark block
+  repeated for theme-less hosts that prefer dark) are the exact inverse of AI
+  DIAL's own DIAL → MCP mapping, so DIAL's values come back unchanged (a
+  round-trip test guards this). Each line is `--ui-kit: var(--mcp, <literal>)`;
+  light literals are ui-kit's own fallbacks, dark literals are approximate.
+- **Derived variables** (`html` block) have no colour fallback, so without
+  host tokens ui-kit's defaults apply:
+  - primary button: solid `--color-background-inverse` with
+    `--color-text-inverse` label; hover/active mix the two;
+  - neutral button ("Edit"): fill `--color-background-tertiary`, border
+    `--color-border-secondary`, label `--color-text-primary`;
+  - button glow: `--color-text-primary` at 10% / 4%;
+  - radii: `--radius-control` ← `--border-radius-md`, small ←
+    `--border-radius-sm`, `--mcp-card-radius` ← `--border-radius-xl`.
+- **Badge tones:** `.mcp-tone-success|warning|danger` re-point a filled
+  `Badge`'s colour at the host's semantic tone. Put the class on the badge,
+  never on a container — the `Avatar` shares the same palette.
 
-Every mapping has the form `--ui-kit: var(--mcp, <literal>)`, so host
-variables always win and the literal is only a default:
+### Host token contract
 
-- `:root` holds light defaults. It also applies when the host sends no theme
-  at all, so theme-less hosts get a coherent light card.
-- `:root[data-theme='dark']` holds dark defaults.
-- The dark block is repeated under `@media (prefers-color-scheme: dark)` for
-  `:root:not([data-theme])`, so a theme-less host follows the OS preference.
+What a host sends to style the skill card:
 
-Accent tokens (`--text-accent-primary`, `--bg-accent-primary-alpha`,
-`--stroke-accent-primary`) have no MCP variable and are plain literals per
-theme. The primary button keeps ui-kit's colours in light; the dark block sets
-lighter `--controls-bg-accent-primary*` values. A test reads the installed
-ui-kit stylesheet and fails if the buttons or skeleton the app renders read a
-variable this file does not set.
-
-The Tailwind preset exposes the same ui-kit variables as utilities, so
-app-local markup follows the host theme without hardcoded colours.
+| MCP variable                                                           | Drives                                                    |
+| ---------------------------------------------------------------------- | --------------------------------------------------------- |
+| `--color-background-primary`                                           | card, skeleton                                            |
+| `--color-background-tertiary`                                          | "Edit" fill; skeleton bars                                |
+| `--color-background-inverse` / `--color-text-inverse`                  | "Try it" fill / label                                     |
+| `--color-background-success`, `-warning`, `-danger` / `--color-text-*` | "% passed" badge by tone; ✓ / ✗ icons; notices            |
+| `--color-text-primary`                                                 | title, description, list items, "Edit" label, button glow |
+| `--color-text-secondary`                                               | hints under failed checks                                 |
+| `--color-text-info`                                                    | "SKILL" label                                             |
+| `--color-border-secondary`                                             | "Edit" border; quality-check block border                 |
+| `--color-ring-primary`                                                 | focus ring                                                |
+| `--font-sans` (+ `styles.css.fonts`)                                   | all text                                                  |
+| `--font-weight-*`, `--font-text-*`, `--font-heading-*`                 | type scale                                                |
+| `--border-radius-md` / `-sm`                                           | buttons / small buttons                                   |
+| `--border-radius-xl`                                                   | card and quality-check block                              |
+| `--border-width-regular`                                               | borders                                                   |
 
 ## Display modes
 

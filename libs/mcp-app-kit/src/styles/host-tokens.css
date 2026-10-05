@@ -1,143 +1,177 @@
 /*
- * Maps MCP Apps standard host variables onto @epam/ai-dial-ui-kit variables.
- * Every mapping is `--ui-kit: var(--mcp, <literal>)`: host variables always
- * win; the literal applies only when the host sends none.
+ * Maps MCP Apps standard host variables onto @epam/ai-dial-ui-kit 2.0
+ * variables. Tokens only: every host, AI DIAL included, styles the app solely
+ * through the variables it sends.
  *
- * - :root holds LIGHT literals. It also covers hosts that send no theme, so
- *   every ui-kit variable the app reads is always set and no utility falls
- *   back to a literal from another theme.
- * - :root[data-theme='dark'] holds DARK literals, repeated for theme-less
- *   hosts whose user prefers a dark colour scheme.
+ * Theme blocks (:root, dark, prefers-color-scheme dark) are the exact inverse
+ * of AI DIAL's D18 mapping, so DIAL's own values round-trip. Each line is
+ * `--ui-kit: var(--mcp, <literal>)`; light literals are ui-kit's own
+ * fallbacks, dark literals are approximate (used only when a host says
+ * "dark" and sends no colours).
  *
- * Accent tokens have no MCP variable, so they are plain literals per theme.
- * The primary button keeps ui-kit's colours in light; the dark block sets
- * lighter ones. Variables ui-kit reads with suitable fallbacks
- * (--controls-text-permanent, --controls-bg-disable-accent,
- * --controls-text-accent-disable, --stroke-focus-black) are left alone.
- * Host --shadow-* variables are never applied (see applyHostContext), so
- * ui-kit's shadow colours are not mapped.
+ * The html block derives the rest from MCP tokens without colour fallbacks:
+ * when a host sends nothing, those variables are invalid and ui-kit's own
+ * defaults apply (gradient primary, pill buttons, 20px card).
+ *
+ * Host --shadow-* variables are never applied (see applyHostContext).
  */
 :root {
-  --bg-layer-0: var(--color-background-primary, #ffffff);
-  --bg-layer-1: var(--color-background-primary, #ffffff);
-  --bg-layer-2: var(--color-background-secondary, #f3f4f6);
-  --bg-layer-3: var(--color-background-tertiary, #fcfcfc);
-  --bg-layer-4: var(--color-background-tertiary, #fcfcfc);
-  --bg-layer-raised: var(--color-background-secondary, #eef1f7);
-  --bg-success: var(--color-background-success, #e5f6f4);
-  --bg-warning: var(--color-background-warning, #fbf6e5);
-  --bg-error: var(--color-background-danger, #fbeaec);
-  --bg-info: var(--color-background-info, #e9f0fd);
-  --text-primary: var(--color-text-primary, #141a23);
-  --text-secondary: var(--color-text-secondary, #6c7380);
+  --bg-layer-raised: var(--color-background-primary, #fcfcfc);
+  --bg-layer-base: var(--color-background-secondary, #f5f7fa);
+  --bg-layer-sunken: var(--color-background-tertiary, #eef1f7);
+  --bg-control-inverted: var(--color-background-inverse, #57647a);
+  --bg-info: var(--color-background-info, #d6e2f9);
+  --bg-error: var(--color-background-danger, #f3d6d8);
+  --bg-success: var(--color-background-success, #d9f0f1);
+  --bg-warning: var(--color-background-warning, #faf0cf);
+  --bg-control-disable-primary: var(--color-background-disabled, #dce0e8);
+  --text-primary: var(--color-text-primary, #161b2d);
+  --text-secondary: var(--color-text-secondary, #57647a);
   --text-tertiary: var(--color-text-tertiary, #848e9c);
-  --text-success: var(--color-text-success, #1a7f5e);
-  --text-warning: var(--color-text-warning, #a15c07);
-  --text-error: var(--color-text-danger, #c22d2d);
-  --text-info: var(--color-text-info, #2764d9);
-  --stroke-primary: var(--color-border-primary, #c3c7cf);
-  --stroke-secondary: var(--color-border-secondary, #dde1e6);
-  --stroke-tertiary: var(--color-border-tertiary, #eceef1);
-  --stroke-default: var(--color-border-primary, #b2c2dd);
-  --stroke-success: var(--color-border-success, #1a7f5e);
-  --stroke-warning: var(--color-border-warning, #a15c07);
-  --stroke-error: var(--color-border-danger, #c22d2d);
-  --stroke-info: var(--color-border-info, #2764d9);
-  --stroke-focus: var(--color-ring-primary, var(--color-text-primary, #2764d9));
-  --controls-text-neutral: var(--color-text-primary, #161b2d);
-  --controls-bg-neutral-hover: var(--color-background-secondary, #d1dbea);
-  --controls-bg-neutral-active: var(--color-background-tertiary, #9fa6bd);
-  --controls-bg-disable: var(--color-background-disabled, #eceef1);
-  --controls-text-primary-disable: var(--color-text-disabled, #a3a9b3);
+  --text-control-permanent: var(--color-text-inverse, #fcfcfc);
+  --text-info: var(--color-text-info, #1d4ed8);
+  --text-error: var(--color-text-danger, #ae2f2f);
+  --text-success: var(--color-text-success, #007274);
+  --text-warning: var(--color-text-warning, #7f6300);
+  --text-control-disable-primary: var(--color-text-disabled, #848e9c);
+  --stroke-primary: var(--color-border-primary, #57647a);
+  --stroke-secondary: var(--color-border-secondary, #d1dbea);
+  --stroke-tertiary: var(--color-border-tertiary, #e0e6f0);
+  --stroke-info: var(--color-border-info, #1d4ed8);
+  --stroke-error: var(--color-border-danger, #ae2f2f);
+  --stroke-success: var(--color-border-success, #007274);
+  --stroke-warning: var(--color-border-warning, #eec840);
+  --stroke-control-disable-primary: var(--color-border-disabled, #848e9c);
+  --stroke-focus-black: var(--color-ring-primary, #161b2d);
+  --stroke-accent-focus: var(--color-ring-secondary, #6785fb);
   --theme-font: var(--font-sans, Inter, system-ui, sans-serif);
-  --text-accent-primary: #2764d9;
-  --bg-accent-primary-alpha: #2764d91a;
-  --stroke-accent-primary: #2764d9;
+  --theme-font-mono: var(--font-mono, 'Fira Code', ui-monospace, monospace);
 }
 
 :root[data-theme='dark'] {
-  --bg-layer-0: var(--color-background-primary, #000000);
-  --bg-layer-1: var(--color-background-primary, #0c101d);
-  --bg-layer-2: var(--color-background-secondary, #161b2d);
-  --bg-layer-3: var(--color-background-tertiary, #1d2439);
-  --bg-layer-4: var(--color-background-tertiary, #242c42);
-  --bg-layer-raised: var(--color-background-secondary, #242c42);
+  --bg-layer-raised: var(--color-background-primary, #161b2d);
+  --bg-layer-base: var(--color-background-secondary, #0c101d);
+  --bg-layer-sunken: var(--color-background-tertiary, #242c42);
+  --bg-control-inverted: var(--color-background-inverse, #9fa6bd);
+  --bg-info: var(--color-background-info, #1c2c47);
+  --bg-error: var(--color-background-danger, #402027);
   --bg-success: var(--color-background-success, #1d3841);
   --bg-warning: var(--color-background-warning, #3f3d25);
-  --bg-error: var(--color-background-danger, #402027);
-  --bg-info: var(--color-background-info, #1c2c47);
+  --bg-control-disable-primary: var(--color-background-disabled, #242c42);
   --text-primary: var(--color-text-primary, #eef1f7);
   --text-secondary: var(--color-text-secondary, #9fa6bd);
   --text-tertiary: var(--color-text-tertiary, #7c8293);
+  --text-control-permanent: var(--color-text-inverse, #fcfcfc);
+  --text-info: var(--color-text-info, #7da4ff);
+  --text-error: var(--color-text-danger, #f76464);
   --text-success: var(--color-text-success, #37babc);
   --text-warning: var(--color-text-warning, #eec840);
-  --text-error: var(--color-text-danger, #f76464);
-  --text-info: var(--color-text-info, #7da4ff);
+  --text-control-disable-primary: var(--color-text-disabled, #7c8293);
   --stroke-primary: var(--color-border-primary, #696e7c);
-  --stroke-secondary: var(--color-border-secondary, #242c42);
-  --stroke-tertiary: var(--color-border-tertiary, #0c101d);
-  --stroke-default: var(--color-border-primary, #696e7c);
+  --stroke-secondary: var(--color-border-secondary, #333942);
+  --stroke-tertiary: var(--color-border-tertiary, #242c42);
+  --stroke-info: var(--color-border-info, #7da4ff);
+  --stroke-error: var(--color-border-danger, #f76464);
   --stroke-success: var(--color-border-success, #37babc);
   --stroke-warning: var(--color-border-warning, #eec840);
-  --stroke-error: var(--color-border-danger, #f76464);
-  --stroke-info: var(--color-border-info, #7da4ff);
-  --stroke-focus: var(--color-ring-primary, var(--color-text-primary, #eef1f7));
-  --controls-text-neutral: var(--color-text-primary, #fcfcfc);
-  --controls-bg-neutral-hover: var(--color-background-secondary, #242c42);
-  --controls-bg-neutral-active: var(--color-background-tertiary, #575f73);
-  --controls-bg-disable: var(--color-background-disabled, #242c42);
-  --controls-text-primary-disable: var(--color-text-disabled, #7c8293);
+  --stroke-control-disable-primary: var(--color-border-disabled, #696e7c);
+  --stroke-focus-black: var(--color-ring-primary, #eef1f7);
+  --stroke-accent-focus: var(--color-ring-secondary, #6785fb);
   --theme-font: var(--font-sans, Inter, system-ui, sans-serif);
-  --text-accent-primary: #7da4ff;
-  --bg-accent-primary-alpha: #7da4ff26;
-  --stroke-accent-primary: #7da4ff;
-  --controls-bg-accent-primary: #3664e2;
-  --controls-bg-accent-primary-hover: #2656d9;
-  --controls-bg-accent-primary-active: #124ace;
+  --theme-font-mono: var(--font-mono, 'Fira Code', ui-monospace, monospace);
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme]) {
-    --bg-layer-0: var(--color-background-primary, #000000);
-    --bg-layer-1: var(--color-background-primary, #0c101d);
-    --bg-layer-2: var(--color-background-secondary, #161b2d);
-    --bg-layer-3: var(--color-background-tertiary, #1d2439);
-    --bg-layer-4: var(--color-background-tertiary, #242c42);
-    --bg-layer-raised: var(--color-background-secondary, #242c42);
+    --bg-layer-raised: var(--color-background-primary, #161b2d);
+    --bg-layer-base: var(--color-background-secondary, #0c101d);
+    --bg-layer-sunken: var(--color-background-tertiary, #242c42);
+    --bg-control-inverted: var(--color-background-inverse, #9fa6bd);
+    --bg-info: var(--color-background-info, #1c2c47);
+    --bg-error: var(--color-background-danger, #402027);
     --bg-success: var(--color-background-success, #1d3841);
     --bg-warning: var(--color-background-warning, #3f3d25);
-    --bg-error: var(--color-background-danger, #402027);
-    --bg-info: var(--color-background-info, #1c2c47);
+    --bg-control-disable-primary: var(--color-background-disabled, #242c42);
     --text-primary: var(--color-text-primary, #eef1f7);
     --text-secondary: var(--color-text-secondary, #9fa6bd);
     --text-tertiary: var(--color-text-tertiary, #7c8293);
+    --text-control-permanent: var(--color-text-inverse, #fcfcfc);
+    --text-info: var(--color-text-info, #7da4ff);
+    --text-error: var(--color-text-danger, #f76464);
     --text-success: var(--color-text-success, #37babc);
     --text-warning: var(--color-text-warning, #eec840);
-    --text-error: var(--color-text-danger, #f76464);
-    --text-info: var(--color-text-info, #7da4ff);
+    --text-control-disable-primary: var(--color-text-disabled, #7c8293);
     --stroke-primary: var(--color-border-primary, #696e7c);
-    --stroke-secondary: var(--color-border-secondary, #242c42);
-    --stroke-tertiary: var(--color-border-tertiary, #0c101d);
-    --stroke-default: var(--color-border-primary, #696e7c);
+    --stroke-secondary: var(--color-border-secondary, #333942);
+    --stroke-tertiary: var(--color-border-tertiary, #242c42);
+    --stroke-info: var(--color-border-info, #7da4ff);
+    --stroke-error: var(--color-border-danger, #f76464);
     --stroke-success: var(--color-border-success, #37babc);
     --stroke-warning: var(--color-border-warning, #eec840);
-    --stroke-error: var(--color-border-danger, #f76464);
-    --stroke-info: var(--color-border-info, #7da4ff);
-    --stroke-focus: var(
-      --color-ring-primary,
-      var(--color-text-primary, #eef1f7)
-    );
-    --controls-text-neutral: var(--color-text-primary, #fcfcfc);
-    --controls-bg-neutral-hover: var(--color-background-secondary, #242c42);
-    --controls-bg-neutral-active: var(--color-background-tertiary, #575f73);
-    --controls-bg-disable: var(--color-background-disabled, #242c42);
-    --controls-text-primary-disable: var(--color-text-disabled, #7c8293);
+    --stroke-control-disable-primary: var(--color-border-disabled, #696e7c);
+    --stroke-focus-black: var(--color-ring-primary, #eef1f7);
+    --stroke-accent-focus: var(--color-ring-secondary, #6785fb);
     --theme-font: var(--font-sans, Inter, system-ui, sans-serif);
-    --text-accent-primary: #7da4ff;
-    --bg-accent-primary-alpha: #7da4ff26;
-    --stroke-accent-primary: #7da4ff;
-    --controls-bg-accent-primary: #3664e2;
-    --controls-bg-accent-primary-hover: #2656d9;
-    --controls-bg-accent-primary-active: #124ace;
+    --theme-font-mono: var(--font-mono, 'Fira Code', ui-monospace, monospace);
   }
+}
+
+/* A separate selector keeps these out of the theme blocks; nothing else sets them. */
+html {
+  --radius-control: var(--border-radius-md, 9999px);
+  --radius-control-small: var(--border-radius-sm, 9999px);
+  --mcp-card-radius: var(--border-radius-xl, 20px);
+  --bg-gradient-1: var(--color-background-inverse);
+  --bg-gradient-2: var(--color-background-inverse);
+  --bg-gradient-1-hover: color-mix(
+    in srgb,
+    var(--color-background-inverse) 88%,
+    var(--color-text-inverse, #fff)
+  );
+  --bg-gradient-2-hover: color-mix(
+    in srgb,
+    var(--color-background-inverse) 88%,
+    var(--color-text-inverse, #fff)
+  );
+  --bg-gradient-1-active: color-mix(
+    in srgb,
+    var(--color-background-inverse) 80%,
+    var(--color-text-inverse, #fff)
+  );
+  --bg-gradient-2-active: color-mix(
+    in srgb,
+    var(--color-background-inverse) 80%,
+    var(--color-text-inverse, #fff)
+  );
+  --bg-control-accent-alpha: var(--color-background-tertiary);
+  --bg-control-accent-alpha-hover: color-mix(
+    in srgb,
+    var(--color-background-tertiary) 92%,
+    var(--color-text-primary, #000)
+  );
+  --bg-control-accent-alpha-active: color-mix(
+    in srgb,
+    var(--color-background-tertiary) 84%,
+    var(--color-text-primary, #000)
+  );
+  --stroke-accent-alpha: var(--color-border-secondary);
+  --text-accent: var(--color-text-primary);
+  --shadow-xs-1: color-mix(in srgb, var(--color-text-primary) 10%, transparent);
+  --shadow-xs-2: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
+  --shadow-md: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
+}
+
+.mcp-tone-success {
+  --bg-visual-green-2: var(--color-background-success);
+  --text-visual-green-1: var(--color-text-success);
+}
+
+.mcp-tone-warning {
+  --bg-visual-brown: var(--color-background-warning);
+  --text-visual-brown-2: var(--color-text-warning);
+}
+
+.mcp-tone-danger {
+  --bg-visual-red: var(--color-background-danger);
+  --text-visual-red: var(--color-text-danger);
 }
