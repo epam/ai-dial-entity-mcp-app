@@ -1,0 +1,32 @@
+name: Release Workflow
+
+on:
+  push:
+    branches: [development, release-*]
+  workflow_dispatch:
+    inputs:
+      promote:
+        type: boolean
+        default: false
+        description: Promote release to stable (for release-* branches only)
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  packages: write
+  security-events: write
+  id-token: write
+
+jobs:
+  release:
+    uses: epam/ai-dial-ci/.github/workflows/node_release.yml@4.12.0
+    with:
+      promote: ${{ github.event_name == 'workflow_dispatch' && inputs.promote }}
+      node-version: 24
+      draft-stable-releases: true
+      # The kit and the app are private; the deliverable is the Docker image.
+      publish-enabled: false
+    secrets: inherit
