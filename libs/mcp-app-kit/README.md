@@ -21,6 +21,7 @@ map — there is no build step. Because of that, Vite must run with
 | `@epam/ai-dial-mcp-app-kit/vite`                                       | `mcpAppVite()` plugin list, `mcpAppEndpoint()`, `MCP_APP_PATH` (`/_mcp-app/index.html`).                                                    |
 | `@epam/ai-dial-mcp-app-kit/tailwind`                                   | Tailwind preset exposing ui-kit colour tokens as utilities (`bg-layer-2`, `text-secondary`, `border-primary`, …).                           |
 | `@epam/ai-dial-mcp-app-kit/styles/host-tokens.css`                     | Maps MCP host variables onto ui-kit variables.                                                                                              |
+| `@epam/ai-dial-mcp-app-kit/styles/ui-kit-overrides.css`                | Re-declares ui-kit's `.dial-*-text` typography classes with MCP host type tokens.                                                           |
 | `@epam/ai-dial-mcp-app-kit/styles/layout.css`                          | Base layout: transparent page, content-sized height, safe-area padding on `#root`.                                                          |
 | `dev-host/` (run with `npm run dev-host -w @epam/ai-dial-mcp-app-kit`) | Local host harness that embeds an app in an iframe and plays the host side of the protocol.                                                 |
 
@@ -31,6 +32,7 @@ map — there is no build step. Because of that, Vite must run with
 ```tsx
 import '@epam/ai-dial-ui-kit/styles.css';
 import '@epam/ai-dial-mcp-app-kit/styles/host-tokens.css';
+import '@epam/ai-dial-mcp-app-kit/styles/ui-kit-overrides.css';
 import '@epam/ai-dial-mcp-app-kit/styles/layout.css';
 import './styles/index.css';
 import { createMcpApp } from '@epam/ai-dial-mcp-app-kit';
@@ -52,7 +54,9 @@ createRoot(document.getElementById('root')!).render(
 );
 ```
 
-Import `host-tokens.css` after the ui-kit stylesheet so the mapping wins.
+Import order matters: ui-kit `styles.css` → `host-tokens.css` →
+`ui-kit-overrides.css` → `layout.css` → the app's own CSS. The kit sheets are
+unlayered and load after ui-kit's, so they win by source order.
 
 `vite.config.ts`:
 

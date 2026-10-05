@@ -10,6 +10,7 @@
     "./vite": "./src/vite/index.ts",
     "./tailwind": "./src/tailwind/preset.js",
     "./styles/host-tokens.css": "./src/styles/host-tokens.css",
+    "./styles/ui-kit-overrides.css": "./src/styles/ui-kit-overrides.css",
     "./styles/layout.css": "./src/styles/layout.css"
   },
   "scripts": {

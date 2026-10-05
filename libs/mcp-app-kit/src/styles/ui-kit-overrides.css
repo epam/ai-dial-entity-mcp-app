@@ -1,0 +1,148 @@
+/*
+ * Re-declares ui-kit's hard-coded `.dial-*-text` classes with MCP host
+ * typography tokens (DIAL D18 correspondence). Unlayered and imported after
+ * ui-kit's stylesheet, so it wins by source order. Every fallback is ui-kit's
+ * own literal: without host tokens nothing changes. Sizes with no matching MCP
+ * token keep ui-kit's values and map only the weight: caption (10/12), italic
+ * display (18/22), and the 24px line-height of `.dial-small-paragraph-text`
+ * and `.dial-small-paragraph-semi-text`.
+ */
+.dial-display1-text {
+  font-size: var(--font-heading-2xl-size, 32px);
+  line-height: var(--font-heading-2xl-line-height, 48px);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.dial-display2-text {
+  font-size: var(--font-heading-xl-size, 28px);
+  line-height: var(--font-heading-xl-line-height, 40px);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.dial-display3-text {
+  font-size: var(--font-heading-lg-size, 22px);
+  line-height: var(--font-heading-lg-line-height, 32px);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.dial-h1-text {
+  font-size: var(--font-heading-md-size, 20px);
+  line-height: var(--font-heading-md-line-height, 28px);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.dial-h2-text {
+  font-size: var(--font-heading-sm-size, 18px);
+  line-height: var(--font-heading-sm-line-height, 26px);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.dial-h3-text {
+  font-size: var(--font-heading-xs-size, 16px);
+  line-height: var(--font-heading-xs-line-height, 24px);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.dial-body-text {
+  font-size: var(--font-text-md-size, 16px);
+  line-height: var(--font-text-md-line-height, 24px);
+  font-weight: var(--font-weight-normal, 400);
+}
+
+.dial-body-semi-text {
+  font-size: var(--font-text-md-size, 16px);
+  line-height: var(--font-text-md-line-height, 24px);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.dial-body-paragraph-text {
+  font-size: var(--font-text-lg-size, 16px);
+  line-height: var(--font-text-lg-line-height, 26px);
+  font-weight: var(--font-weight-normal, 400);
+}
+
+.dial-body-paragraph-semi-text {
+  font-size: var(--font-text-lg-size, 16px);
+  line-height: var(--font-text-lg-line-height, 26px);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.dial-small-text {
+  font-size: var(--font-text-sm-size, 14px);
+  line-height: var(--font-text-sm-line-height, 20px);
+  font-weight: var(--font-weight-normal, 400);
+}
+
+.dial-small-italic-text {
+  font-size: var(--font-text-sm-size, 14px);
+  line-height: var(--font-text-sm-line-height, 20px);
+  font-weight: var(--font-weight-normal, 400);
+}
+
+.dial-code-text {
+  font-size: var(--font-text-sm-size, 14px);
+  line-height: var(--font-text-sm-line-height, 20px);
+  font-weight: var(--font-weight-normal, 400);
+}
+
+.dial-small-semi-text {
+  font-size: var(--font-text-sm-size, 14px);
+  line-height: var(--font-text-sm-line-height, 20px);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.dial-small-paragraph-text {
+  font-size: var(--font-text-sm-size, 14px);
+  font-weight: var(--font-weight-normal, 400);
+}
+
+.dial-small-paragraph-semi-text {
+  font-size: var(--font-text-sm-size, 14px);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.dial-tiny-text {
+  font-size: var(--font-text-xs-size, 12px);
+  line-height: var(--font-text-xs-line-height, 16px);
+  font-weight: var(--font-weight-normal, 400);
+}
+
+.dial-tiny-italic-text {
+  font-size: var(--font-text-xs-size, 12px);
+  line-height: var(--font-text-xs-line-height, 16px);
+  font-weight: var(--font-weight-normal, 400);
+}
+
+.dial-tiny-lead-text {
+  font-size: var(--font-text-xs-size, 12px);
+  line-height: var(--font-text-xs-line-height, 16px);
+  font-weight: var(--font-weight-normal, 400);
+}
+
+.dial-tiny-lead-semi-text {
+  font-size: var(--font-text-xs-size, 12px);
+  line-height: var(--font-text-xs-line-height, 16px);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.dial-tiny-semi-text {
+  font-size: var(--font-text-xs-size, 12px);
+  line-height: var(--font-text-xs-line-height, 16px);
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.dial-caption-text {
+  font-weight: var(--font-weight-normal, 400);
+}
+
+.dial-caption-lead-semi-text {
+  font-weight: var(--font-weight-semibold, 600);
+}
+
+.dial-caption-italic-text {
+  font-weight: var(--font-weight-normal, 400);
+}
+
+.dial-italic-text {
+  font-weight: var(--font-weight-normal, 400);
+}

@@ -1,5 +1,6 @@
 import '@epam/ai-dial-ui-kit/styles.css';
 import '@epam/ai-dial-mcp-app-kit/styles/host-tokens.css';
+import '@epam/ai-dial-mcp-app-kit/styles/ui-kit-overrides.css';
 import '@epam/ai-dial-mcp-app-kit/styles/layout.css';
 import './styles/index.css';
 import { createMcpApp } from '@epam/ai-dial-mcp-app-kit';
