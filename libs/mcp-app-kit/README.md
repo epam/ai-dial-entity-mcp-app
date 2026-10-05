@@ -11,18 +11,27 @@ The package is private and consumed as TypeScript source through its `exports`
 map — there is no build step. Because of that, Vite must run with
 `--configLoader runner` in any workspace whose config imports the kit.
 
+The kit is layered: the framework-free core imports nothing from React, Vite
+or the testing layer, and the React layer imports nothing from Vite. ESLint
+enforces this.
+
+`@epam/ai-dial-ui-kit` is an optional peer dependency
+(`>=0.15.0-dev.36 <0.16.0`): only an app that uses ui-kit needs it.
+`host-tokens.css` and `ui-kit-overrides.css` target the ui-kit 2.0 variables
+and classes.
+
 ## Entry points
 
 | Import                                                                 | Contents                                                                                                                                                                                                                    |
 | ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@epam/ai-dial-mcp-app-kit`                                            | Framework-free core: `createMcpApp`, `applyHostContext`, `getStructuredContent`, `ParseResult`, `McpAppPhase`, `McpAppError`, host helpers.                                                                                 |
+| `@epam/ai-dial-mcp-app-kit`                                            | Framework-free core: `createMcpApp`, `applyHostContext`, `getStructuredContent`, `getToolError`, `ParseResult`, `McpAppPhase`, `McpAppError`, host helpers.                                                                 |
 | `@epam/ai-dial-mcp-app-kit/react`                                      | `McpAppProvider`, `useMcpApp`, `useHostContext`, `useOpenLink`, `useToolResult`, `ToolResultStatus`.                                                                                                                        |
 | `@epam/ai-dial-mcp-app-kit/testing`                                    | `createFakeMcpApp` — an in-memory store for component tests; `MCP_STYLE_VARIABLE_KEYS` — the 76 standard style keys.                                                                                                        |
 | `@epam/ai-dial-mcp-app-kit/vite`                                       | `mcpAppVite()` plugin list, `mcpAppEndpoint()`, `MCP_APP_PATH` (`/_mcp-app/index.html`).                                                                                                                                    |
 | `@epam/ai-dial-mcp-app-kit/tailwind`                                   | Tailwind preset: ui-kit 2.0 colour utilities (`bg-layer-raised`, `text-secondary`, `border-secondary`, …) and MCP host typography (`font-*`, `text-xs…lg`, `text-heading-*`), radius (`rounded-*`) and border-width tokens. |
 | `@epam/ai-dial-mcp-app-kit/styles/host-tokens.css`                     | Maps MCP host variables onto ui-kit variables.                                                                                                                                                                              |
 | `@epam/ai-dial-mcp-app-kit/styles/ui-kit-overrides.css`                | Re-declares ui-kit's `.dial-*-text` typography classes with MCP host type tokens.                                                                                                                                           |
-| `@epam/ai-dial-mcp-app-kit/styles/layout.css`                          | Base layout: transparent page, content-sized height, safe-area padding on `#root`.                                                                                                                                          |
+| `@epam/ai-dial-mcp-app-kit/styles/layout.css`                          | Base layout: transparent page, safe-area padding on `#root`, `[hidden]` forced to `display: none`, container `min-height` in fullscreen/pip.                                                                                |
 | `dev-host/` (run with `npm run dev-host -w @epam/ai-dial-mcp-app-kit`) | Local host harness that embeds an app in an iframe and plays the host side of the protocol.                                                                                                                                 |
 
 ## Minimal usage
@@ -80,7 +89,8 @@ production image uses.
 store. `start()` connects to the host (by default over `postMessage` to
 `window.parent`; pass `transport` to override). The store tracks a snapshot —
 `phase` (`connecting`, `tool-pending`, `ready`, `error`, `torndown`),
-`toolInput`, `toolResult`, `hostContext`, `error` — and exposes `openLink`,
+`toolInput`, `toolResult`, `hostContext`, `error` (a tool result with
+`isError: true` moves `phase` to `error`) — and exposes `openLink`,
 `callTool`, `requestDisplayMode` and `sendMessage`. Every action rejects with
 `McpAppError` if `start()` has not been called, and with `McpAppError` (carrying
 the host's message) when the host request fails — for example the host has no
@@ -101,12 +111,17 @@ type ParseResult<T> = { ok: true; data: T } | { ok: false; reason: string };
 The app supplies a parser `(raw: unknown) => ParseResult<T>` that validates the
 tool's structured content. `useToolResult(parse)` returns a `ToolResultState<T>`:
 
-| `status`                   | When                                                 | Extra fields     |
-| -------------------------- | ---------------------------------------------------- | ---------------- |
-| `ToolResultStatus.Loading` | Connecting, or the tool is still running.            | —                |
-| `ToolResultStatus.Ready`   | A result arrived and `parse` returned `ok: true`.    | `data: T`        |
-| `ToolResultStatus.Invalid` | A result arrived and `parse` returned `ok: false`.   | `error: string`  |
-| `ToolResultStatus.Error`   | The handshake failed or the host cancelled the tool. | `error?: string` |
+| `status`                   | When                                                                                  | Extra fields     |
+| -------------------------- | ------------------------------------------------------------------------------------- | ---------------- |
+| `ToolResultStatus.Loading` | Connecting, the tool is still running, or the app was torn down.                      | —                |
+| `ToolResultStatus.Ready`   | A result arrived and `parse` returned `ok: true`.                                     | `data: T`        |
+| `ToolResultStatus.Invalid` | A result arrived and `parse` returned `ok: false`.                                    | `error: string`  |
+| `ToolResultStatus.Error`   | The handshake failed, the host cancelled the tool, or the result has `isError: true`. | `error?: string` |
+
+A result flagged `isError: true` is never parsed. Its message (`error`) is the
+first text content block, else `"Tool failed"`, and the snapshot keeps the
+`toolResult`. The core exports the same check as `getToolError(result)`, which
+returns that message, or `undefined` for a successful result.
 
 Before parsing, the raw result goes through `getStructuredContent`, which
 accepts `structuredContent`, `structured_content`, a nested `result` wrapper,
@@ -191,7 +206,7 @@ of the host container in `fullscreen` and `pip`.
 
 `npm run dev` in `apps/skill-card` starts the app on port 4300 and the harness
 on port 4301 together. To run the harness for another app, start the app's
-Vite server and run:
+Vite server and run, from the app directory (e.g. `apps/skill-card`):
 
 ```sh
 MCP_APP_URL=http://localhost:4300/_mcp-app/index.html \

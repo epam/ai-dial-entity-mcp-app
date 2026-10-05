@@ -30,7 +30,10 @@ notifications, `ui/open-link`, host-context changes).
 - The kit never imports from `apps/`.
 - App code never imports `@modelcontextprotocol/*`, never touches
   `window.parent` or `postMessage`. Use kit APIs (`createMcpApp`,
-  `useToolResult`, `useOpenLink`, …). Lint enforces this (`eslint.config.mjs`).
+  `useToolResult`, `useOpenLink`, …). Lint (`eslint.config.mjs`) bans SDK
+  imports in the app, `window.parent` / `postMessage`, and the bare globals
+  `fetch`, `XMLHttpRequest`, `WebSocket`, `EventSource`, `top` and `opener` in
+  `apps/*/src`; it also enforces the kit layering.
 - The app makes no network calls. Anything server-side goes through host tool calls.
 - The build must stay a single file. Never relax
   `apps/skill-card/scripts/check-single-file.mjs`.
@@ -45,7 +48,8 @@ notifications, `ui/open-link`, host-context changes).
 - Kit API changes: update `libs/mcp-app-kit/README.md` in the same change.
 - UI: use `@epam/ai-dial-ui-kit` **2.0** components (`PrimaryButton`,
   `NeutralButton`, `CardShell`, `Avatar`, `Accordion`, `Badge`,
-  `Notification`; not the 1.0 `Dial*` ones) and `@tabler/icons-react` with
+  `Notification`; not the 1.0 `Dial*` ones; `Skeleton` has no 2.0 version, so
+  the unprefixed one is used) and `@tabler/icons-react` with
   `stroke={DIAL_KIT_ICON_STROKE}`. Local markup uses kit-preset classes. No
   hardcoded colours, no host-specific code: hosts style the app only through
   MCP tokens.
@@ -63,4 +67,4 @@ read the relevant `.claude/rules/*.md` file before editing matching files.
 
 ## Review
 
-`agents/code-reviewer.md` is the review rubric (`/code-review` in Claude Code).
+`agents/code-reviewer.md` is the review rubric (`/review-rubric` in Claude Code).

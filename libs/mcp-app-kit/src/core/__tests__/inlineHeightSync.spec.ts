@@ -34,7 +34,7 @@ describe('startInlineHeightSync', () => {
     expect(root.style.height).toBe('');
   });
 
-  it('runs with the setup ResizeObserver stub after globals are restored', () => {
+  it('shared test setup re-stubs ResizeObserver after globals are restored', () => {
     expect(vi.isMockFunction(globalThis.ResizeObserver)).toBe(true);
   });
 });

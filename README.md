@@ -26,7 +26,9 @@ Repository layout (npm workspaces):
 2. The host renders that HTML in a sandboxed iframe. The app runs the MCP Apps
    handshake (`ui/initialize`) and applies the host's theme and layout.
 3. The host sends the tool result; `parseSkillCardPayload` validates it and the
-   card renders (a skeleton shows until then, a notice if the data is invalid).
+   card renders (a skeleton shows until then, a notice if the data is invalid,
+   and "Couldn't load skill" if the connection to the host or the tool failed,
+   the tool was cancelled, or it returned an `isError` result).
 4. **Try it** and **Edit** ask the host to open their URL via `ui/open-link`.
 
 The card follows the host's light/dark theme and colours: the card is built
@@ -45,15 +47,15 @@ contract there.
 
 Run from the repository root.
 
-| Command             | What it does                                                                                                                                          |
-| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `npm install`       | Installs all workspaces.                                                                                                                              |
-| `npm run dev`       | Starts the app dev server on http://localhost:4300 and the dev host harness on http://localhost:4301 (opens in the browser).                          |
-| `npm run build`     | Type-checks and builds the app, then checks that `apps/skill-card/dist/index.html` is the only output file, has no external assets and is under 1 MB. |
-| `npm test`          | Runs all unit tests once (Vitest).                                                                                                                    |
-| `npm run lint`      | Lints the repository (ESLint).                                                                                                                        |
-| `npm run typecheck` | Type-checks every workspace.                                                                                                                          |
-| `npm run verify`    | Runs lint, format check, typecheck, tests and build — the full pre-merge check.                                                                       |
+| Command             | What it does                                                                                                                                                                                                 |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `npm install`       | Installs all workspaces.                                                                                                                                                                                     |
+| `npm run dev`       | Starts the app dev server on http://localhost:4300 and the dev host harness on http://localhost:4301 (opens in the browser).                                                                                 |
+| `npm run build`     | Type-checks and builds the app, then runs `scripts/check-single-file.mjs`: `dist/index.html` must be the only output file, contain no `<script src>` or stylesheet `<link>` references, and be at most 1 MB. |
+| `npm test`          | Runs all unit tests once (Vitest).                                                                                                                                                                           |
+| `npm run lint`      | Lints the repository (ESLint).                                                                                                                                                                               |
+| `npm run typecheck` | Type-checks every workspace.                                                                                                                                                                                 |
+| `npm run verify`    | Runs lint, format check, typecheck, tests and build — the full pre-merge check.                                                                                                                              |
 
 `npm run format` applies Prettier formatting; `npm run format:check` only
 reports unformatted files.
@@ -61,24 +63,19 @@ reports unformatted files.
 ## Payload contract
 
 The tool must return the card data as its `structuredContent` (hosts that only
-forward a JSON text block are handled too). The shape is defined in
-[`apps/skill-card/src/contract.ts`](apps/skill-card/src/contract.ts):
+forward a JSON text block are handled too). It is parsed by
+`parseSkillCardPayload` in
+[`apps/skill-card/src/contract.ts`](apps/skill-card/src/contract.ts). The
+payload is an object with:
 
-```ts
-type SkillCardPayload = {
-  skill: {
-    name: string;
-    description: string;
-    initials?: string;
-    kindLabel?: string;
-  };
-  actions: { tryUrl?: string; editUrl?: string };
-  qualityCheck?: {
-    passedPercent: number;
-    items: { id: string; label: string; passed: boolean; hint?: string }[];
-  };
-};
-```
+- `skill` (required): `name` and `description` (strings), plus optional
+  `initials` and `kindLabel` (strings).
+- `actions` (may be missing): optional `tryUrl` and `editUrl` (strings).
+- `qualityCheck` (optional): `passedPercent` (number) and `items`, an array
+  of `{ id, label, passed, hint? }` — `id` and `label` strings, `passed` a
+  boolean, `hint` an optional string.
+
+Unknown fields are ignored.
 
 Validation rules applied by `parseSkillCardPayload`:
 
@@ -88,7 +85,8 @@ Validation rules applied by `parseSkillCardPayload`:
   up to two initials are derived from the words of the name (`?` if there are
   none). `kindLabel` defaults to `Skill`.
 - `tryUrl` / `editUrl` must be `http:` or `https:` URLs; any other value is
-  dropped and its button is not rendered.
+  dropped and its button is not rendered. Accepted URLs are normalised by URL
+  parsing (surrounding whitespace trimmed, scheme and host lower-cased).
 - `qualityCheck` is optional; when present, every item must have a non-empty
   `id` and `label` and a boolean `passed`, and `passedPercent` must be a number
   (it is rounded and clamped to 0–100). An invalid `qualityCheck` also shows

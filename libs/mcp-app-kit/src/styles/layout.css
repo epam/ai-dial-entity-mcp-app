@@ -1,6 +1,8 @@
 /*
- * Base layout for an embedded MCP App. The page sizes to its content and
- * keeps the host safe area clear. The extra :root raises specificity above
+ * Base layout for an embedded MCP App: transparent page, host safe-area
+ * padding on #root, and a container min-height in fullscreen/pip. Inline
+ * height sync is `startInlineHeightSync`, run by the provider. The extra
+ * :root raises specificity above
  * host-injected `#root { padding: 0 }` resets.
  */
 html,
