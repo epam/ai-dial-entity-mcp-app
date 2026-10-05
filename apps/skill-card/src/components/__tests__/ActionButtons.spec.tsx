@@ -29,6 +29,23 @@ describe('ActionButtons', () => {
     ]);
   });
 
+  it('renders "Try it" as the 2.0 primary button and "Edit" as the 2.0 neutral button', () => {
+    renderButtons({
+      tryUrl: 'https://a.test/try',
+      editUrl: 'https://a.test/edit',
+    });
+    expect(
+      screen
+        .getByRole('button', { name: /try it/i })
+        .closest('.dial-kit-primary-solid-button'),
+    ).not.toBeNull();
+    expect(
+      screen
+        .getByRole('button', { name: /edit/i })
+        .closest('.dial-kit-neutral-solid-button'),
+    ).not.toBeNull();
+  });
+
   it('hides a button whose url is missing', () => {
     renderButtons({ editUrl: 'https://a.test/edit' });
     expect(screen.queryByRole('button', { name: /try it/i })).toBeNull();

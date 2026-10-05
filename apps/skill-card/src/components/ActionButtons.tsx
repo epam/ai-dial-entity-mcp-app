@@ -1,4 +1,11 @@
-import { DialNeutralButton, DialPrimaryButton } from '@epam/ai-dial-ui-kit';
+import {
+  DIAL_KIT_ICON_STROKE,
+  NeutralButton,
+  Notification,
+  NotificationType,
+  NotificationVariant,
+  PrimaryButton,
+} from '@epam/ai-dial-ui-kit';
 import { useOpenLink } from '@epam/ai-dial-mcp-app-kit/react';
 import { IconPencil, IconPlayerPlay } from '@tabler/icons-react';
 import { type FC, memo, useCallback, useState } from 'react';
@@ -29,24 +36,38 @@ const ActionButtons: FC<ActionButtonsProps> = ({ actions }) => {
     <div className="mt-4 flex flex-col gap-2 pl-[60px]">
       <div className="flex flex-wrap gap-2">
         {tryUrl && (
-          <DialPrimaryButton
+          <PrimaryButton
             label="Try it"
-            iconBefore={<IconPlayerPlay size={16} aria-hidden="true" />}
+            iconBefore={
+              <IconPlayerPlay
+                size={20}
+                stroke={DIAL_KIT_ICON_STROKE}
+                aria-hidden="true"
+              />
+            }
             onClick={() => void handleOpen(tryUrl)}
           />
         )}
         {editUrl && (
-          <DialNeutralButton
+          <NeutralButton
             label="Edit"
-            iconBefore={<IconPencil size={16} aria-hidden="true" />}
+            iconBefore={
+              <IconPencil
+                size={20}
+                stroke={DIAL_KIT_ICON_STROKE}
+                aria-hidden="true"
+              />
+            }
             onClick={() => void handleOpen(editUrl)}
           />
         )}
       </div>
       {hasFailed && (
-        <p role="alert" className="text-xs text-error">
-          Couldn't open the link. Try again.
-        </p>
+        <Notification
+          type={NotificationType.SectionMessage}
+          variant={NotificationVariant.Error}
+          message="Couldn't open the link. Try again."
+        />
       )}
     </div>
   );
