@@ -14,8 +14,9 @@ Check, in order:
 3. **Host behaviour** — host context applied and cleaned up; new host quirks
    live in `libs/mcp-app-kit/src/core/host/` with a JSDoc naming the host;
    declared display modes are supported by the UI.
-4. **Theming** — no hardcoded colours; ui-kit components or kit preset classes;
-   works in light, dark and with no host variables.
+4. **Theming** — no hardcoded colours; ui-kit 2.0 components or kit preset
+   classes; no host-name checks or per-host CSS; no shared `rounded-*` scale
+   classes in app markup; works in light, dark and with no host variables.
 5. **Accessibility** — native controls, `aria-expanded`/`aria-controls` on
    disclosure toggles, accessible names,
    text alternatives for status icons.

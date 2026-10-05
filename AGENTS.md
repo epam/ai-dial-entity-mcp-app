@@ -43,9 +43,12 @@ notifications, `ui/open-link`, host-context changes).
 - Payload changes: update `src/contract.ts`, the fixtures and the README
   contract section in the same change.
 - Kit API changes: update `libs/mcp-app-kit/README.md` in the same change.
-- UI: prefer `@epam/ai-dial-ui-kit` `Dial*` components and `@tabler/icons-react`.
-  Local markup uses Tailwind classes from the kit preset (ui-kit tokens). No
-  hardcoded colours.
+- UI: use `@epam/ai-dial-ui-kit` **2.0** components (`PrimaryButton`,
+  `NeutralButton`, `CardShell`, `Avatar`, `Accordion`, `Badge`,
+  `Notification`; not the 1.0 `Dial*` ones) and `@tabler/icons-react` with
+  `stroke={DIAL_KIT_ICON_STROKE}`. Local markup uses kit-preset classes. No
+  hardcoded colours, no host-specific code: hosts style the app only through
+  MCP tokens.
 - Accessibility: native elements first (`button`, `ul`), `aria-expanded`/`aria-controls`
   on disclosure toggles, icons `aria-hidden` with text alternatives.
 - Use Context7 for library docs (ext-apps, Vite, Tailwind, React) instead of memory.

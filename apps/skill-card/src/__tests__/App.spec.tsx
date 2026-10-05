@@ -59,7 +59,7 @@ describe('App', () => {
         toolResult: { structuredContent: malformed },
       }),
     );
-    expect(screen.getByRole('status')).toHaveTextContent(
+    expect(screen.getByRole('alert')).toHaveTextContent(
       "Couldn't display this skill",
     );
     expect(warn).toHaveBeenCalledWith(
@@ -73,6 +73,6 @@ describe('App', () => {
     renderApp(
       createFakeMcpApp({ phase: McpAppPhase.Error, error: 'Tool cancelled' }),
     );
-    expect(screen.getByRole('status')).toHaveTextContent("Couldn't load skill");
+    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load skill");
   });
 });

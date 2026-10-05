@@ -29,10 +29,12 @@ Repository layout (npm workspaces):
    card renders (a skeleton shows until then, a notice if the data is invalid).
 4. **Try it** and **Edit** ask the host to open their URL via `ui/open-link`.
 
-The card follows the host's light/dark theme and colours: host CSS variables
-are mapped onto `@epam/ai-dial-ui-kit` variables, with light and dark defaults
-for hosts that send none. See
-[Host theming](libs/mcp-app-kit/README.md#host-theming) in the kit README.
+The card follows the host's light/dark theme and colours: the card is built
+from `@epam/ai-dial-ui-kit` 2.0 components, and the host's MCP style variables
+(colours, fonts, type scale, radii, border width) are mapped onto them; a host
+that sends none gets ui-kit's own look. See
+[Host theming](libs/mcp-app-kit/README.md#host-theming) and the host token
+contract there.
 
 ## Requirements
 

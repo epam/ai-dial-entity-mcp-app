@@ -1,11 +1,15 @@
 import {
+  Notification,
+  NotificationType,
+  NotificationVariant,
+} from '@epam/ai-dial-ui-kit';
+import {
   ToolResultStatus,
   useToolResult,
 } from '@epam/ai-dial-mcp-app-kit/react';
 import { type FC, memo, useEffect } from 'react';
 import SkillCard from './components/SkillCard';
 import SkillCardSkeleton from './components/SkillCardSkeleton';
-import StatusNotice from './components/StatusNotice';
 import { parseSkillCardPayload } from './contract';
 
 const App: FC = () => {
@@ -22,9 +26,21 @@ const App: FC = () => {
     case ToolResultStatus.Loading:
       return <SkillCardSkeleton />;
     case ToolResultStatus.Error:
-      return <StatusNotice message="Couldn't load skill" />;
+      return (
+        <Notification
+          type={NotificationType.SectionMessage}
+          variant={NotificationVariant.Error}
+          message="Couldn't load skill"
+        />
+      );
     case ToolResultStatus.Invalid:
-      return <StatusNotice message="Couldn't display this skill" />;
+      return (
+        <Notification
+          type={NotificationType.SectionMessage}
+          variant={NotificationVariant.Warning}
+          message="Couldn't display this skill"
+        />
+      );
     case ToolResultStatus.Ready:
       return <SkillCard data={result.data} />;
   }
