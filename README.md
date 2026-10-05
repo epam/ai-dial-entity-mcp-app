@@ -19,6 +19,21 @@ Repository layout (npm workspaces):
   Tailwind presets, test helpers and a local dev host. See
   [its README](libs/mcp-app-kit/README.md).
 
+## How it works
+
+1. The model calls the skill tool. The MCP server returns the card data as
+   `structuredContent` and declares a `ui://` resource whose HTML is this app.
+2. The host renders that HTML in a sandboxed iframe. The app runs the MCP Apps
+   handshake (`ui/initialize`) and applies the host's theme and layout.
+3. The host sends the tool result; `parseSkillCardPayload` validates it and the
+   card renders (a skeleton shows until then, a notice if the data is invalid).
+4. **Try it** and **Edit** ask the host to open their URL via `ui/open-link`.
+
+The card follows the host's light/dark theme and colours: host CSS variables
+are mapped onto `@epam/ai-dial-ui-kit` variables, with light and dark defaults
+for hosts that send none. See
+[Host theming](libs/mcp-app-kit/README.md#host-theming) in the kit README.
+
 ## Requirements
 
 - Node.js 24 (pinned in `.nvmrc`; run `nvm use`)
@@ -67,13 +82,15 @@ Validation rules applied by `parseSkillCardPayload`:
 
 - `skill.name` and `skill.description` are required non-empty strings; anything
   else shows a "Couldn't display this skill" notice.
-- `initials` defaults to the first letters of up to two words of the name and is
-  capped at three characters; `kindLabel` defaults to `Skill`.
+- A supplied `initials` is upper-cased and capped at three characters; otherwise
+  up to two initials are derived from the words of the name (`?` if there are
+  none). `kindLabel` defaults to `Skill`.
 - `tryUrl` / `editUrl` must be `http:` or `https:` URLs; any other value is
   dropped and its button is not rendered.
 - `qualityCheck` is optional; when present, every item must have a non-empty
-  `id` and `label` and a boolean `passed`. `passedPercent` is rounded and
-  clamped to 0–100.
+  `id` and `label` and a boolean `passed`, and `passedPercent` must be a number
+  (it is rounded and clamped to 0–100). An invalid `qualityCheck` also shows
+  the "Couldn't display this skill" notice.
 
 A full example is in
 [`apps/skill-card/fixtures/with-failures.json`](apps/skill-card/fixtures/with-failures.json);
@@ -105,8 +122,10 @@ make docker-run
 curl -I http://localhost:8080/_mcp-app/index.html
 ```
 
-`make docker-run` starts the container with a read-only root filesystem and a
-tmpfs on `/tmp`. Override the image name or host port with
+The image needs no environment variables, so one image works in every
+environment. It runs as a non-root user and works with a read-only root
+filesystem as long as `/tmp` is writable — `make docker-run` starts it that
+way, with a tmpfs on `/tmp`. Override the image name or host port with
 `make docker-run IMAGE=my-image PORT=9090`.
 
 ## Manual check in other hosts
@@ -126,5 +145,5 @@ also check the built file in real hosts:
 ## Git hooks
 
 `npm install` runs the `prepare` script, which sets `core.hooksPath` to
-`.githooks`. The pre-commit hook runs lint and typecheck. Outside a git
-checkout (for example in the Docker build) the step is skipped.
+`.githooks`. The pre-commit hook runs lint and typecheck. The Docker build
+installs with `npm ci --ignore-scripts`, so this step doesn't run there.
