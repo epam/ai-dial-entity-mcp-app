@@ -2,6 +2,7 @@
   "name": "ai-dial-entity-card",
   "version": "0.1.0",
   "private": true,
+  "license": "Apache-2.0",
   "type": "module",
   "scripts": {
     "dev": "concurrently -n app,host -c blue,magenta \"npm:dev:app\" \"npm:dev:host\"",

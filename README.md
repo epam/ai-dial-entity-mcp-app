@@ -147,3 +147,12 @@ also check the built file in real hosts:
 `npm install` runs the `prepare` script, which sets `core.hooksPath` to
 `.githooks`. The pre-commit hook runs lint and typecheck. The Docker build
 installs with `npm ci --ignore-scripts`, so this step doesn't run there.
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md). Report security issues as described in
+[SECURITY.md](SECURITY.md), not as public issues.
+
+## License
+
+[Apache License 2.0](LICENSE).
