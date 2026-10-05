@@ -36,7 +36,7 @@ const QualityCheck: FC<QualityCheckProps> = ({ qualityCheck }) => {
       defaultExpanded
       caretPosition={AccordionCaretPosition.Start}
       className={`${CARD_RADIUS_CLASS} border border-secondary`}
-      headerClassName="[&>span]:flex-1"
+      headerClassName="hover:bg-transparent [&>span]:flex-1"
       title={
         <span className="flex items-center justify-between gap-3">
           <span className="truncate text-md font-semibold text-primary">

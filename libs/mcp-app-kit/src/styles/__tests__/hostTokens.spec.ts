@@ -85,7 +85,6 @@ const preferredDarkBlock = findBlock(':root:not([data-theme])', [
 ]);
 const derivedBlock = findBlock('html');
 const neutralButtonBlock = findBlock('.dial-kit-neutral-solid-button');
-const accordionBlock = findBlock('.dial-kit-accordion');
 const toneBlocks = {
   success: findBlock('.mcp-tone-success'),
   warning: findBlock('.mcp-tone-warning'),
@@ -284,14 +283,12 @@ describe('component-scoped derivations', () => {
     );
   });
 
-  it('re-points the Accordion header hover at the same tertiary mix', () => {
-    expect(accordionBlock).toEqual([
-      {
-        name: '--bg-control-accent-alpha-hover',
-        value:
-          'color-mix(in srgb, var(--color-background-tertiary) 92%, var(--color-text-primary, #000))',
-      },
-    ]);
+  it('maps no Accordion-wide hover (the app removes the header hover)', () => {
+    expect(
+      parseRules(hostTokensCss).some((rule) =>
+        rule.selector.includes('.dial-kit-accordion'),
+      ),
+    ).toBe(false);
   });
 
   it('never declares the scoped variables on :root or html', () => {
@@ -301,7 +298,7 @@ describe('component-scoped derivations', () => {
   });
 
   it('reads only MCP variables', () => {
-    [neutralButtonBlock, accordionBlock].forEach((block) =>
+    [neutralButtonBlock].forEach((block) =>
       block.forEach(({ name, value }) =>
         sourcesOf(value).forEach((source) =>
           expect(MCP_KEYS, `${name} → ${source}`).toContain(source),
@@ -391,7 +388,6 @@ describe('ui-kit coverage guard', () => {
     ...namesOf(lightBlock),
     ...namesOf(derivedBlock),
     ...namesOf(neutralButtonBlock),
-    ...namesOf(accordionBlock),
     ...Object.values(toneBlocks).flatMap(namesOf),
   ]);
 

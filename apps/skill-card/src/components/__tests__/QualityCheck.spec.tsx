@@ -42,6 +42,13 @@ describe('QualityCheck', () => {
     expect(second).toHaveTextContent('Inherit style.');
   });
 
+  it('has no hover background on the header (the block is not a hover target)', () => {
+    render(<QualityCheck qualityCheck={qualityCheck} />);
+    const toggle = screen.getByRole('button', { name: /quality check/i });
+    expect(toggle).not.toHaveClass('hover:bg-control-accent-alpha-hover');
+    expect(toggle).toHaveClass('hover:bg-transparent');
+  });
+
   it('makes collapsed content inert and restores it on expand (mouse and keyboard)', async () => {
     render(<QualityCheck qualityCheck={qualityCheck} />);
     const toggle = screen.getByRole('button', { name: /quality check/i });

@@ -168,14 +168,6 @@ html {
   --text-accent: var(--color-text-primary);
 }
 
-.dial-kit-accordion {
-  --bg-control-accent-alpha-hover: color-mix(
-    in srgb,
-    var(--color-background-tertiary) 92%,
-    var(--color-text-primary, #000)
-  );
-}
-
 .mcp-tone-success {
   --bg-visual-green-2: var(--color-background-success);
   --text-visual-green-1: var(--color-text-success);

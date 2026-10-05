@@ -146,8 +146,7 @@ through the variables it sends; there is no host detection.
     `--color-text-inverse` label; hover/active mix the two;
   - neutral button ("Edit"): fill `--color-background-tertiary`, border
     `--color-border-secondary`, label `--color-text-primary` — scoped to
-    `.dial-kit-neutral-solid-button` (and the matching hover to
-    `.dial-kit-accordion`), because ui-kit reads the same variables
+    `.dial-kit-neutral-solid-button`, because ui-kit reads the same variables
     elsewhere (e.g. the `Avatar` palette);
   - button glow: `--color-text-primary` at 10% / 4%;
   - radii: `--radius-control` ← `--border-radius-md`, small ←
