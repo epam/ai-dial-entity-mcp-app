@@ -25,7 +25,7 @@ describe('applyHostContext', () => {
     expect(root.dataset.displayMode).toBe('inline');
     expect(root.dataset.platform).toBe('desktop');
     expect(root.style.getPropertyValue('--mcp-container-width')).toBe('640px');
-    expect(root.style.getPropertyValue('--mcp-safe-area-top')).toBe('0px');
+    expect(root.style.getPropertyValue('--mcp-safe-area-top')).toBe('12px');
   });
 
   it('applies container height and safe-area insets and cleans them up', () => {
@@ -115,6 +115,6 @@ describe('applyHostContext', () => {
     cleanup = applyHostContext({ theme: 'dark', displayMode: 'inline' });
     cleanupA();
     expect(root.getAttribute('data-theme')).toBe('dark');
-    expect(root.style.getPropertyValue('--mcp-safe-area-top')).toBe('0px');
+    expect(root.style.getPropertyValue('--mcp-safe-area-top')).toBe('12px');
   });
 });

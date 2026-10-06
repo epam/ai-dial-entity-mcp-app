@@ -238,7 +238,10 @@ protocol message; `ui/open-link` requests are highlighted and not navigated.
   instead of `ui/notifications/size-changed`, so the SDK's auto-resize alone
   never reports that content shrank. In inline mode the provider keeps
   `<html>`'s height equal to the content height.
-- **Safe area.** Insets come only from `hostContext.safeAreaInsets`; a host
-  that sends none gets no padding. There is no per-host fallback.
+- **Safe area.** Insets come from `hostContext.safeAreaInsets` and are always
+  respected, even all zeros; a side the host leaves out is 0. Only when the
+  host sends no insets at all (missing, or no side set) does inline mode fall
+  back to 12px padding (8px when `platform` is `mobile`); fullscreen and pip
+  get none. The rule is the same for every host, with no host detection.
 - **Result envelopes.** `getStructuredContent` normalises the different
   tool-result shapes hosts deliver (see above).
