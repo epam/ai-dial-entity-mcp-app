@@ -1,7 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import { parseSkillCardPayload } from '../../contract';
+import { parseQualityCheckPayload } from '../../contract';
 import QualityCheck from '../QualityCheck';
 
 const qualityCheck = {
@@ -65,14 +65,11 @@ describe('QualityCheck', () => {
   });
 
   it('shows a fractional server percentage rounded', () => {
-    const parsed = parseSkillCardPayload({
-      skill: { name: 'a', description: 'b' },
-      actions: {},
+    const parsed = parseQualityCheckPayload({
       qualityCheck: { passedPercent: 91.666, items: [] },
     });
-    if (!parsed.ok || !parsed.data.qualityCheck)
-      throw new Error('fixture must parse');
-    render(<QualityCheck qualityCheck={parsed.data.qualityCheck} />);
+    if (!parsed.ok) throw new Error('fixture must parse');
+    render(<QualityCheck qualityCheck={parsed.data} />);
     expect(badgeFor(92)).toHaveAttribute('data-tone', 'success');
   });
 

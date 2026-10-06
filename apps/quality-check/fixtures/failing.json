@@ -1,0 +1,13 @@
+{
+  "qualityCheck": {
+    "passedPercent": 40,
+    "items": [
+      {
+        "id": "tests",
+        "label": "Test cases provided",
+        "passed": false,
+        "hint": "Add at least one test case."
+      }
+    ]
+  }
+}

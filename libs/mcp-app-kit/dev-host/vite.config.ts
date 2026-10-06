@@ -13,5 +13,9 @@ export default defineConfig({
       process.env.MCP_DEFAULT_FIXTURE ?? '',
     ),
   },
-  server: { port: 4301, strictPort: true, open: true },
+  server: {
+    port: Number(process.env.MCP_DEV_HOST_PORT ?? 4301),
+    strictPort: true,
+    open: true,
+  },
 });

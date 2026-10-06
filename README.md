@@ -4,8 +4,7 @@
 
 The MCP App UI for the skill tool. When the tool returns a skill, MCP Apps hosts
 (Claude, ChatGPT and AI DIAL) render this UI inline in the conversation as a
-skill card: the skill's name and description, an optional quality check, and
-buttons that open the skill for a test run or for editing.
+skill card: the skill's name and description and buttons that open the skill for a test run or for editing.
 
 The app builds to a single self-contained `index.html` — all JavaScript and CSS
 are inlined — so a host can embed it without loading anything else.
@@ -14,6 +13,8 @@ Repository layout (npm workspaces):
 
 - `apps/entity-card` — the entity card app (`ai-dial-entity-card`); today it renders the skill card. Its build
   output is `apps/entity-card/dist/index.html`.
+- `apps/quality-check` — the quality check app (`ai-dial-quality-check`), a separate MCP App with its own tool
+  payload. Its build output is `apps/quality-check/dist/index.html`.
 - `libs/mcp-app-kit` — `@epam/ai-dial-mcp-app-kit`, the reusable layer every MCP
   App here is built on: host connection, React hooks, host theming, Vite and
   Tailwind presets, test helpers and a local dev host. See
@@ -66,6 +67,8 @@ reports unformatted files.
 
 ## Payload contract
 
+### Entity card
+
 The tool must return the card data as its `structuredContent` (hosts that only
 forward a JSON text block are handled too). It is parsed by
 `parseSkillCardPayload` in
@@ -75,9 +78,6 @@ payload is an object with:
 - `skill` (required): `name` and `description` (strings), plus optional
   `initials` and `kindLabel` (strings).
 - `actions` (may be missing): optional `tryUrl` and `editUrl` (strings).
-- `qualityCheck` (optional): `passedPercent` (number) and `items`, an array
-  of `{ id, label, passed, hint? }` — `id` and `label` strings, `passed` a
-  boolean, `hint` an optional string.
 
 Unknown fields are ignored.
 
@@ -91,40 +91,58 @@ Validation rules applied by `parseSkillCardPayload`:
 - `tryUrl` / `editUrl` must be `http:` or `https:` URLs; any other value is
   dropped and its button is not rendered. Accepted URLs are normalised by URL
   parsing (surrounding whitespace trimmed, scheme and host lower-cased).
-- `qualityCheck` is optional; when present, every item must have a non-empty
-  `id` and `label` and a boolean `passed`, and `passedPercent` must be a number
-  (it is rounded and clamped to 0–100). An invalid `qualityCheck` also shows
-  the "Couldn't display this skill" notice.
+- The quality check is not part of this payload; a `qualityCheck` field is
+  ignored. It has its own app, below.
 
 A full example is in
-[`apps/entity-card/fixtures/with-failures.json`](apps/entity-card/fixtures/with-failures.json);
-the other files in `fixtures/` cover the passing, no-quality-check, missing-URL
-and malformed cases.
+[`apps/entity-card/fixtures/default.json`](apps/entity-card/fixtures/default.json);
+the other files in `fixtures/` cover the missing-URL and malformed cases.
+
+### Quality check
+
+The quality check is a separate MCP App, served from its own page and fed by
+its own tool. It is not rendered inside the entity card: each app runs in its
+own iframe. The tool returns, as `structuredContent`, parsed by
+`parseQualityCheckPayload` in
+[`apps/quality-check/src/contract.ts`](apps/quality-check/src/contract.ts):
+
+- `qualityCheck` (required): `passedPercent` (number) and `items`, an array of
+  `{ id, label, passed, hint? }` — `id` and `label` non-empty strings, `passed`
+  a boolean, `hint` an optional string (shown for failed items only).
+
+`passedPercent` is rounded and clamped to 0–100. Unknown fields are ignored.
+A missing or invalid `qualityCheck` shows a "Couldn't display this quality
+check" notice. Examples are in
+[`apps/quality-check/fixtures/`](apps/quality-check/fixtures/).
 
 ## How the MCP server consumes it
 
 1. Deploy the Docker image (below) so the app is reachable at
-   `https://<widget-origin>/_mcp-app/index.html`.
+   `https://<widget-origin>/_mcp-app/entity-card/index.html` (entity card) or
+   `https://<widget-origin>/_mcp-app/quality-check/index.html` (quality check).
 2. Declare the tool's UI resource with a `ui://` URI.
 3. On `resources/read` for that URI, fetch
-   `https://<widget-origin>/_mcp-app/index.html` and return its body as the
+   that URL and return its body as the
    resource contents with MIME type `text/html;profile=mcp-app`. AI DIAL Core
    currently rejects that value, so for AI DIAL use plain `text/html`.
-4. Return the payload above as the tool result's `structuredContent`.
+4. Return the matching payload above as the tool result's `structuredContent`.
+   Each app has its own tool and its own `ui://` resource.
 
 No `resourceDomains` (CSP) entries are needed: the file is self-contained and
 loads no external scripts, styles or fonts.
 
 ## Docker
 
-The image builds the app and serves it with unprivileged nginx on port 8080.
-Only `/_mcp-app/index.html` and `/` (the same file) are served, with
-`Cache-Control: no-cache`; every other path returns 404.
+The image builds the apps and serves them with unprivileged nginx on port 8080.
+Only `/_mcp-app/entity-card/index.html`, `/_mcp-app/quality-check/index.html`
+and `/` (the entity card) are served, with `Cache-Control: no-cache`; every
+other path returns 404. The old `/_mcp-app/index.html` path is gone.
 
 ```sh
 make docker-build
 make docker-run
-curl -I http://localhost:8080/_mcp-app/index.html
+curl -I http://localhost:8080/_mcp-app/entity-card/index.html
+curl -I http://localhost:8080/_mcp-app/quality-check/index.html
 ```
 
 The image needs no environment variables, so one image works in every

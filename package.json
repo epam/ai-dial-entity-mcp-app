@@ -13,7 +13,8 @@
   ],
   "scripts": {
     "dev": "npm run dev -w ai-dial-entity-card",
-    "build": "npm run build -w ai-dial-entity-card",
+    "dev:quality-check": "npm run dev -w ai-dial-quality-check",
+    "build": "npm run build -w ai-dial-entity-card -w ai-dial-quality-check",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",

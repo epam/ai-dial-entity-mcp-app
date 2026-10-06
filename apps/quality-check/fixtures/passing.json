@@ -1,0 +1,13 @@
+{
+  "qualityCheck": {
+    "passedPercent": 100,
+    "items": [
+      { "id": "trigger-phrases", "label": "Trigger phrases", "passed": true },
+      {
+        "id": "instructions",
+        "label": "Instructions (3+ steps)",
+        "passed": true
+      }
+    ]
+  }
+}
