@@ -53,7 +53,7 @@ const QualityCheck: FC<QualityCheckProps> = ({ qualityCheck }) => {
         </span>
       }
     >
-      <ul className="flex flex-col gap-3">
+      <ul className="relative flex flex-col gap-3">
         {qualityCheck.items.map((item, index) => (
           <li
             key={`${item.id}-${index}`}
