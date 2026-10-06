@@ -176,7 +176,7 @@ utilities, so app markup follows the host theme without hardcoded colours.
 
 ### Host token contract
 
-What a host sends to style the skill card:
+What a host sends to style the entity card and the quality check:
 
 | MCP variable                                                           | Drives                                                    |
 | ---------------------------------------------------------------------- | --------------------------------------------------------- |
@@ -186,7 +186,7 @@ What a host sends to style the skill card:
 | `--color-background-success`, `-warning`, `-danger` / `--color-text-*` | "% passed" badge by tone; ✓ / ✗ icons; notices            |
 | `--color-text-primary`                                                 | title, description, list items, "Edit" label, button glow |
 | `--color-text-secondary`                                               | hints under failed checks                                 |
-| `--color-text-info`                                                    | "SKILL" label                                             |
+| `--color-text-info`                                                    | kind label (e.g. "SKILL", "AGENT")                        |
 | `--color-border-secondary`                                             | "Edit" border; quality-check block border                 |
 | `--color-ring-primary`                                                 | focus ring                                                |
 | `--font-sans` (+ `styles.css.fonts`)                                   | all text                                                  |

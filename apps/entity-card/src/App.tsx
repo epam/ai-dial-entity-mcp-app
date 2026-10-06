@@ -8,12 +8,12 @@ import {
   useToolResult,
 } from '@epam/ai-dial-mcp-app-kit/react';
 import { type FC, memo, useEffect } from 'react';
-import SkillCard from './components/SkillCard';
-import SkillCardSkeleton from './components/SkillCardSkeleton';
-import { parseSkillCardPayload } from './contract';
+import EntityCard from './components/EntityCard';
+import EntityCardSkeleton from './components/EntityCardSkeleton';
+import { parseEntityCardPayload } from './contract';
 
 const App: FC = () => {
-  const result = useToolResult(parseSkillCardPayload);
+  const result = useToolResult(parseEntityCardPayload);
   const invalidReason =
     result.status === ToolResultStatus.Invalid ? result.error : undefined;
 
@@ -24,13 +24,13 @@ const App: FC = () => {
 
   switch (result.status) {
     case ToolResultStatus.Loading:
-      return <SkillCardSkeleton />;
+      return <EntityCardSkeleton />;
     case ToolResultStatus.Error:
       return (
         <Notification
           type={NotificationType.SectionMessage}
           variant={NotificationVariant.Error}
-          message="Couldn't load skill"
+          message="Couldn't load entity"
         />
       );
     case ToolResultStatus.Invalid:
@@ -38,11 +38,11 @@ const App: FC = () => {
         <Notification
           type={NotificationType.SectionMessage}
           variant={NotificationVariant.Warning}
-          message="Couldn't display this skill"
+          message="Couldn't display this entity"
         />
       );
     case ToolResultStatus.Ready:
-      return <SkillCard data={result.data} />;
+      return <EntityCard data={result.data} />;
   }
 };
 

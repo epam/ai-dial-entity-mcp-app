@@ -9,9 +9,9 @@ import {
 import { useOpenLink } from '@epam/ai-dial-mcp-app-kit/react';
 import { IconPencil, IconPlayerPlay } from '@tabler/icons-react';
 import { type FC, memo, useCallback, useState } from 'react';
-import type { SkillCardData } from '../contract';
+import type { EntityCardData } from '../contract';
 
-type ActionButtonsProps = { actions: SkillCardData['actions'] };
+type ActionButtonsProps = { actions: EntityCardData['actions'] };
 
 const ActionButtons: FC<ActionButtonsProps> = ({ actions }) => {
   const openLink = useOpenLink();

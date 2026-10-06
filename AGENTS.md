@@ -1,6 +1,6 @@
 # ai-dial-entity-mcp-app
 
-MCP App UI for the skill tool. An **MCP App** is a web page that an MCP server
+MCP App UI for the entity tools. An **MCP App** is a web page that an MCP server
 exposes as a `ui://` resource for one of its tools; MCP Apps hosts (Claude,
 ChatGPT, AI DIAL) render it in a sandboxed iframe and talk to it over the
 MCP Apps postMessage protocol (`ui/initialize`, tool input/result
@@ -8,7 +8,7 @@ notifications, `ui/open-link`, host-context changes).
 
 ## Repo map
 
-- `apps/entity-card/` — the entity card app (today it renders the skill card). Builds to one self-contained
+- `apps/entity-card/` — the entity card app (renders skill and agent cards from one payload with optional sections). Builds to one self-contained
   `dist/index.html`.
   - `src/contract.ts` — tool payload type + parser (the contract we own).
   - `src/components/` — UI.

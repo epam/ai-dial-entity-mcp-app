@@ -2,16 +2,18 @@
 
 ## What this is
 
-The MCP App UI for the skill tool. When the tool returns a skill, MCP Apps hosts
-(Claude, ChatGPT and AI DIAL) render this UI inline in the conversation as a
-skill card: the skill's name and description and buttons that open the skill for a test run or for editing.
+The MCP App UI for the entity tools. When a tool returns a skill or an agent,
+MCP Apps hosts (Claude, ChatGPT and AI DIAL) render this UI inline in the
+conversation as an entity card: the name and description, optional labelled
+sections (chips or text, chosen by the server) and buttons that open the entity
+for a test run or for editing.
 
 The app builds to a single self-contained `index.html` — all JavaScript and CSS
 are inlined — so a host can embed it without loading anything else.
 
 Repository layout (npm workspaces):
 
-- `apps/entity-card` — the entity card app (`ai-dial-entity-card`); today it renders the skill card. Its build
+- `apps/entity-card` — the entity card app (`ai-dial-entity-card`); it renders skill and agent cards. Its build
   output is `apps/entity-card/dist/index.html`.
 - `apps/quality-check` — the quality check app (`ai-dial-quality-check`), a separate MCP App with its own tool
   payload. Its build output is `apps/quality-check/dist/index.html`.
@@ -26,13 +28,13 @@ in real hosts (see [its README](tools/test-mcp-server/README.md)).
 
 ## How it works
 
-1. The model calls the skill tool. The MCP server returns the card data as
+1. The model calls the entity tool (for a skill or an agent). The MCP server returns the card data as
    `structuredContent` and declares a `ui://` resource whose HTML is this app.
 2. The host renders that HTML in a sandboxed iframe. The app runs the MCP Apps
    handshake (`ui/initialize`) and applies the host's theme and layout.
-3. The host sends the tool result; `parseSkillCardPayload` validates it and the
+3. The host sends the tool result; `parseEntityCardPayload` validates it and the
    card renders (a skeleton shows until then, a notice if the data is invalid,
-   and "Couldn't load skill" if the connection to the host or the tool failed,
+   and "Couldn't load entity" if the connection to the host or the tool failed,
    the tool was cancelled, or it returned an `isError` result).
 4. **Try it** and **Edit** ask the host to open their URL via `ui/open-link`.
 
@@ -71,32 +73,42 @@ reports unformatted files.
 
 The tool must return the card data as its `structuredContent` (hosts that only
 forward a JSON text block are handled too). It is parsed by
-`parseSkillCardPayload` in
+`parseEntityCardPayload` in
 [`apps/entity-card/src/contract.ts`](apps/entity-card/src/contract.ts). The
 payload is an object with:
 
-- `skill` (required): `name` and `description` (strings), plus optional
-  `initials` and `kindLabel` (strings).
+- `entity` (required): `name` and `description` (strings), plus
+  optional `initials` and `kindLabel` (strings).
 - `actions` (may be missing): optional `tryUrl` and `editUrl` (strings).
+- `sections` (optional): an ordered array rendered between the header and the
+  buttons. Each item is
+  `{ "type": "chips", "label": string, "items": string[] }` or
+  `{ "type": "text", "label": string, "text": string }`.
 
 Unknown fields are ignored.
 
-Validation rules applied by `parseSkillCardPayload`:
+Validation rules applied by `parseEntityCardPayload`:
 
-- `skill.name` and `skill.description` are required non-empty strings; anything
-  else shows a "Couldn't display this skill" notice.
+- `entity.name` and `entity.description` are required non-empty strings;
+  anything else shows a "Couldn't display this entity" notice.
 - A supplied `initials` is upper-cased and capped at three characters; otherwise
   up to two initials are derived from the words of the name (`?` if there are
   none). `kindLabel` defaults to `Skill`.
 - `tryUrl` / `editUrl` must be `http:` or `https:` URLs; any other value is
   dropped and its button is not rendered. Accepted URLs are normalised by URL
   parsing (surrounding whitespace trimmed, scheme and host lower-cased).
-- The quality check is not part of this payload; a `qualityCheck` field is
-  ignored. It has its own app, below.
+- Sections never fail the card. A section with an unknown `type`, an empty
+  `label`, no non-empty `items` or empty `text` is skipped; non-string and
+  empty chip items are dropped; a `sections` value that is not an array is
+  ignored.
+- The quality check is a separate app with its own payload, below.
 
-A full example is in
-[`apps/entity-card/fixtures/default.json`](apps/entity-card/fixtures/default.json);
-the other files in `fixtures/` cover the missing-URL and malformed cases.
+A skill example is in
+[`apps/entity-card/fixtures/default.json`](apps/entity-card/fixtures/default.json)
+and an agent with sections in
+[`apps/entity-card/fixtures/agent.json`](apps/entity-card/fixtures/agent.json);
+the other files in `fixtures/` cover missing URLs,
+malformed payloads and the section edge cases.
 
 ### Quality check
 
@@ -136,7 +148,7 @@ loads no external scripts, styles or fonts.
 The image builds the apps and serves them with unprivileged nginx on port 8080.
 Only `/_mcp-app/entity-card/index.html`, `/_mcp-app/quality-check/index.html`
 and `/` (the entity card) are served, with `Cache-Control: no-cache`; every
-other path returns 404. The old `/_mcp-app/index.html` path is gone.
+other path returns 404.
 
 ```sh
 make docker-build

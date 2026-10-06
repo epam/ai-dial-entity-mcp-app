@@ -6,9 +6,9 @@ import { STATIC_CARD_CLASS } from './cardSurface';
  * Skeleton bars are `bg-layer-raised`, the card's own colour; the wrapper
  * re-points that variable at the sunken layer so the bars stay visible.
  */
-const SkillCardSkeleton: FC = () => (
+const EntityCardSkeleton: FC = () => (
   <CardShell
-    data-testid="skill-card-skeleton"
+    data-testid="entity-card-skeleton"
     aria-busy="true"
     className={STATIC_CARD_CLASS}
   >
@@ -18,4 +18,4 @@ const SkillCardSkeleton: FC = () => (
   </CardShell>
 );
 
-export default memo(SkillCardSkeleton);
+export default memo(EntityCardSkeleton);

@@ -45,7 +45,7 @@ const errorResult = (text: string): CallToolResult => ({
 });
 
 /**
- * Creates an MCP server with the skill card tool and its UI resource.
+ * Creates an MCP server with the entity card tool and its UI resource.
  * A new one is made per request because the transport is stateless.
  */
 const createMcpServer = (): McpServer => {
@@ -56,18 +56,18 @@ const createMcpServer = (): McpServer => {
 
   registerAppTool(
     server,
-    'show_skill_card',
+    'show_entity_card',
     {
-      title: 'Show skill card',
-      description: `Shows a skill card for a test skill. Pass one of: ${fixtureNames.join(', ')}.`,
-      inputSchema: { skill: z.string().optional() },
+      title: 'Show entity card',
+      description: `Shows an entity card (a skill or an agent) for a test fixture. Pass one of: ${fixtureNames.join(', ')}.`,
+      inputSchema: { entity: z.string().optional() },
       _meta: { ui: { resourceUri: RESOURCE_URI } },
     },
-    async ({ skill }) => {
-      const payload = skill ? fixtures.get(skill) : undefined;
+    async ({ entity }) => {
+      const payload = entity ? fixtures.get(entity) : undefined;
       if (!payload) {
         return errorResult(
-          `Unknown skill "${skill ?? ''}". Use one of: ${fixtureNames.join(', ')}.`,
+          `Unknown entity "${entity ?? ''}". Use one of: ${fixtureNames.join(', ')}.`,
         );
       }
       return {
