@@ -1,0 +1,28 @@
+name: Deploy development
+
+on:
+  workflow_dispatch: # manual run
+  workflow_run:
+    workflows: ['Release Workflow']
+    types:
+      - completed
+
+permissions:
+  contents: read
+
+jobs:
+  gitlab-dev-deploy:
+    # Skipped until the GITLAB_PROJECT_ID repository variable is set.
+    if: |
+      vars.GITLAB_PROJECT_ID != '' &&
+      (github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'development'))
+    uses: epam/ai-dial-ci/.github/workflows/deploy-development.yml@4.12.0
+    with:
+      gitlab-project-id: ${{ vars.GITLAB_PROJECT_ID }}
+      gitlab-project-ref: ${{ vars.GITLAB_PROJECT_REF || 'main' }}
+      environment-name: 'development'
+    secrets:
+      DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+      DEPLOY_ACCESS_TOKEN: ${{ secrets.DEPLOY_ACCESS_TOKEN }}
+      DEPLOY_TRIGGER_TOKEN: ${{ secrets.DEPLOY_TRIGGER_TOKEN }}
