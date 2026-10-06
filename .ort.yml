@@ -5,6 +5,9 @@ excludes:
   paths:
     - pattern: 'package-lock.json'
       reason: 'BUILD_TOOL_OF'
+    - pattern: 'tools/**'
+      reason: 'TEST_OF'
+      comment: 'Local development tools, not shipped.'
   scopes:
     - pattern: 'devDependencies'
       reason: 'DEV_DEPENDENCY_OF'
