@@ -19,6 +19,10 @@ Repository layout (npm workspaces):
   Tailwind presets, test helpers and a local dev host. See
   [its README](libs/mcp-app-kit/README.md).
 
+Outside the workspaces, `tools/` holds development-only tools that are never
+shipped, such as `tools/test-mcp-server`, a local MCP server for trying the card
+in real hosts (see [its README](tools/test-mcp-server/README.md)).
+
 ## How it works
 
 1. The model calls the skill tool. The MCP server returns the card data as
@@ -104,7 +108,8 @@ and malformed cases.
 2. Declare the tool's UI resource with a `ui://` URI.
 3. On `resources/read` for that URI, fetch
    `https://<widget-origin>/_mcp-app/index.html` and return its body as the
-   resource contents with MIME type `text/html;profile=mcp-app`.
+   resource contents with MIME type `text/html;profile=mcp-app`. AI DIAL Core
+   currently rejects that value, so for AI DIAL use plain `text/html`.
 4. Return the payload above as the tool result's `structuredContent`.
 
 No `resourceDomains` (CSP) entries are needed: the file is self-contained and
@@ -134,11 +139,14 @@ The dev host at http://localhost:4301 covers day-to-day work. Before a release,
 also check the built file in real hosts:
 
 1. Run `npm run build`.
-2. Run MCPJam Inspector with `npx @mcpjam/inspector` and connect a local MCP
-   server whose tool returns one of the fixtures as `structuredContent` and
-   whose `ui://` resource returns the built `apps/entity-card/dist/index.html`
-   with MIME type `text/html;profile=mcp-app`.
-3. Repeat in Claude, ChatGPT (developer mode) and AI DIAL. In each host check
+2. Start the test MCP server from
+   [`tools/test-mcp-server`](tools/test-mcp-server/README.md). Its tool returns
+   one of the fixtures as `structuredContent` and its `ui://` resource returns
+   the built `apps/entity-card/dist/index.html`.
+3. Run MCPJam Inspector with `npx @mcpjam/inspector` and connect it to
+   `http://localhost:8080/mcp`.
+4. Repeat in Claude, ChatGPT (developer mode) and AI DIAL; for AI DIAL, push
+   the server's Docker image as its README describes. In each host check
    that the card renders, the theme follows the host's light/dark setting, and
    the buttons open their links.
 

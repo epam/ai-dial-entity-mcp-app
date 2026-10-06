@@ -15,7 +15,27 @@ notifications, `ui/open-link`, host-context changes).
 - `apps/entity-card/fixtures/` — payload samples for tests and the dev host.
 - `libs/mcp-app-kit/` (`@epam/ai-dial-mcp-app-kit`) — reusable MCP App plumbing.
   Read `libs/mcp-app-kit/AGENTS.md` before changing it.
+- `tools/test-mcp-server/` — local test MCP server that serves the built card
+  and the fixtures, for trying the card in real hosts. Not shipped.
 - `Dockerfile`, `nginx.conf` — serve the file at `/_mcp-app/index.html`.
+
+## Where new code goes
+
+- `apps/<name>/` — an MCP App UI that ships. An npm workspace, built and
+  released by CI.
+- `libs/<name>/` — reusable code shared by apps. An npm workspace.
+- `tools/<name>/` — anything for development or testing only (test servers,
+  scripts with their own dependencies). Never shipped. Each tool:
+  - has its own `package.json` and `package-lock.json` and is **not** an npm
+    workspace, so the root lockfile, `npm run verify` and the release image
+    don't change;
+  - has a `README.md` that says it isn't shipped and how to run it;
+  - may read from `apps/` and `libs/` (fixtures, build output), but nothing in
+    `apps/` or `libs/` imports from `tools/`.
+
+  `tools/` is already excluded from the release image (`.dockerignore`), from
+  ORT (`.ort.yml`) and linted as Node code (`eslint.config.mjs`), so a new tool
+  needs no config changes there.
 
 ## Commands
 
