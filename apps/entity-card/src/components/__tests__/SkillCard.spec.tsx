@@ -2,8 +2,7 @@ import { createFakeMcpApp } from '@epam/ai-dial-mcp-app-kit/testing';
 import { McpAppProvider } from '@epam/ai-dial-mcp-app-kit/react';
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import withFailures from '../../../fixtures/with-failures.json';
-import noQualityCheck from '../../../fixtures/no-quality-check.json';
+import withFailures from '../../../fixtures/default.json';
 import { parseSkillCardPayload, type SkillCardData } from '../../contract';
 import SkillCard from '../SkillCard';
 
@@ -21,7 +20,7 @@ const renderCard = (data: SkillCardData) =>
   );
 
 describe('SkillCard', () => {
-  it('renders header, actions and quality check', () => {
+  it('renders header and actions', () => {
     renderCard(toData(withFailures));
     expect(
       screen.getByRole('heading', { name: 'good-morning-breakfast' }),
@@ -29,14 +28,6 @@ describe('SkillCard', () => {
     expect(screen.getByText('GM')).toBeInTheDocument();
     expect(screen.getByText('Skill')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /try it/i })).toBeInTheDocument();
-    expect(
-      screen.getByRole('button', { name: /quality check/i }),
-    ).toBeInTheDocument();
-  });
-
-  it('omits the quality check section when absent', () => {
-    renderCard(toData(noQualityCheck));
-    expect(screen.queryByRole('button', { name: /quality check/i })).toBeNull();
   });
 
   it('renders a static 2.0 card: no hover lift, no shadow, token radius', () => {

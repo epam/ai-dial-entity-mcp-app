@@ -1,9 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import malformed from '../../fixtures/malformed.json';
 import missingUrls from '../../fixtures/missing-urls.json';
-import noQualityCheck from '../../fixtures/no-quality-check.json';
-import passing from '../../fixtures/passing.json';
-import withFailures from '../../fixtures/with-failures.json';
+import withFailures from '../../fixtures/default.json';
 import { deriveInitials, parseSkillCardPayload } from '../contract';
 
 const ok = (raw: unknown) => {
@@ -33,19 +31,14 @@ describe('parseSkillCardPayload', () => {
       initials: 'GM',
       kindLabel: 'Skill',
     });
-    expect(data.qualityCheck?.items).toHaveLength(6);
-    expect(data.qualityCheck?.items[1]).toMatchObject({
-      passed: false,
-      hint: expect.any(String),
+  });
+
+  it('ignores a legacy qualityCheck field', () => {
+    const data = ok({
+      ...withFailures,
+      qualityCheck: { passedPercent: 'bad', items: null },
     });
-  });
-
-  it('parses the passing fixture', () => {
-    expect(ok(passing).qualityCheck?.passedPercent).toBe(100);
-  });
-
-  it('allows a missing quality check', () => {
-    expect(ok(noQualityCheck).qualityCheck).toBeUndefined();
+    expect(data).not.toHaveProperty('qualityCheck');
   });
 
   it('drops non-http urls and keeps explicit initials', () => {
@@ -79,53 +72,9 @@ describe('parseSkillCardPayload', () => {
     },
   );
 
-  it.each([
-    [91.666, 92],
-    [-5, 0],
-    [130, 100],
-  ])('rounds and clamps passedPercent %d → %d', (input, expected) => {
-    const data = ok({
-      ...withFailures,
-      qualityCheck: { passedPercent: input, items: [] },
-    });
-    expect(data.qualityCheck?.passedPercent).toBe(expected);
-  });
-
-  it('rejects a non-numeric passedPercent', () => {
-    const result = parseSkillCardPayload({
-      ...withFailures,
-      qualityCheck: { passedPercent: '92', items: [] },
-    });
-    expect(result).toEqual({
-      ok: false,
-      reason: 'qualityCheck.passedPercent must be a number',
-    });
-  });
-
-  it('rejects an invalid quality check item with its index', () => {
-    const result = parseSkillCardPayload({
-      ...withFailures,
-      qualityCheck: { passedPercent: 50, items: [{ id: 'a', label: 'A' }] },
-    });
-    expect(result).toEqual({
-      ok: false,
-      reason: 'qualityCheck.items[0] is invalid',
-    });
-  });
-
-  it('ignores unknown fields and an empty hint', () => {
-    const data = ok({
-      ...withFailures,
-      extra: true,
-      qualityCheck: {
-        passedPercent: 50,
-        items: [{ id: 'a', label: 'A', passed: false, hint: '' }],
-      },
-    });
-    expect(data.qualityCheck?.items[0]).toEqual({
-      id: 'a',
-      label: 'A',
-      passed: false,
-    });
+  it('ignores unknown fields', () => {
+    expect(ok({ ...withFailures, extra: true }).skill.name).toBe(
+      'good-morning-breakfast',
+    );
   });
 });

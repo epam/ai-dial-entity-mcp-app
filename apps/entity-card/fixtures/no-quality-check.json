@@ -1,7 +1,0 @@
-{
-  "skill": {
-    "name": "draft-skill",
-    "description": "A skill without a quality check yet."
-  },
-  "actions": { "editUrl": "https://example.com/skills/draft-skill/edit" }
-}

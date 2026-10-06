@@ -1,9 +1,8 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 const MAX_BYTES = 1024 * 1024;
-const dist = fileURLToPath(new URL('../dist/', import.meta.url));
+const dist = join(process.cwd(), 'dist');
 const files = readdirSync(dist, { recursive: true }).filter((f) =>
   statSync(join(dist, f)).isFile(),
 );

@@ -4,7 +4,7 @@ import { createFakeMcpApp } from '@epam/ai-dial-mcp-app-kit/testing';
 import { act, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import malformed from '../../fixtures/malformed.json';
-import withFailures from '../../fixtures/with-failures.json';
+import withFailures from '../../fixtures/default.json';
 import App from '../App';
 
 const renderApp = (

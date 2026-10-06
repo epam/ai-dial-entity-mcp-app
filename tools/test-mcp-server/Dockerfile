@@ -4,6 +4,7 @@ WORKDIR /app
 COPY package.json package-lock.json ./
 COPY libs/mcp-app-kit/package.json libs/mcp-app-kit/
 COPY apps/entity-card/package.json apps/entity-card/
+COPY apps/quality-check/package.json apps/quality-check/
 RUN npm ci --ignore-scripts
 COPY . .
 RUN npm run build

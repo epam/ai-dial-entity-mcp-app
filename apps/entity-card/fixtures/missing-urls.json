@@ -4,11 +4,5 @@
     "description": "No links available.",
     "initials": "OS"
   },
-  "actions": { "tryUrl": "javascript:alert(1)" },
-  "qualityCheck": {
-    "passedPercent": 40,
-    "items": [
-      { "id": "tests", "label": "Test cases provided", "passed": false }
-    ]
-  }
+  "actions": { "tryUrl": "javascript:alert(1)" }
 }

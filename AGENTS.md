@@ -13,11 +13,16 @@ notifications, `ui/open-link`, host-context changes).
   - `src/contract.ts` — tool payload type + parser (the contract we own).
   - `src/components/` — UI.
 - `apps/entity-card/fixtures/` — payload samples for tests and the dev host.
+- `apps/quality-check/` — the quality check app, a separate MCP App with its own
+  payload contract (`src/contract.ts`) and fixtures. Builds to its own
+  `dist/index.html`. Not rendered inside the entity card (separate iframes).
+- `scripts/check-single-file.mjs` — build check shared by every app.
 - `libs/mcp-app-kit/` (`@epam/ai-dial-mcp-app-kit`) — reusable MCP App plumbing.
   Read `libs/mcp-app-kit/AGENTS.md` before changing it.
 - `tools/test-mcp-server/` — local test MCP server that serves the built card
   and the fixtures, for trying the card in real hosts. Not shipped.
-- `Dockerfile`, `nginx.conf` — serve the file at `/_mcp-app/index.html`.
+- `Dockerfile`, `nginx.conf` — serve the files at `/_mcp-app/entity-card/index.html` and
+  `/_mcp-app/quality-check/index.html`.
 
 ## Where new code goes
 
@@ -39,7 +44,8 @@ notifications, `ui/open-link`, host-context changes).
 
 ## Commands
 
-- `npm run dev` — app (:4300) + dev host harness (:4301).
+- `npm run dev` — entity card (:4300) + dev host harness (:4301).
+- `npm run dev:quality-check` — quality check (:4302) + its dev host harness (:4303).
 - `npm test` / `npm run test:watch`
 - `npm run lint`, `npm run typecheck`, `npm run format`
 - `npm run build` — single-file build + check.
@@ -56,7 +62,7 @@ notifications, `ui/open-link`, host-context changes).
   `apps/*/src`; it also enforces the kit layering.
 - The app makes no network calls. Anything server-side goes through host tool calls.
 - The build must stay a single file. Never relax
-  `apps/entity-card/scripts/check-single-file.mjs`.
+  `scripts/check-single-file.mjs`.
 - Every display mode the app declares must be supported by its UI. The app
   declares `inline` only.
 
