@@ -1,0 +1,34 @@
+{
+  "entity": {
+    "name": "Inbox Digest",
+    "description": "Summarizes your inbox every morning and flags anything urgent, using your calendar and VIP list for context.",
+    "kindLabel": "Agent",
+    "initials": "ID"
+  },
+  "actions": {
+    "tryUrl": "https://example.com/agents/inbox-digest/try",
+    "editUrl": "https://example.com/agents/inbox-digest/edit"
+  },
+  "sections": [
+    {
+      "type": "chips",
+      "label": "Your data",
+      "items": ["Gmail", "vip-contacts.csv"]
+    },
+    {
+      "type": "chips",
+      "label": "Tools",
+      "items": ["Urgency scorer", "Thread summarizer"]
+    },
+    {
+      "type": "text",
+      "label": "Prompt",
+      "text": "Concise, neutral tone. No fluff."
+    },
+    {
+      "type": "chips",
+      "label": "Schedule",
+      "items": ["Docs Assistant Schedule"]
+    }
+  ]
+}

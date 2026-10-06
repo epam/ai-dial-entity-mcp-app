@@ -1,0 +1,25 @@
+{
+  "entity": {
+    "name": "edge-cases",
+    "description": "Sections that exercise the drop and skip rules.",
+    "kindLabel": "Agent"
+  },
+  "actions": {},
+  "sections": [
+    { "type": "chips", "label": "Kept", "items": ["ok", 42, "", "  padded  "] },
+    { "type": "chips", "label": "No items", "items": [] },
+    { "type": "chips", "label": "Items not an array", "items": "oops" },
+    { "type": "text", "label": "Empty text", "text": "   " },
+    { "type": "text", "label": "", "text": "No label" },
+    { "type": "table", "label": "Unknown type", "rows": [] },
+    "not an object",
+    { "type": "text", "label": "Multi-line", "text": "line one\nline two" },
+    {
+      "type": "chips",
+      "label": "Long label",
+      "items": [
+        "an-extremely-long-unbroken-file-name-that-must-not-overflow-the-card-because-it-truncates-aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.csv"
+      ]
+    }
+  ]
+}

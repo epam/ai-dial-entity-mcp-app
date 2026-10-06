@@ -1,5 +1,5 @@
 {
-  "skill": {
+  "entity": {
     "name": "good-morning-breakfast",
     "description": "Evaluates investment opportunities against firm criteria. Analyzes deal summaries across key dimensions including market size, founding team quality, product-market fit signals, financial metrics, competitive positioning, and valuation."
   },

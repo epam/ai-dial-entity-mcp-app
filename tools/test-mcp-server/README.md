@@ -6,11 +6,13 @@ MCP server. It is not part of the root workspaces, CI or the release image.
 
 It exposes, over Streamable HTTP at `/mcp`:
 
-- the `show_skill_card` tool, with `_meta.ui.resourceUri` set to
-  `ui://entity-card/index.html`. It takes `skill`, the name of a file in
-  `apps/entity-card/fixtures` (without `.json`), and returns that fixture as
-  `structuredContent`. A missing or unknown `skill` returns an `isError`
-  result, which the card shows as its failed state.
+- the `show_entity_card` tool, with `_meta.ui.resourceUri` set to
+  `ui://entity-card/index.html`. It takes `entity`, the name of a file in
+  `apps/entity-card/fixtures` (without `.json`: `default`,
+  `missing-urls`, `malformed`, `agent` for an agent with sections,
+  `sections-edge`), and returns that fixture as `structuredContent`. A missing
+  or unknown `entity` returns an `isError` result, which the card shows as its
+  failed state.
 - the `ui://entity-card/index.html` resource: the built
   `apps/entity-card/dist/index.html`, served as `text/html`, because DIAL Core
   rejects `text/html;profile=mcp-app`.

@@ -1,14 +1,34 @@
 import type { ParseResult } from '@epam/ai-dial-mcp-app-kit';
 
+export enum SectionType {
+  Chips = 'chips',
+  Text = 'text',
+}
+
+export type ChipsSection = {
+  type: SectionType.Chips;
+  label: string;
+  items: string[];
+};
+
+export type TextSection = {
+  type: SectionType.Text;
+  label: string;
+  text: string;
+};
+
+export type CardSection = ChipsSection | TextSection;
+
 /** Normalised payload the UI renders. */
-export type SkillCardData = {
-  skill: {
+export type EntityCardData = {
+  entity: {
     name: string;
     description: string;
     initials: string;
     kindLabel: string;
   };
   actions: { tryUrl?: string; editUrl?: string };
+  sections: CardSection[];
 };
 
 const DEFAULT_KIND_LABEL = 'Skill';
@@ -34,7 +54,7 @@ const safeUrl = (value: unknown): string | undefined => {
 /**
  * Builds up to two initials from the first letters of the name's words,
  * splitting on anything that is not a letter or digit.
- * @param name - skill name, e.g. `good-morning-breakfast`
+ * @param name - entity name, e.g. `good-morning-breakfast`
  */
 export const deriveInitials = (name: string): string => {
   const initials = name
@@ -46,41 +66,70 @@ export const deriveInitials = (name: string): string => {
   return initials || '?';
 };
 
+const parseSection = (raw: unknown): CardSection | undefined => {
+  if (!isRecord(raw) || !isNonEmptyString(raw.label)) return undefined;
+  const label = raw.label.trim();
+  switch (raw.type) {
+    case SectionType.Chips: {
+      const items = Array.isArray(raw.items)
+        ? raw.items.filter(isNonEmptyString).map((item) => item.trim())
+        : [];
+      return items.length > 0
+        ? { type: SectionType.Chips, label, items }
+        : undefined;
+    }
+    case SectionType.Text:
+      return isNonEmptyString(raw.text)
+        ? { type: SectionType.Text, label, text: raw.text.trim() }
+        : undefined;
+    default:
+      return undefined;
+  }
+};
+
+const parseSections = (raw: unknown): CardSection[] =>
+  Array.isArray(raw)
+    ? raw
+        .map(parseSection)
+        .filter((section): section is CardSection => section !== undefined)
+    : [];
+
 /**
- * Validates and normalises the skill card tool payload. Unknown fields are
+ * Validates and normalises the entity card tool payload. Unknown fields are
  * ignored; non-http(s) URLs are dropped so their buttons are not rendered.
  * @param raw - structured content from the tool result
  */
-export const parseSkillCardPayload = (
+export const parseEntityCardPayload = (
   raw: unknown,
-): ParseResult<SkillCardData> => {
+): ParseResult<EntityCardData> => {
   if (!isRecord(raw)) return fail('payload must be an object');
-  const { skill, actions } = raw;
-  if (!isRecord(skill)) return fail('skill must be an object');
-  if (!isNonEmptyString(skill.name))
-    return fail('skill.name must be a non-empty string');
-  if (!isNonEmptyString(skill.description)) {
-    return fail('skill.description must be a non-empty string');
+  const { entity } = raw;
+  if (!isRecord(entity)) return fail('entity must be an object');
+  if (!isNonEmptyString(entity.name))
+    return fail('entity.name must be a non-empty string');
+  if (!isNonEmptyString(entity.description)) {
+    return fail('entity.description must be a non-empty string');
   }
 
-  const actionRecord = isRecord(actions) ? actions : {};
+  const actionRecord = isRecord(raw.actions) ? raw.actions : {};
   const tryUrl = safeUrl(actionRecord.tryUrl);
   const editUrl = safeUrl(actionRecord.editUrl);
 
   return {
     ok: true,
     data: {
-      skill: {
-        name: skill.name.trim(),
-        description: skill.description.trim(),
-        initials: isNonEmptyString(skill.initials)
-          ? skill.initials.trim().slice(0, 3).toLocaleUpperCase()
-          : deriveInitials(skill.name),
-        kindLabel: isNonEmptyString(skill.kindLabel)
-          ? skill.kindLabel.trim()
+      entity: {
+        name: entity.name.trim(),
+        description: entity.description.trim(),
+        initials: isNonEmptyString(entity.initials)
+          ? entity.initials.trim().slice(0, 3).toLocaleUpperCase()
+          : deriveInitials(entity.name),
+        kindLabel: isNonEmptyString(entity.kindLabel)
+          ? entity.kindLabel.trim()
           : DEFAULT_KIND_LABEL,
       },
       actions: { ...(tryUrl && { tryUrl }), ...(editUrl && { editUrl }) },
+      sections: parseSections(raw.sections),
     },
   };
 };
