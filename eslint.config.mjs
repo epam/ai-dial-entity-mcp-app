@@ -70,6 +70,7 @@ export default defineConfig(
       'libs/mcp-app-kit/src/vite/**/*.ts',
       'libs/mcp-app-kit/dev-host/devHostServer.ts',
       'tools/**/*.ts',
+      'servers/**/*.ts',
       '**/*.spec.{ts,tsx}',
     ],
     languageOptions: { globals: globals.node },

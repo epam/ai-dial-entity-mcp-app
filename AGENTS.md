@@ -19,6 +19,9 @@ notifications, `ui/open-link`, host-context changes).
 - `scripts/check-single-file.mjs` — build check shared by every app.
 - `libs/mcp-app-kit/` (`@epam/ai-dial-mcp-app-kit`) — reusable MCP App plumbing.
   Read `libs/mcp-app-kit/AGENTS.md` before changing it.
+- `servers/entity-mcp/` — the shipped production MCP server. Serves
+  `show_entity_card` and the `ui://entity-card/index.html` resource against real
+  DIAL Core data. Node, no build step, no stored credentials.
 - `tools/test-mcp-server/` — local test MCP server that serves the built card
   and the fixtures, for trying the card in real hosts. Not shipped.
 - `Dockerfile`, `nginx.conf` — serve the files at `/_mcp-app/entity-card/index.html` and
@@ -29,6 +32,8 @@ notifications, `ui/open-link`, host-context changes).
 - `apps/<name>/` — an MCP App UI that ships. An npm workspace, built and
   released by CI.
 - `libs/<name>/` — reusable code shared by apps. An npm workspace.
+- `servers/<name>/` — a shipped backend. An npm workspace, released as its own
+  Docker image. May import from `libs/`; never from `apps/`.
 - `tools/<name>/` — anything for development or testing only (test servers,
   scripts with their own dependencies). Never shipped. Each tool:
   - has its own `package.json` and `package-lock.json` and is **not** an npm
