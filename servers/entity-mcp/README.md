@@ -49,6 +49,26 @@ A future reader should not "helpfully" add these back:
 - `LOG_LEVEL` — same reasoning: no knob until there is more than one log
   level's worth of output to control.
 
+## Logging
+
+Every `show_entity_card` call logs exactly one completion line to `console`
+— `console.log` on success, `console.error` on failure — carrying the
+outcome, the entity kind, the (sanitised) entity id, the call's duration in
+milliseconds, and a correlation id.
+
+The correlation id is read once per inbound request, from `X-Correlation-ID`,
+else `X-Request-ID`, else `X-Trace-ID`, or generated when the host sent none
+of them. It is sent to DIAL Core as `x-correlation-id` on the same request (and
+`x-request-id` / `x-trace-id` are forwarded too, when the host sent them), so
+this server's log line and Core's logs for that call can be joined on one id.
+
+Credentials are never logged. The `Authorization` and `Api-Key` values never
+appear in a log line, in full or in part, on either the success or the
+failure path. The entity id and the correlation id are always rendered
+through the same sanitiser used for the existing failure logs, so a
+caller-controlled value (for example one containing a newline) cannot forge
+an extra log entry.
+
 ## Run locally
 
 ```sh

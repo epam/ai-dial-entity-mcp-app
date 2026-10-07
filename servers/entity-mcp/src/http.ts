@@ -1,9 +1,10 @@
+import { randomUUID } from 'node:crypto';
 import type {
   IncomingHttpHeaders,
   IncomingMessage,
   ServerResponse,
 } from 'node:http';
-import type { InboundCredential } from './core/client.ts';
+import type { CorrelationContext, InboundCredential } from './core/client.ts';
 
 /**
  * Answers the liveness probe. Returns true when the request was handled here
@@ -39,4 +40,25 @@ export const readInboundCredential = (
   const apiKey = firstValue(headers['api-key']);
   if (apiKey) return { header: 'Api-Key', value: apiKey };
   return undefined;
+};
+
+/**
+ * Establishes one correlation id for an inbound request, so this server's
+ * logs can be joined with DIAL Core's. Reuses `X-Correlation-ID`, else
+ * `X-Request-ID`, else `X-Trace-ID`, and mints a fresh id only when the host
+ * sent none of them. `requestId` and `traceId` carry the caller's own values,
+ * if present, independent of which header seeded `correlationId`.
+ * @param headers - inbound request headers
+ */
+export const readInboundCorrelation = (
+  headers: IncomingHttpHeaders,
+): CorrelationContext => {
+  const correlationId = firstValue(headers['x-correlation-id']);
+  const requestId = firstValue(headers['x-request-id']);
+  const traceId = firstValue(headers['x-trace-id']);
+  return {
+    correlationId: correlationId ?? requestId ?? traceId ?? randomUUID(),
+    requestId,
+    traceId,
+  };
 };

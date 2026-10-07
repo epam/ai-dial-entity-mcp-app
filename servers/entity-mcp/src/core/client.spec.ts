@@ -34,6 +34,7 @@ describe('fetchEntity', () => {
       kind: EntityKind.Skill,
       id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer abc.def' },
+      correlation: { correlationId: 'test-correlation-id' },
     });
     const [url, init] = spy.mock.calls[0]!;
     expect(url).toBe('https://core.example.com/v2/metadata/skills/b/s');
@@ -49,22 +50,56 @@ describe('fetchEntity', () => {
       kind: EntityKind.Skill,
       id: 'skills/b/s',
       credential: { header: 'Api-Key', value: 'raw-key-value' },
+      correlation: { correlationId: 'test-correlation-id' },
     });
     const headers = spy.mock.calls[0]![1]!.headers as Record<string, string>;
     expect(headers['Api-Key']).toBe('raw-key-value');
     expect(headers['Authorization']).toBeUndefined();
   });
 
-  test('sends a correlation id', async () => {
+  test('sends the given correlation id verbatim', async () => {
     const spy = mockFetch(200, {});
     await fetchEntity({
       config,
       kind: EntityKind.Skill,
       id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'given-correlation-id' },
     });
     const headers = spy.mock.calls[0]![1]!.headers as Record<string, string>;
-    expect(headers['x-correlation-id']).toMatch(/[0-9a-f-]{36}/);
+    expect(headers['x-correlation-id']).toBe('given-correlation-id');
+  });
+
+  test('forwards x-request-id and x-trace-id when present on the correlation context', async () => {
+    const spy = mockFetch(200, {});
+    await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: {
+        correlationId: 'given-correlation-id',
+        requestId: 'given-request-id',
+        traceId: 'given-trace-id',
+      },
+    });
+    const headers = spy.mock.calls[0]![1]!.headers as Record<string, string>;
+    expect(headers['x-request-id']).toBe('given-request-id');
+    expect(headers['x-trace-id']).toBe('given-trace-id');
+  });
+
+  test('omits x-request-id and x-trace-id when absent from the correlation context', async () => {
+    const spy = mockFetch(200, {});
+    await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'given-correlation-id' },
+    });
+    const headers = spy.mock.calls[0]![1]!.headers as Record<string, string>;
+    expect(headers['x-request-id']).toBeUndefined();
+    expect(headers['x-trace-id']).toBeUndefined();
   });
 
   test('maps 401 to an expired-session message', async () => {
@@ -75,6 +110,7 @@ describe('fetchEntity', () => {
         kind: EntityKind.Skill,
         id: 'skills/b/s',
         credential: { header: 'Authorization', value: 'Bearer t' },
+        correlation: { correlationId: 'test-correlation-id' },
       }),
     ).rejects.toMatchObject({
       status: 401,
@@ -89,6 +125,7 @@ describe('fetchEntity', () => {
       kind: EntityKind.Skill,
       id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'test-correlation-id' },
     }).catch((error: CoreError) => error);
     mockFetch(404, {});
     const missing = await fetchEntity({
@@ -96,6 +133,7 @@ describe('fetchEntity', () => {
       kind: EntityKind.Skill,
       id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'test-correlation-id' },
     }).catch((error: CoreError) => error);
     expect((forbidden as CoreError).userMessage).not.toBe(
       (missing as CoreError).userMessage,
@@ -109,6 +147,7 @@ describe('fetchEntity', () => {
       kind: EntityKind.Skill,
       id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'test-correlation-id' },
     }).catch((caught: CoreError) => caught);
     expect(KNOWN_USER_MESSAGES).toContain((error as CoreError).userMessage);
   });
@@ -125,6 +164,7 @@ describe('fetchEntity', () => {
       kind: EntityKind.Skill,
       id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'test-correlation-id' },
     }).catch((caught: CoreError) => caught);
     expect(error).toBeInstanceOf(CoreError);
     expect((error as CoreError).status).toBe(504);
@@ -143,6 +183,7 @@ describe('fetchEntity', () => {
       kind: EntityKind.Skill,
       id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'test-correlation-id' },
     }).catch((caught: CoreError) => caught);
     expect(error).toBeInstanceOf(CoreError);
     expect(KNOWN_USER_MESSAGES).toContain((error as CoreError).userMessage);
@@ -157,6 +198,7 @@ describe('fetchEntity', () => {
       kind: EntityKind.Skill,
       id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'test-correlation-id' },
     }).catch((caught: CoreError) => caught);
     expect(error).toBeInstanceOf(CoreError);
     expect(KNOWN_USER_MESSAGES).toContain((error as CoreError).userMessage);
@@ -179,6 +221,7 @@ describe('fetchEntity', () => {
       kind: EntityKind.Skill,
       id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'test-correlation-id' },
     }).catch((caught: CoreError) => caught);
 
     expect(error).toBeInstanceOf(CoreError);
@@ -193,6 +236,7 @@ describe('fetchEntity', () => {
       kind: EntityKind.Skill,
       id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'test-correlation-id' },
     }).catch((caught: CoreError) => caught);
     expect((error as CoreError).status).toBe(403);
   });

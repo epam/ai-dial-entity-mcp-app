@@ -2,6 +2,7 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { parseEntityCardPayload } from '@epam/ai-dial-entity-contract';
+import type { CorrelationContext } from '../core/client.ts';
 import { EntityKind } from '../core/routing.ts';
 import { buildCardPayload, createMcpServer } from './server.ts';
 
@@ -10,6 +11,10 @@ const config = {
   port: 8080,
   appHtmlPath: 'x',
   tryUrlTemplate: 'https://chat.example.com/{kind}s/{id}/try',
+};
+
+const TEST_CORRELATION: CorrelationContext = {
+  correlationId: 'test-correlation-id',
 };
 
 describe('buildCardPayload', () => {
@@ -77,10 +82,15 @@ describe('createMcpServer', () => {
       }),
     );
 
-    const server = createMcpServer(config, '<html></html>', {
-      header: 'Authorization',
-      value: 'Bearer token',
-    });
+    const server = createMcpServer(
+      config,
+      '<html></html>',
+      {
+        header: 'Authorization',
+        value: 'Bearer token',
+      },
+      TEST_CORRELATION,
+    );
     const [clientTransport, serverTransport] =
       InMemoryTransport.createLinkedPair();
     const client = new Client({ name: 'test-client', version: '0.0.0' });
@@ -100,10 +110,15 @@ describe('createMcpServer', () => {
   };
 
   test('keeps a malformed id out of the tool result text', async () => {
-    const server = createMcpServer(config, '<html></html>', {
-      header: 'Authorization',
-      value: 'Bearer token',
-    });
+    const server = createMcpServer(
+      config,
+      '<html></html>',
+      {
+        header: 'Authorization',
+        value: 'Bearer token',
+      },
+      TEST_CORRELATION,
+    );
     const [clientTransport, serverTransport] =
       InMemoryTransport.createLinkedPair();
     const client = new Client({ name: 'test-client', version: '0.0.0' });
@@ -178,10 +193,15 @@ describe('createMcpServer', () => {
         },
       ),
     );
-    const server = createMcpServer(config, '<html></html>', {
-      header: 'Authorization',
-      value: 'Bearer abc.def',
-    });
+    const server = createMcpServer(
+      config,
+      '<html></html>',
+      {
+        header: 'Authorization',
+        value: 'Bearer abc.def',
+      },
+      TEST_CORRELATION,
+    );
     const [clientTransport, serverTransport] =
       InMemoryTransport.createLinkedPair();
     const client = new Client({ name: 'test-client', version: '0.0.0' });
@@ -212,10 +232,15 @@ describe('createMcpServer', () => {
         },
       ),
     );
-    const server = createMcpServer(config, '<html></html>', {
-      header: 'Api-Key',
-      value: 'raw-key-value',
-    });
+    const server = createMcpServer(
+      config,
+      '<html></html>',
+      {
+        header: 'Api-Key',
+        value: 'raw-key-value',
+      },
+      TEST_CORRELATION,
+    );
     const [clientTransport, serverTransport] =
       InMemoryTransport.createLinkedPair();
     const client = new Client({ name: 'test-client', version: '0.0.0' });
@@ -238,7 +263,12 @@ describe('createMcpServer', () => {
 
   test('fails closed with the fixed message and makes no Core request when no credential is forwarded', async () => {
     const spy = vi.spyOn(globalThis, 'fetch');
-    const server = createMcpServer(config, '<html></html>', undefined);
+    const server = createMcpServer(
+      config,
+      '<html></html>',
+      undefined,
+      TEST_CORRELATION,
+    );
     const [clientTransport, serverTransport] =
       InMemoryTransport.createLinkedPair();
     const client = new Client({ name: 'test-client', version: '0.0.0' });
@@ -271,10 +301,15 @@ describe('createMcpServer', () => {
           { status: 200, headers: { 'content-type': 'application/json' } },
         ),
       );
-    const server = createMcpServer(config, '<html></html>', {
-      header: 'Authorization',
-      value: 'Bearer token',
-    });
+    const server = createMcpServer(
+      config,
+      '<html></html>',
+      {
+        header: 'Authorization',
+        value: 'Bearer token',
+      },
+      TEST_CORRELATION,
+    );
     const [clientTransport, serverTransport] =
       InMemoryTransport.createLinkedPair();
     const client = new Client({ name: 'test-client', version: '0.0.0' });
@@ -310,10 +345,15 @@ describe('createMcpServer', () => {
     );
     const secretBearer = 'Bearer UNIQUE_SECRET_TOKEN';
     const secretApiKey = 'UNIQUE_SECRET_API_KEY';
-    const server = createMcpServer(config, '<html></html>', {
-      header: 'Authorization',
-      value: secretBearer,
-    });
+    const server = createMcpServer(
+      config,
+      '<html></html>',
+      {
+        header: 'Authorization',
+        value: secretBearer,
+      },
+      TEST_CORRELATION,
+    );
     const [clientTransport, serverTransport] =
       InMemoryTransport.createLinkedPair();
     const client = new Client({ name: 'test-client', version: '0.0.0' });
@@ -341,10 +381,15 @@ describe('createMcpServer', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response(JSON.stringify({ error: 'nope' }), { status: 403 }),
     );
-    const server = createMcpServer(config, '<html></html>', {
-      header: 'Authorization',
-      value: 'Bearer token',
-    });
+    const server = createMcpServer(
+      config,
+      '<html></html>',
+      {
+        header: 'Authorization',
+        value: 'Bearer token',
+      },
+      TEST_CORRELATION,
+    );
     const [clientTransport, serverTransport] =
       InMemoryTransport.createLinkedPair();
     const client = new Client({ name: 'test-client', version: '0.0.0' });
@@ -362,6 +407,112 @@ describe('createMcpServer', () => {
     });
 
     for (const call of errorSpy.mock.calls) {
+      for (const arg of call) {
+        if (typeof arg === 'string') {
+          expect(arg.split('\n')).toHaveLength(1);
+        }
+      }
+    }
+
+    await client.close();
+    await server.close();
+  });
+
+  test('logs one completion line with outcome and correlation id on success', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const result = await callTool(EntityKind.Skill, 'skills/b/my-skill', 200, {
+      attributes: { name: 'x', description: 'y' },
+    });
+
+    expect(result.isError).toBeFalsy();
+    const logged = logSpy.mock.calls
+      .map((call) => call.map(String).join(' '))
+      .filter((line) => line.includes('show_entity_card'));
+    expect(logged).toHaveLength(1);
+    expect(logged[0]).toContain('succeeded');
+    expect(logged[0]).toContain('test-correlation-id');
+  });
+
+  test('logs the correlation id alongside the existing diagnostic detail on failure', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    await callTool(EntityKind.Skill, 'skills/b/my-skill', 404, {
+      error: 'nope',
+    });
+
+    const logged = errorSpy.mock.calls
+      .map((call) => call.map(String).join(' '))
+      .join('\n');
+    expect(logged).toContain('test-correlation-id');
+    expect(logged).toContain('DIAL Core responded 404');
+  });
+
+  test('never logs a credential value on the success path', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    const secretBearer = 'Bearer UNIQUE_SUCCESS_SECRET_TOKEN';
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({ attributes: { name: 'x', description: 'y' } }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      ),
+    );
+    const server = createMcpServer(
+      config,
+      '<html></html>',
+      { header: 'Authorization', value: secretBearer },
+      TEST_CORRELATION,
+    );
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '0.0.0' });
+    await Promise.all([
+      server.connect(serverTransport),
+      client.connect(clientTransport),
+    ]);
+
+    await client.callTool({
+      name: 'show_entity_card',
+      arguments: { kind: EntityKind.Skill, id: 'skills/b/s' },
+    });
+
+    const loggedText = logSpy.mock.calls.flat().map(String).join('\n');
+    expect(loggedText).not.toContain(secretBearer);
+    expect(loggedText).not.toContain('UNIQUE_SUCCESS_SECRET_TOKEN');
+
+    await client.close();
+    await server.close();
+  });
+
+  test('sanitizes a newline in the id so it cannot forge a log entry on success', async () => {
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({ attributes: { name: 'x', description: 'y' } }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      ),
+    );
+    const server = createMcpServer(
+      config,
+      '<html></html>',
+      { header: 'Authorization', value: 'Bearer token' },
+      TEST_CORRELATION,
+    );
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '0.0.0' });
+    await Promise.all([
+      server.connect(serverTransport),
+      client.connect(clientTransport),
+    ]);
+
+    await client.callTool({
+      name: 'show_entity_card',
+      arguments: {
+        kind: EntityKind.Skill,
+        id: 'skills/b/x\nFORGED LOG LINE',
+      },
+    });
+
+    for (const call of logSpy.mock.calls) {
       for (const arg of call) {
         if (typeof arg === 'string') {
           expect(arg.split('\n')).toHaveLength(1);

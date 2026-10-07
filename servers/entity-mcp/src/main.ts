@@ -3,7 +3,11 @@ import { createServer } from 'node:http';
 import { resolve } from 'node:path';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import { loadConfig } from './config.ts';
-import { handleHealth, readInboundCredential } from './http.ts';
+import {
+  handleHealth,
+  readInboundCorrelation,
+  readInboundCredential,
+} from './http.ts';
 import { createMcpServer } from './mcp/server.ts';
 
 const config = loadConfig(process.env);
@@ -24,6 +28,7 @@ const httpServer = createServer(async (req, res) => {
     config,
     appHtml,
     readInboundCredential(req.headers),
+    readInboundCorrelation(req.headers),
   );
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,

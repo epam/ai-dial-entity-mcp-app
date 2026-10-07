@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import type { ServerConfig } from '../config.ts';
 import { EntityKind, coreUrlForEntity } from './routing.ts';
 
@@ -42,11 +41,26 @@ export type InboundCredential =
   | { header: 'Authorization'; value: string }
   | { header: 'Api-Key'; value: string };
 
+/**
+ * The correlation id established once per inbound request, so this server's
+ * logs and DIAL Core's can be joined. `correlationId` is always set — reused
+ * from the inbound request when the host sent one, minted otherwise.
+ * `requestId` and `traceId` carry the caller's own `X-Request-ID` /
+ * `X-Trace-ID` values, if present, independent of what seeded
+ * `correlationId`, so an existing trace isn't broken at this hop.
+ */
+export type CorrelationContext = {
+  correlationId: string;
+  requestId?: string;
+  traceId?: string;
+};
+
 export type FetchEntityOptions = {
   config: ServerConfig;
   kind: EntityKind;
   id: string;
   credential: InboundCredential;
+  correlation: CorrelationContext;
 };
 
 /**
@@ -59,7 +73,7 @@ export type FetchEntityOptions = {
 export const fetchEntity = async (
   options: FetchEntityOptions,
 ): Promise<Record<string, unknown>> => {
-  const { config, kind, id, credential } = options;
+  const { config, kind, id, credential, correlation } = options;
   const path = coreUrlForEntity(kind, id);
 
   let response: Response;
@@ -69,7 +83,11 @@ export const fetchEntity = async (
       headers: {
         accept: 'application/json',
         [credential.header]: credential.value,
-        'x-correlation-id': randomUUID(),
+        'x-correlation-id': correlation.correlationId,
+        ...(correlation.requestId
+          ? { 'x-request-id': correlation.requestId }
+          : {}),
+        ...(correlation.traceId ? { 'x-trace-id': correlation.traceId } : {}),
       },
       signal: AbortSignal.timeout(TIMEOUT_MS),
       // The fetch spec strips `Authorization` but not a forwarded `Api-Key` on

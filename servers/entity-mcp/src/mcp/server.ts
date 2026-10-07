@@ -10,6 +10,7 @@ import {
   CoreError,
   FALLBACK_MESSAGE,
   fetchEntity,
+  type CorrelationContext,
   type InboundCredential,
 } from '../core/client.ts';
 import { EntityKind, InvalidEntityId } from '../core/routing.ts';
@@ -71,11 +72,13 @@ const errorResult = (text: string): CallToolResult => ({
  * @param config - server configuration
  * @param appHtml - the built card, inlined as the resource body
  * @param credential - the caller's forwarded credential, if any
+ * @param correlation - the correlation id established for this request
  */
 export const createMcpServer = (
   config: ServerConfig,
   appHtml: string,
   credential: InboundCredential | undefined,
+  correlation: CorrelationContext,
 ): McpServer => {
   const server = new McpServer({ name: 'entity-mcp', version: '0.0.0' });
 
@@ -94,6 +97,8 @@ export const createMcpServer = (
     },
     async ({ kind, id }) => {
       const trimmedId = id.trim();
+      const startedAt = Date.now();
+      const correlationLabel = sanitizeForLog(correlation.correlationId);
       if (!credential) {
         return errorResult(
           'This tool needs your DIAL identity, which was not forwarded with the request.',
@@ -105,6 +110,7 @@ export const createMcpServer = (
           kind,
           id: trimmedId,
           credential,
+          correlation,
         });
         const payload = buildCardPayload({
           config,
@@ -113,31 +119,35 @@ export const createMcpServer = (
           raw,
           activeLocale: DEFAULT_LOCALE,
         });
+        console.log(
+          `show_entity_card succeeded for ${kind} ${sanitizeForLog(trimmedId)} in ${Date.now() - startedAt}ms (correlation ${correlationLabel})`,
+        );
         return {
           structuredContent: payload,
           content: [{ type: 'text', text: JSON.stringify(payload) }],
         };
       } catch (error) {
+        const durationMs = Date.now() - startedAt;
         if (error instanceof CoreError) {
           console.error(
-            `show_entity_card failed for ${kind} ${sanitizeForLog(trimmedId)}: ${error.message}`,
+            `show_entity_card failed for ${kind} ${sanitizeForLog(trimmedId)} in ${durationMs}ms (correlation ${correlationLabel}): ${error.message}`,
           );
           return errorResult(error.userMessage);
         }
         if (error instanceof IncompleteEntity) {
           console.error(
-            `show_entity_card failed for ${kind} ${sanitizeForLog(trimmedId)}: ${error.message}`,
+            `show_entity_card failed for ${kind} ${sanitizeForLog(trimmedId)} in ${durationMs}ms (correlation ${correlationLabel}): ${error.message}`,
           );
           return errorResult(error.userMessage);
         }
         if (error instanceof InvalidEntityId) {
           console.error(
-            `show_entity_card failed for ${kind} ${sanitizeForLog(trimmedId)}: ${error.message}`,
+            `show_entity_card failed for ${kind} ${sanitizeForLog(trimmedId)} in ${durationMs}ms (correlation ${correlationLabel}): ${error.message}`,
           );
           return errorResult(error.userMessage);
         }
         console.error(
-          `show_entity_card failed for ${kind} ${sanitizeForLog(trimmedId)} with an unexpected error:`,
+          `show_entity_card failed for ${kind} ${sanitizeForLog(trimmedId)} in ${durationMs}ms (correlation ${correlationLabel}) with an unexpected error:`,
           error,
         );
         return errorResult(FALLBACK_MESSAGE);
