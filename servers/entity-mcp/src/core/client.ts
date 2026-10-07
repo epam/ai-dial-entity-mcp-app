@@ -12,6 +12,11 @@ const MESSAGES: Record<number, string> = {
 
 const FALLBACK_MESSAGE = 'Could not load this entity from DIAL.';
 
+const TIMEOUT_MESSAGE = 'DIAL took too long to respond. Please try again.';
+
+const isTimeoutError = (error: unknown): boolean =>
+  error instanceof Error && error.name === 'TimeoutError';
+
 /**
  * Raised when DIAL Core responds with a non-success status. The message
  * shown to end users (`userMessage`) never includes Core's response body.
@@ -45,15 +50,24 @@ export const fetchEntity = async (
 ): Promise<Record<string, unknown>> => {
   const { config, kind, id, authorization } = options;
   const path = coreUrlForEntity(kind, id);
-  const response = await fetch(`${config.coreBaseUrl}${path}`, {
-    method: 'GET',
-    headers: {
-      accept: 'application/json',
-      authorization,
-      'x-correlation-id': randomUUID(),
-    },
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-  });
+
+  let response: Response;
+  try {
+    response = await fetch(`${config.coreBaseUrl}${path}`, {
+      method: 'GET',
+      headers: {
+        accept: 'application/json',
+        authorization,
+        'x-correlation-id': randomUUID(),
+      },
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+  } catch (error) {
+    if (isTimeoutError(error)) {
+      throw new CoreError(504, TIMEOUT_MESSAGE);
+    }
+    throw new CoreError(502, FALLBACK_MESSAGE);
+  }
 
   if (!response.ok) {
     throw new CoreError(
@@ -61,5 +75,10 @@ export const fetchEntity = async (
       MESSAGES[response.status] ?? FALLBACK_MESSAGE,
     );
   }
-  return (await response.json()) as Record<string, unknown>;
+
+  try {
+    return (await response.json()) as Record<string, unknown>;
+  } catch {
+    throw new CoreError(502, FALLBACK_MESSAGE);
+  }
 };

@@ -18,6 +18,14 @@ const mockFetch = (status: number, body: unknown) =>
 
 afterEach(() => vi.restoreAllMocks());
 
+const KNOWN_USER_MESSAGES = [
+  'Your session has expired. Sign in again and retry.',
+  "You don't have access to this entity.",
+  'That entity no longer exists.',
+  'Could not load this entity from DIAL.',
+  'DIAL took too long to respond. Please try again.',
+];
+
 describe('fetchEntity', () => {
   test('forwards the caller authorization header verbatim', async () => {
     const spy = mockFetch(200, { name: 'x' });
@@ -89,6 +97,66 @@ describe('fetchEntity', () => {
       id: 'skills/b/s',
       authorization: 'Bearer t',
     }).catch((caught: CoreError) => caught);
-    expect((error as CoreError).userMessage).not.toContain('secrets');
+    expect(KNOWN_USER_MESSAGES).toContain((error as CoreError).userMessage);
+  });
+
+  test('maps a timed-out request to a CoreError with a timeout message', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(
+      new DOMException(
+        'The operation was aborted due to timeout',
+        'TimeoutError',
+      ),
+    );
+    const error = await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      authorization: 'Bearer t',
+    }).catch((caught: CoreError) => caught);
+    expect(error).toBeInstanceOf(CoreError);
+    expect((error as CoreError).status).toBe(504);
+    expect(KNOWN_USER_MESSAGES).toContain((error as CoreError).userMessage);
+  });
+
+  test('maps a 200 response with a non-JSON body to a CoreError with the fallback message', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('<html>not json</html>', {
+        status: 200,
+        headers: { 'content-type': 'text/html' },
+      }),
+    );
+    const error = await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      authorization: 'Bearer t',
+    }).catch((caught: CoreError) => caught);
+    expect(error).toBeInstanceOf(CoreError);
+    expect(KNOWN_USER_MESSAGES).toContain((error as CoreError).userMessage);
+  });
+
+  test('maps a 200 response with an empty body to a CoreError with the fallback message', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('', { status: 200 }),
+    );
+    const error = await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      authorization: 'Bearer t',
+    }).catch((caught: CoreError) => caught);
+    expect(error).toBeInstanceOf(CoreError);
+    expect(KNOWN_USER_MESSAGES).toContain((error as CoreError).userMessage);
+  });
+
+  test('preserves the original status on a non-2xx CoreError', async () => {
+    mockFetch(403, {});
+    const error = await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      authorization: 'Bearer t',
+    }).catch((caught: CoreError) => caught);
+    expect((error as CoreError).status).toBe(403);
   });
 });
