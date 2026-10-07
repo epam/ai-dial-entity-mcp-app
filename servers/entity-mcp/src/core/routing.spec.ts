@@ -85,4 +85,16 @@ describe('coreUrlForEntity', () => {
       '/openai/applications/%2F%2Fevil%2Fx',
     );
   });
+
+  test('keeps the offending id out of userMessage while message stays developer-facing', () => {
+    expect.assertions(3);
+    try {
+      coreUrlForEntity(EntityKind.Skill, 'skills/b/../../UNIQUEMARKER');
+    } catch (error) {
+      expect(error).toBeInstanceOf(InvalidEntityId);
+      const invalidEntityId = error as InvalidEntityId;
+      expect(invalidEntityId.message).toContain('UNIQUEMARKER');
+      expect(invalidEntityId.userMessage).not.toContain('UNIQUEMARKER');
+    }
+  });
 });

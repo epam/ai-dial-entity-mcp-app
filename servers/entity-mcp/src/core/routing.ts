@@ -5,7 +5,16 @@ export const EntityKind = {
 
 export type EntityKind = (typeof EntityKind)[keyof typeof EntityKind];
 
-export class InvalidEntityId extends Error {}
+/**
+ * Thrown when a caller-supplied entity id doesn't match the shape this server
+ * expects. `message` is developer-facing and names the offending id, for
+ * logs; `userMessage` is a fixed, user-safe explanation that never repeats
+ * caller input.
+ */
+export class InvalidEntityId extends Error {
+  readonly userMessage =
+    'This entity id is not in a form this tool understands. A skill id looks like skills/{bucket}/{path}; an agent id is a deployment id.';
+}
 
 const SKILL_PREFIX = 'skills';
 

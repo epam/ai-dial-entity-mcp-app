@@ -103,7 +103,8 @@ export const createMcpServer = (
         if (error instanceof CoreError) return errorResult(error.userMessage);
         if (error instanceof IncompleteEntity)
           return errorResult(error.userMessage);
-        if (error instanceof InvalidEntityId) return errorResult(error.message);
+        if (error instanceof InvalidEntityId)
+          return errorResult(error.userMessage);
         return errorResult('Could not load this entity from DIAL.');
       }
     },

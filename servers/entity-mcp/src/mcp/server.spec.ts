@@ -1,7 +1,9 @@
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { describe, expect, test } from 'vitest';
 import { parseEntityCardPayload } from '@epam/ai-dial-entity-contract';
 import { EntityKind } from '../core/routing.ts';
-import { buildCardPayload } from './server.ts';
+import { buildCardPayload, createMcpServer } from './server.ts';
 
 const config = {
   coreBaseUrl: 'https://core.example.com',
@@ -56,5 +58,29 @@ describe('buildCardPayload', () => {
     });
     expect(payload.sections).toEqual([]);
     expect(JSON.stringify(payload)).not.toContain('qualityCheck');
+  });
+});
+
+describe('createMcpServer', () => {
+  test('keeps a malformed id out of the tool result text', async () => {
+    const server = createMcpServer(config, '<html></html>', 'Bearer token');
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '0.0.0' });
+    await Promise.all([
+      server.connect(serverTransport),
+      client.connect(clientTransport),
+    ]);
+
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { kind: EntityKind.Skill, id: 'skills/b/../../UNIQUEMARKER' },
+    });
+
+    expect(result.isError).toBe(true);
+    expect(JSON.stringify(result.content)).not.toContain('UNIQUEMARKER');
+
+    await client.close();
+    await server.close();
   });
 });
