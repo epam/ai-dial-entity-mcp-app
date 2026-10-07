@@ -150,7 +150,7 @@ entity card baked in. `apps/quality-check` is not included in the image.
 
 ```sh
 make docker-build
-make docker-run DIAL_CORE_BASE_URL=https://core.example.com
+make docker-run DIAL_CORE_URL=https://core.example.com
 ```
 
 See [`servers/entity-mcp/README.md`](servers/entity-mcp/README.md) for the

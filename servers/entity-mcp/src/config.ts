@@ -12,9 +12,9 @@ const ALLOWED_PROTOCOLS = ['http:', 'https:'];
 const MAX_PORT = 65535;
 
 /**
- * Validates that `DIAL_CORE_BASE_URL` is a well-formed `http(s)` URL, throwing
+ * Validates that `DIAL_CORE_URL` is a well-formed `http(s)` URL, throwing
  * a startup error naming the variable otherwise.
- * @param value - trimmed value of `DIAL_CORE_BASE_URL`
+ * @param value - trimmed value of `DIAL_CORE_URL`
  */
 const parseCoreBaseUrl = (value: string): string => {
   let parsed: URL;
@@ -22,11 +22,11 @@ const parseCoreBaseUrl = (value: string): string => {
     parsed = new URL(value);
   } catch {
     throw new Error(
-      `DIAL_CORE_BASE_URL must be an absolute http(s) URL, got: ${value}`,
+      `DIAL_CORE_URL must be an absolute http(s) URL, got: ${value}`,
     );
   }
   if (!ALLOWED_PROTOCOLS.includes(parsed.protocol)) {
-    throw new Error(`DIAL_CORE_BASE_URL must use http or https, got: ${value}`);
+    throw new Error(`DIAL_CORE_URL must use http or https, got: ${value}`);
   }
   return value.replace(/\/+$/, '');
 };
@@ -38,9 +38,9 @@ const parseCoreBaseUrl = (value: string): string => {
  * @param env - process environment to read from
  */
 export const loadConfig = (env: NodeJS.ProcessEnv): ServerConfig => {
-  const coreBaseUrl = env.DIAL_CORE_BASE_URL?.trim();
+  const coreBaseUrl = env.DIAL_CORE_URL?.trim();
   if (!coreBaseUrl) {
-    throw new Error('DIAL_CORE_BASE_URL is required and was not set');
+    throw new Error('DIAL_CORE_URL is required and was not set');
   }
   const port = Number(env.PORT ?? DEFAULT_PORT);
   if (!Number.isInteger(port) || port <= 0 || port > MAX_PORT) {

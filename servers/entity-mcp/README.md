@@ -29,7 +29,7 @@ There is nothing else to configure:
 
 | Var                        | Required | Default                            | Purpose                                                                          |
 | -------------------------- | -------- | ---------------------------------- | -------------------------------------------------------------------------------- |
-| `DIAL_CORE_BASE_URL`       | **yes**  | —                                  | Where to call Core back. Not a credential; the server fails to start without it. |
+| `DIAL_CORE_URL`            | **yes**  | —                                  | Where to call Core back. Not a credential; the server fails to start without it. |
 | `ENTITY_TRY_URL_TEMPLATE`  | no       | unset                              | Template for the card's Try button URL; unset means no Try button.               |
 | `ENTITY_EDIT_URL_TEMPLATE` | no       | unset                              | Template for the card's Edit button URL; unset means no Edit button.             |
 | `PORT`                     | no       | `8080`                             | Matches the test server and the proven DIAL Admin registration.                  |
@@ -74,7 +74,7 @@ an extra log entry.
 ```sh
 npm run build -w ai-dial-entity-card
 cd servers/entity-mcp
-DIAL_CORE_BASE_URL=https://core.example.com npm start
+DIAL_CORE_URL=https://core.example.com npm start
 ```
 
 The server listens on port 8080 (`PORT` overrides it) and serves `/mcp` and
@@ -88,14 +88,14 @@ workspace packages:
 
 ```sh
 make docker-build
-make docker-run DIAL_CORE_BASE_URL=https://core.example.com
+make docker-run DIAL_CORE_URL=https://core.example.com
 ```
 
 which is equivalent to:
 
 ```sh
 docker build -t ai-dial-entity-mcp .
-docker run --rm -p 8080:8080 -e DIAL_CORE_BASE_URL=https://core.example.com ai-dial-entity-mcp
+docker run --rm -p 8080:8080 -e DIAL_CORE_URL=https://core.example.com ai-dial-entity-mcp
 ```
 
 The image runs as the non-root `node` user and exposes port 8080. CI builds
@@ -177,7 +177,7 @@ require('node:http').createServer((req, res) => {
 
 # terminal 2
 cd servers/entity-mcp
-DIAL_CORE_BASE_URL=http://localhost:9000 npm start
+DIAL_CORE_URL=http://localhost:9000 npm start
 
 # terminal 3
 cd tools/mcp-probe && npm ci
@@ -189,12 +189,12 @@ Terminal 1 should log the `Api-Key` value for the first probe call and the
 `Authorization` value for the second.
 
 **3. This server against real Core** — a smoke test, not an access-control
-check. Run the server with a real `DIAL_CORE_BASE_URL` and call it with a real
+check. Run the server with a real `DIAL_CORE_URL` and call it with a real
 `DIAL_API_KEY`:
 
 ```sh
 cd servers/entity-mcp
-DIAL_CORE_BASE_URL=https://your-core.example.com npm start
+DIAL_CORE_URL=https://your-core.example.com npm start
 
 cd tools/mcp-probe && npm ci
 DIAL_API_KEY=... npm start -- --kind skill --id skills/your-bucket/your-skill
