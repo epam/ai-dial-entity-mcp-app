@@ -1,14 +1,14 @@
 import { describe, expect, it } from 'vitest';
-import malformed from '../../fixtures/malformed.json';
-import missingUrls from '../../fixtures/missing-urls.json';
-import agent from '../../fixtures/agent.json';
-import sectionsEdge from '../../fixtures/sections-edge.json';
-import withFailures from '../../fixtures/default.json';
+import malformed from '../../../apps/entity-card/fixtures/malformed.json';
+import missingUrls from '../../../apps/entity-card/fixtures/missing-urls.json';
+import agent from '../../../apps/entity-card/fixtures/agent.json';
+import sectionsEdge from '../../../apps/entity-card/fixtures/sections-edge.json';
+import withFailures from '../../../apps/entity-card/fixtures/default.json';
 import {
   deriveInitials,
   parseEntityCardPayload,
   SectionType,
-} from '../contract';
+} from './contract.ts';
 
 const ok = (raw: unknown) => {
   const result = parseEntityCardPayload(raw);

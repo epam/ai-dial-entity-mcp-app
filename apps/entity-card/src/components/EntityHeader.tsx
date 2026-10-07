@@ -1,6 +1,6 @@
 import { Avatar, AvatarShape } from '@epam/ai-dial-ui-kit';
 import { type FC, memo } from 'react';
-import type { EntityCardData } from '../contract';
+import type { EntityCardData } from '@epam/ai-dial-entity-contract';
 
 type EntityHeaderProps = { entity: EntityCardData['entity'] };
 

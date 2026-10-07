@@ -1,6 +1,6 @@
 import { CardShell } from '@epam/ai-dial-ui-kit';
 import { type FC, memo } from 'react';
-import type { EntityCardData } from '../contract';
+import type { EntityCardData } from '@epam/ai-dial-entity-contract';
 import ActionButtons from './ActionButtons';
 import { STATIC_CARD_CLASS } from './cardSurface';
 import EntityHeader from './EntityHeader';

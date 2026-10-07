@@ -1,6 +1,6 @@
 import { Badge } from '@epam/ai-dial-ui-kit';
 import { type FC, memo, useId } from 'react';
-import { type CardSection, SectionType } from '../contract';
+import { type CardSection, SectionType } from '@epam/ai-dial-entity-contract';
 
 type SectionBlockProps = { section: CardSection };
 

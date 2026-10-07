@@ -1,6 +1,6 @@
 import { render, screen, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { SectionType } from '../../contract';
+import { SectionType } from '@epam/ai-dial-entity-contract';
 import SectionBlock from '../SectionBlock';
 
 describe('SectionBlock', () => {

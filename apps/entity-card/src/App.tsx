@@ -10,7 +10,7 @@ import {
 import { type FC, memo, useEffect } from 'react';
 import EntityCard from './components/EntityCard';
 import EntityCardSkeleton from './components/EntityCardSkeleton';
-import { parseEntityCardPayload } from './contract';
+import { parseEntityCardPayload } from '@epam/ai-dial-entity-contract';
 
 const App: FC = () => {
   const result = useToolResult(parseEntityCardPayload);
