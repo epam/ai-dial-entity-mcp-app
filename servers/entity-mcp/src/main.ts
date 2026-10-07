@@ -12,7 +12,7 @@ const appHtml = readFileSync(
   'utf8',
 );
 
-createServer(async (req, res) => {
+const httpServer = createServer(async (req, res) => {
   const pathname = new URL(req.url ?? '/', 'http://localhost').pathname;
   if (handleHealth(pathname, res)) return;
   if (pathname !== '/mcp') {
@@ -35,6 +35,13 @@ createServer(async (req, res) => {
     console.error(error);
     if (!res.headersSent) res.writeHead(500).end();
   }
-}).listen(config.port, () => {
+});
+
+httpServer.listen(config.port, () => {
   console.log(`entity-mcp listening on :${config.port}/mcp`);
+});
+
+process.on('SIGTERM', () => {
+  console.log('entity-mcp received SIGTERM, shutting down');
+  httpServer.close(() => process.exit(0));
 });

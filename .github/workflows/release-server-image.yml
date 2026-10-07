@@ -25,7 +25,7 @@ jobs:
           ghcr-username: ${{ github.actor }}
           ghcr-password: ${{ secrets.ACTIONS_BOT_TOKEN }}
           image-names: ghcr.io/${{ github.repository }}-entity-mcp
-          image-tags: type=raw,value=development
+          image-tags: type=ref,event=branch
           push-enabled: true
           platforms: linux/amd64
           dockerfile-path: servers/entity-mcp/Dockerfile

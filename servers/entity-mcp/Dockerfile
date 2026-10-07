@@ -26,6 +26,7 @@ RUN apk upgrade --no-cache
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/servers/entity-mcp/src ./src
+RUN find ./src -name '*.spec.ts' -delete
 COPY --from=build /app/apps/entity-card/dist/index.html ./card/index.html
 ENV PORT=8080 APP_HTML=/app/card/index.html
 USER node

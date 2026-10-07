@@ -10,7 +10,7 @@ const MESSAGES: Record<number, string> = {
   404: 'That entity no longer exists.',
 };
 
-const FALLBACK_MESSAGE = 'Could not load this entity from DIAL.';
+export const FALLBACK_MESSAGE = 'Could not load this entity from DIAL.';
 
 const TIMEOUT_MESSAGE = 'DIAL took too long to respond. Please try again.';
 

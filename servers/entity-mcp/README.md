@@ -108,3 +108,24 @@ If either is true, encoding alone may not be a complete defense against
 traversal reaching Core, and this should be verified against a live Core
 before this server is trusted with untrusted ids from a wider range of
 callers.
+
+- whether Core resolves a percent-encoded `/` (`%2F`) inside the single path
+  segment this server sends for a custom-application agent id of the form
+  `applications/{bucket}/{path}` (`/openai/applications/applications%2F...`).
+  If Core does not decode `%2F` before routing, custom-application agents
+  will 404 while bare deployment names keep working. This should be the
+  first thing probed against a live Core once the toolset is registered.
+
+## v1 limitations
+
+- The active locale is hardcoded to `en`. The server does not yet read MCP
+  host context, so a non-English installation always receives the English
+  `displayName`, even though the resolver in `src/mapping/locale.ts` is
+  already parameterised for a per-request locale.
+- The server reads only the inbound `Authorization` header, not the
+  per-request `Api-Key`. Registering the toolset with
+  `forwardPerRequestKey: true` is recommended for future-proofing, but
+  nothing in the server currently reads that header.
+- `APP_HTML`, when given a relative path, resolves against the server's
+  `src/` directory (`import.meta.dirname`), not the process's working
+  directory. Use an absolute path to avoid surprises.

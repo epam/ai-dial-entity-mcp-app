@@ -1,6 +1,6 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
-import { describe, expect, test } from 'vitest';
+import { afterEach, describe, expect, test, vi } from 'vitest';
 import { parseEntityCardPayload } from '@epam/ai-dial-entity-contract';
 import { EntityKind } from '../core/routing.ts';
 import { buildCardPayload, createMcpServer } from './server.ts';
@@ -62,6 +62,40 @@ describe('buildCardPayload', () => {
 });
 
 describe('createMcpServer', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const callTool = async (
+    kind: EntityKind,
+    id: string,
+    status: number,
+    body: unknown,
+  ) => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { 'content-type': 'application/json' },
+      }),
+    );
+
+    const server = createMcpServer(config, '<html></html>', 'Bearer token');
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '0.0.0' });
+    await Promise.all([
+      server.connect(serverTransport),
+      client.connect(clientTransport),
+    ]);
+
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { kind, id },
+    });
+
+    await client.close();
+    await server.close();
+    return result;
+  };
+
   test('keeps a malformed id out of the tool result text', async () => {
     const server = createMcpServer(config, '<html></html>', 'Bearer token');
     const [clientTransport, serverTransport] =
@@ -82,5 +116,49 @@ describe('createMcpServer', () => {
 
     await client.close();
     await server.close();
+  });
+
+  test('returns the fixed not-found message for a skill on a Core 404', async () => {
+    const result = await callTool(EntityKind.Skill, 'skills/b/my-skill', 404, {
+      error: 'SECRET_CORE_BODY',
+    });
+    expect(result.isError).toBe(true);
+    expect(JSON.stringify(result.content)).toContain(
+      'That entity no longer exists.',
+    );
+    expect(JSON.stringify(result.content)).not.toContain('SECRET_CORE_BODY');
+  });
+
+  test('returns the fixed forbidden message for a skill on a Core 403', async () => {
+    const result = await callTool(EntityKind.Skill, 'skills/b/my-skill', 403, {
+      error: 'SECRET_CORE_BODY',
+    });
+    expect(result.isError).toBe(true);
+    expect(JSON.stringify(result.content)).toContain(
+      "You don't have access to this entity.",
+    );
+    expect(JSON.stringify(result.content)).not.toContain('SECRET_CORE_BODY');
+  });
+
+  test('returns the fixed not-found message for an agent on a Core 404', async () => {
+    const result = await callTool(EntityKind.Agent, 'gpt-4o', 404, {
+      error: 'SECRET_CORE_BODY',
+    });
+    expect(result.isError).toBe(true);
+    expect(JSON.stringify(result.content)).toContain(
+      'That entity no longer exists.',
+    );
+    expect(JSON.stringify(result.content)).not.toContain('SECRET_CORE_BODY');
+  });
+
+  test('returns the fixed forbidden message for an agent on a Core 403', async () => {
+    const result = await callTool(EntityKind.Agent, 'gpt-4o', 403, {
+      error: 'SECRET_CORE_BODY',
+    });
+    expect(result.isError).toBe(true);
+    expect(JSON.stringify(result.content)).toContain(
+      "You don't have access to this entity.",
+    );
+    expect(JSON.stringify(result.content)).not.toContain('SECRET_CORE_BODY');
   });
 });

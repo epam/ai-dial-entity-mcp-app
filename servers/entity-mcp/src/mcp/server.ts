@@ -6,7 +6,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import type { ServerConfig } from '../config.ts';
-import { CoreError, fetchEntity } from '../core/client.ts';
+import { CoreError, FALLBACK_MESSAGE, fetchEntity } from '../core/client.ts';
 import { EntityKind, InvalidEntityId } from '../core/routing.ts';
 import { buildActions } from '../mapping/actions.ts';
 import { IncompleteEntity, mapAgent, mapSkill } from '../mapping/entity.ts';
@@ -100,12 +100,29 @@ export const createMcpServer = (
           content: [{ type: 'text', text: JSON.stringify(payload) }],
         };
       } catch (error) {
-        if (error instanceof CoreError) return errorResult(error.userMessage);
-        if (error instanceof IncompleteEntity)
+        if (error instanceof CoreError) {
+          console.error(
+            `show_entity_card failed for ${kind} ${id}: ${error.message}`,
+          );
           return errorResult(error.userMessage);
-        if (error instanceof InvalidEntityId)
+        }
+        if (error instanceof IncompleteEntity) {
+          console.error(
+            `show_entity_card failed for ${kind} ${id}: ${error.message}`,
+          );
           return errorResult(error.userMessage);
-        return errorResult('Could not load this entity from DIAL.');
+        }
+        if (error instanceof InvalidEntityId) {
+          console.error(
+            `show_entity_card failed for ${kind} ${id}: ${error.message}`,
+          );
+          return errorResult(error.userMessage);
+        }
+        console.error(
+          `show_entity_card failed for ${kind} ${id} with an unexpected error:`,
+          error,
+        );
+        return errorResult(FALLBACK_MESSAGE);
       }
     },
   );

@@ -30,4 +30,29 @@ describe('loadConfig', () => {
     });
     expect(JSON.stringify(config)).not.toContain('secret');
   });
+
+  test('throws when the base url has no scheme', () => {
+    expect(() =>
+      loadConfig({ DIAL_CORE_BASE_URL: 'core.example.com' }),
+    ).toThrow(/DIAL_CORE_BASE_URL/);
+  });
+
+  test('throws when the base url uses a javascript: scheme', () => {
+    expect(() =>
+      loadConfig({ DIAL_CORE_BASE_URL: 'javascript:alert(1)' }),
+    ).toThrow(/DIAL_CORE_BASE_URL/);
+  });
+
+  test('throws when the base url uses a file: scheme', () => {
+    expect(() =>
+      loadConfig({ DIAL_CORE_BASE_URL: 'file:///etc/passwd' }),
+    ).toThrow(/DIAL_CORE_BASE_URL/);
+  });
+
+  test('accepts a valid https url', () => {
+    const config = loadConfig({
+      DIAL_CORE_BASE_URL: 'https://core.example.com',
+    });
+    expect(config.coreBaseUrl).toBe('https://core.example.com');
+  });
 });

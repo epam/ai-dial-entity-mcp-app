@@ -8,6 +8,27 @@ export type ServerConfig = {
 
 const DEFAULT_PORT = 8080;
 const DEFAULT_APP_HTML = '../../../apps/entity-card/dist/index.html';
+const ALLOWED_PROTOCOLS = ['http:', 'https:'];
+
+/**
+ * Validates that `DIAL_CORE_BASE_URL` is a well-formed `http(s)` URL, throwing
+ * a startup error naming the variable otherwise.
+ * @param value - trimmed value of `DIAL_CORE_BASE_URL`
+ */
+const parseCoreBaseUrl = (value: string): string => {
+  let parsed: URL;
+  try {
+    parsed = new URL(value);
+  } catch {
+    throw new Error(
+      `DIAL_CORE_BASE_URL must be an absolute http(s) URL, got: ${value}`,
+    );
+  }
+  if (!ALLOWED_PROTOCOLS.includes(parsed.protocol)) {
+    throw new Error(`DIAL_CORE_BASE_URL must use http or https, got: ${value}`);
+  }
+  return value.replace(/\/+$/, '');
+};
 
 /**
  * Reads the server configuration from the environment. Credentials are
@@ -25,7 +46,7 @@ export const loadConfig = (env: NodeJS.ProcessEnv): ServerConfig => {
     throw new Error(`PORT must be a positive integer, got ${env.PORT}`);
   }
   return {
-    coreBaseUrl: coreBaseUrl.replace(/\/+$/, ''),
+    coreBaseUrl: parseCoreBaseUrl(coreBaseUrl),
     tryUrlTemplate: env.ENTITY_TRY_URL_TEMPLATE?.trim() || undefined,
     editUrlTemplate: env.ENTITY_EDIT_URL_TEMPLATE?.trim() || undefined,
     port,
