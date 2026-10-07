@@ -65,3 +65,39 @@ describe('mapAgent', () => {
     );
   });
 });
+
+describe('IncompleteEntity message separation', () => {
+  const FIXED_USER_MESSAGE =
+    'This entity is missing a name or description, so it cannot be displayed.';
+
+  test('mapSkill failure: message names the field, userMessage is the fixed string', () => {
+    expect.assertions(2);
+    try {
+      mapSkill({ attributes: { name: 'x' } });
+    } catch (error) {
+      const incomplete = error as IncompleteEntity;
+      expect(incomplete.message).toContain('attributes.description');
+      expect(incomplete.userMessage).toBe(FIXED_USER_MESSAGE);
+    }
+  });
+
+  test('mapAgent failure: userMessage matches the same fixed string as mapSkill', () => {
+    expect.assertions(1);
+    try {
+      mapAgent({ displayName: 'Inbox Digest' }, 'en');
+    } catch (error) {
+      const incomplete = error as IncompleteEntity;
+      expect(incomplete.userMessage).toBe(FIXED_USER_MESSAGE);
+    }
+  });
+
+  test('userMessage never contains the offending field name', () => {
+    expect.assertions(1);
+    try {
+      mapAgent({ description: 'x' }, 'en');
+    } catch (error) {
+      const incomplete = error as IncompleteEntity;
+      expect(incomplete.userMessage).not.toContain('displayName');
+    }
+  });
+});
