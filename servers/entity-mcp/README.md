@@ -2,9 +2,12 @@
 
 The production MCP server for the entity card. It is a stateless Streamable
 HTTP MCP server with no stored credentials: every request runs as the calling
-user, identified by the inbound `Authorization` header forwarded to DIAL Core
-verbatim. It never reads an ambient credential and fails closed when identity
-is missing.
+user, identified by an inbound credential forwarded to DIAL Core verbatim. It
+accepts two inbound headers, `Authorization` and `Api-Key` — `Authorization`
+wins when both are present, matching DIAL's own auth precedence (user JWT,
+then `Api-Key`) — and forwards whichever one it got back to Core under the
+same header name. It never reads an ambient credential and fails closed when
+neither header is present.
 
 It exposes:
 
@@ -123,10 +126,61 @@ callers.
   host context, so a non-English installation always receives the English
   `displayName`, even though the resolver in `src/mapping/locale.ts` is
   already parameterised for a per-request locale.
-- The server reads only the inbound `Authorization` header, not the
-  per-request `Api-Key`. Registering the toolset with
-  `forwardPerRequestKey: true` is recommended for future-proofing, but
-  nothing in the server currently reads that header.
 - `APP_HTML`, when given a relative path, resolves against the server's
   `src/` directory (`import.meta.dirname`), not the process's working
   directory. Use an absolute path to avoid surprises.
+
+## Check it works
+
+**1. Card from fixtures, no server, no network** — proves the card renders a
+payload correctly:
+
+```sh
+npm run dev
+```
+
+Open the dev host it prints and pick a fixture from
+`apps/entity-card/fixtures`.
+
+**2. This server against a stub Core** — proves credential forwarding and
+error mapping without a real DIAL deployment:
+
+```sh
+# terminal 1: a stub that only checks which header it received
+node -e "
+require('node:http').createServer((req, res) => {
+  console.log('stub received headers:', req.headers.authorization ?? req.headers['api-key']);
+  res.writeHead(200, { 'content-type': 'application/json' })
+     .end(JSON.stringify({ attributes: { name: 'stub', description: 'from stub Core' } }));
+}).listen(9000);
+"
+
+# terminal 2
+cd servers/entity-mcp
+DIAL_CORE_BASE_URL=http://localhost:9000 npm start
+
+# terminal 3
+cd tools/mcp-probe && npm ci
+DIAL_API_KEY=test-key npm start -- --kind skill --id skills/b/my-skill
+DIAL_USER_JWT=test-jwt npm start -- --kind skill --id skills/b/my-skill
+```
+
+Terminal 1 should log the `Api-Key` value for the first probe call and the
+`Authorization` value for the second.
+
+**3. This server against real Core** — a smoke test, not an access-control
+check. Run the server with a real `DIAL_CORE_BASE_URL` and call it with a real
+`DIAL_API_KEY`:
+
+```sh
+cd servers/entity-mcp
+DIAL_CORE_BASE_URL=https://your-core.example.com npm start
+
+cd tools/mcp-probe && npm ci
+DIAL_API_KEY=... npm start -- --kind skill --id skills/your-bucket/your-skill
+```
+
+A DIAL API key is often a _service_ key with broader access than a real end
+user has, so this may show entities a real user could not see. Treat a
+successful call here as proof the plumbing works, not as proof of correct
+access control.

@@ -27,19 +27,32 @@ const KNOWN_USER_MESSAGES = [
 ];
 
 describe('fetchEntity', () => {
-  test('forwards the caller authorization header verbatim', async () => {
+  test('forwards a bearer credential as Authorization, verbatim', async () => {
     const spy = mockFetch(200, { name: 'x' });
     await fetchEntity({
       config,
       kind: EntityKind.Skill,
       id: 'skills/b/s',
-      authorization: 'Bearer abc.def',
+      credential: { header: 'Authorization', value: 'Bearer abc.def' },
     });
     const [url, init] = spy.mock.calls[0]!;
     expect(url).toBe('https://core.example.com/v2/metadata/skills/b/s');
-    expect((init!.headers as Record<string, string>).authorization).toBe(
-      'Bearer abc.def',
-    );
+    const headers = init!.headers as Record<string, string>;
+    expect(headers['Authorization']).toBe('Bearer abc.def');
+    expect(headers['Api-Key']).toBeUndefined();
+  });
+
+  test('forwards an api-key credential as Api-Key, verbatim', async () => {
+    const spy = mockFetch(200, { name: 'x' });
+    await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      credential: { header: 'Api-Key', value: 'raw-key-value' },
+    });
+    const headers = spy.mock.calls[0]![1]!.headers as Record<string, string>;
+    expect(headers['Api-Key']).toBe('raw-key-value');
+    expect(headers['Authorization']).toBeUndefined();
   });
 
   test('sends a correlation id', async () => {
@@ -48,7 +61,7 @@ describe('fetchEntity', () => {
       config,
       kind: EntityKind.Skill,
       id: 'skills/b/s',
-      authorization: 'Bearer t',
+      credential: { header: 'Authorization', value: 'Bearer t' },
     });
     const headers = spy.mock.calls[0]![1]!.headers as Record<string, string>;
     expect(headers['x-correlation-id']).toMatch(/[0-9a-f-]{36}/);
@@ -61,7 +74,7 @@ describe('fetchEntity', () => {
         config,
         kind: EntityKind.Skill,
         id: 'skills/b/s',
-        authorization: 'Bearer t',
+        credential: { header: 'Authorization', value: 'Bearer t' },
       }),
     ).rejects.toMatchObject({
       status: 401,
@@ -75,14 +88,14 @@ describe('fetchEntity', () => {
       config,
       kind: EntityKind.Skill,
       id: 'skills/b/s',
-      authorization: 'Bearer t',
+      credential: { header: 'Authorization', value: 'Bearer t' },
     }).catch((error: CoreError) => error);
     mockFetch(404, {});
     const missing = await fetchEntity({
       config,
       kind: EntityKind.Skill,
       id: 'skills/b/s',
-      authorization: 'Bearer t',
+      credential: { header: 'Authorization', value: 'Bearer t' },
     }).catch((error: CoreError) => error);
     expect((forbidden as CoreError).userMessage).not.toBe(
       (missing as CoreError).userMessage,
@@ -95,7 +108,7 @@ describe('fetchEntity', () => {
       config,
       kind: EntityKind.Skill,
       id: 'skills/b/s',
-      authorization: 'Bearer t',
+      credential: { header: 'Authorization', value: 'Bearer t' },
     }).catch((caught: CoreError) => caught);
     expect(KNOWN_USER_MESSAGES).toContain((error as CoreError).userMessage);
   });
@@ -111,7 +124,7 @@ describe('fetchEntity', () => {
       config,
       kind: EntityKind.Skill,
       id: 'skills/b/s',
-      authorization: 'Bearer t',
+      credential: { header: 'Authorization', value: 'Bearer t' },
     }).catch((caught: CoreError) => caught);
     expect(error).toBeInstanceOf(CoreError);
     expect((error as CoreError).status).toBe(504);
@@ -129,7 +142,7 @@ describe('fetchEntity', () => {
       config,
       kind: EntityKind.Skill,
       id: 'skills/b/s',
-      authorization: 'Bearer t',
+      credential: { header: 'Authorization', value: 'Bearer t' },
     }).catch((caught: CoreError) => caught);
     expect(error).toBeInstanceOf(CoreError);
     expect(KNOWN_USER_MESSAGES).toContain((error as CoreError).userMessage);
@@ -143,7 +156,7 @@ describe('fetchEntity', () => {
       config,
       kind: EntityKind.Skill,
       id: 'skills/b/s',
-      authorization: 'Bearer t',
+      credential: { header: 'Authorization', value: 'Bearer t' },
     }).catch((caught: CoreError) => caught);
     expect(error).toBeInstanceOf(CoreError);
     expect(KNOWN_USER_MESSAGES).toContain((error as CoreError).userMessage);
@@ -155,7 +168,7 @@ describe('fetchEntity', () => {
       config,
       kind: EntityKind.Skill,
       id: 'skills/b/s',
-      authorization: 'Bearer t',
+      credential: { header: 'Authorization', value: 'Bearer t' },
     }).catch((caught: CoreError) => caught);
     expect((error as CoreError).status).toBe(403);
   });

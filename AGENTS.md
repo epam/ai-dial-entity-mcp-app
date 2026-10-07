@@ -31,6 +31,9 @@ tested like any other workspace, but not shipped.
   DIAL Core data. Node, no build step, no stored credentials.
 - `tools/test-mcp-server/` — local test MCP server that serves the built card
   and the fixtures, for trying the card in real hosts. Not shipped.
+- `tools/mcp-probe/` — CLI that calls an MCP endpoint as a Streamable-HTTP
+  client (lists tools/resources, calls `show_entity_card`), for checking
+  credential forwarding by hand. Not shipped.
 - `Dockerfile` — builds the repo's single shipped artifact, the MCP server
   (`servers/entity-mcp`) with the entity card baked in as its `ui://` resource.
   There is no static hosting and no `/_mcp-app/` paths.

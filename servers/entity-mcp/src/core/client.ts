@@ -32,23 +32,34 @@ export class CoreError extends Error {
   }
 }
 
+/**
+ * The caller's forwarded credential, tagged with the exact header it was read
+ * from and must be sent back as. `Authorization` carries a bearer token;
+ * `Api-Key` carries DIAL's per-request key. Keeping the two variants explicit
+ * makes it impossible to forward a value under the wrong header.
+ */
+export type InboundCredential =
+  | { header: 'Authorization'; value: string }
+  | { header: 'Api-Key'; value: string };
+
 export type FetchEntityOptions = {
   config: ServerConfig;
   kind: EntityKind;
   id: string;
-  authorization: string;
+  credential: InboundCredential;
 };
 
 /**
  * Reads one entity record from DIAL Core as the calling user. The caller's
- * Authorization header is forwarded verbatim; this server holds no credential
- * of its own and never retries under a different identity.
+ * credential is forwarded verbatim, under the same header it arrived on; this
+ * server holds no credential of its own and never retries under a different
+ * identity.
  * @param options - config, entity coordinates and the forwarded credential
  */
 export const fetchEntity = async (
   options: FetchEntityOptions,
 ): Promise<Record<string, unknown>> => {
-  const { config, kind, id, authorization } = options;
+  const { config, kind, id, credential } = options;
   const path = coreUrlForEntity(kind, id);
 
   let response: Response;
@@ -57,7 +68,7 @@ export const fetchEntity = async (
       method: 'GET',
       headers: {
         accept: 'application/json',
-        authorization,
+        [credential.header]: credential.value,
         'x-correlation-id': randomUUID(),
       },
       signal: AbortSignal.timeout(TIMEOUT_MS),

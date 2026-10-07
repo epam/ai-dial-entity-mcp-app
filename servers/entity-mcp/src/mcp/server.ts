@@ -6,7 +6,12 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { z } from 'zod';
 import type { ServerConfig } from '../config.ts';
-import { CoreError, FALLBACK_MESSAGE, fetchEntity } from '../core/client.ts';
+import {
+  CoreError,
+  FALLBACK_MESSAGE,
+  fetchEntity,
+  type InboundCredential,
+} from '../core/client.ts';
 import { EntityKind, InvalidEntityId } from '../core/routing.ts';
 import { buildActions } from '../mapping/actions.ts';
 import { IncompleteEntity, mapAgent, mapSkill } from '../mapping/entity.ts';
@@ -58,12 +63,12 @@ const errorResult = (text: string): CallToolResult => ({
  * A new one is made per request because the transport is stateless.
  * @param config - server configuration
  * @param appHtml - the built card, inlined as the resource body
- * @param authorization - the caller's forwarded credential, if any
+ * @param credential - the caller's forwarded credential, if any
  */
 export const createMcpServer = (
   config: ServerConfig,
   appHtml: string,
-  authorization: string | undefined,
+  credential: InboundCredential | undefined,
 ): McpServer => {
   const server = new McpServer({ name: 'entity-mcp', version: '0.0.0' });
 
@@ -81,13 +86,13 @@ export const createMcpServer = (
       _meta: { ui: { resourceUri: RESOURCE_URI } },
     },
     async ({ kind, id }) => {
-      if (!authorization) {
+      if (!credential) {
         return errorResult(
           'This tool needs your DIAL identity, which was not forwarded with the request.',
         );
       }
       try {
-        const raw = await fetchEntity({ config, kind, id, authorization });
+        const raw = await fetchEntity({ config, kind, id, credential });
         const payload = buildCardPayload({
           config,
           kind,
