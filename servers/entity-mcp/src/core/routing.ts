@@ -12,6 +12,9 @@ const SKILL_PREFIX = 'skills';
 const hasTraversal = (value: string): boolean =>
   value.split('/').some((segment) => segment === '..' || segment === '.');
 
+const hasEmptySegment = (segments: string[]): boolean =>
+  segments.some((segment) => segment.trim() === '');
+
 /**
  * Builds the DIAL Core path that returns the entity record for an id.
  * Skills are v2 complex resources addressed as `skills/{bucket}/{path}`;
@@ -35,6 +38,11 @@ export const coreUrlForEntity = (kind: EntityKind, id: string): string => {
   if (prefix !== SKILL_PREFIX || !bucket || !path) {
     throw new InvalidEntityId(
       `skill id must be skills/{bucket}/{path}, got: ${id}`,
+    );
+  }
+  if (hasEmptySegment(rest)) {
+    throw new InvalidEntityId(
+      `skill id must not contain empty path segments: ${id}`,
     );
   }
   const encodedPath = path.split('/').map(encodeURIComponent).join('/');
