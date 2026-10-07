@@ -36,7 +36,7 @@ describe('fetchEntity', () => {
       authorization: 'Bearer abc.def',
     });
     const [url, init] = spy.mock.calls[0]!;
-    expect(url).toBe('https://core.example.com/v2/skills/b/s');
+    expect(url).toBe('https://core.example.com/v2/metadata/skills/b/s');
     expect((init!.headers as Record<string, string>).authorization).toBe(
       'Bearer abc.def',
     );

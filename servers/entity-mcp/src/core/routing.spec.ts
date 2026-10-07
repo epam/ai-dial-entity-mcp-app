@@ -2,16 +2,16 @@ import { describe, expect, test } from 'vitest';
 import { EntityKind, InvalidEntityId, coreUrlForEntity } from './routing.ts';
 
 describe('coreUrlForEntity', () => {
-  test('routes a skill id to the v2 prefix', () => {
+  test('routes a skill id to the v2 metadata endpoint', () => {
     expect(coreUrlForEntity(EntityKind.Skill, 'skills/abc123/my-skill')).toBe(
-      '/v2/skills/abc123/my-skill',
+      '/v2/metadata/skills/abc123/my-skill',
     );
   });
 
   test('keeps nested skill paths', () => {
     expect(
       coreUrlForEntity(EntityKind.Skill, 'skills/abc123/folder/my-skill'),
-    ).toBe('/v2/skills/abc123/folder/my-skill');
+    ).toBe('/v2/metadata/skills/abc123/folder/my-skill');
   });
 
   test('routes an agent id to the openai applications endpoint', () => {
@@ -83,6 +83,12 @@ describe('coreUrlForEntity', () => {
   test('collapses a protocol-relative agent id into one opaque segment', () => {
     expect(coreUrlForEntity(EntityKind.Agent, '//evil/x')).toBe(
       '/openai/applications/%2F%2Fevil%2Fx',
+    );
+  });
+
+  test('routes a skill read through the metadata endpoint, not the ZIP download endpoint', () => {
+    expect(coreUrlForEntity(EntityKind.Skill, 'skills/abc123/my-skill')).toBe(
+      '/v2/metadata/skills/abc123/my-skill',
     );
   });
 

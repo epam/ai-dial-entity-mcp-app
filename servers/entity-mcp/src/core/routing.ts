@@ -26,8 +26,10 @@ const hasEmptySegment = (segments: string[]): boolean =>
 
 /**
  * Builds the DIAL Core path that returns the entity record for an id.
- * Skills are v2 complex resources addressed as `skills/{bucket}/{path}`;
- * agents are applications addressed by deployment id.
+ * Skills are v2 complex resources addressed as `skills/{bucket}/{path}`; their
+ * name/description live in the item's metadata, so the metadata endpoint is
+ * used rather than the folder-download endpoint (which streams a ZIP
+ * archive, not JSON). Agents are applications addressed by deployment id.
  * @param kind - which entity type the caller asked for
  * @param id - exact entity id, as supplied to the tool
  */
@@ -55,5 +57,5 @@ export const coreUrlForEntity = (kind: EntityKind, id: string): string => {
     );
   }
   const encodedPath = path.split('/').map(encodeURIComponent).join('/');
-  return `/v2/${SKILL_PREFIX}/${encodeURIComponent(bucket)}/${encodedPath}`;
+  return `/v2/metadata/${SKILL_PREFIX}/${encodeURIComponent(bucket)}/${encodedPath}`;
 };

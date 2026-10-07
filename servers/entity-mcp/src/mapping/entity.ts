@@ -35,7 +35,7 @@ const requireText = (value: unknown, field: string): string => {
 
 /**
  * Maps a Core skill record onto the card's entity fields.
- * @param raw - body of GET /v2/skills/{bucket}/{path}
+ * @param raw - body of GET /v2/metadata/skills/{bucket}/{path}
  */
 export const mapSkill = (raw: Record<string, unknown>): MappedEntity => {
   const attributes = isRecord(raw.attributes) ? raw.attributes : {};
