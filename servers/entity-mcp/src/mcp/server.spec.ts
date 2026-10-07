@@ -262,6 +262,47 @@ describe('createMcpServer', () => {
     await server.close();
   });
 
+  test('trims a padded id once, for both the Core fetch and the action urls', async () => {
+    const spy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(
+        new Response(
+          JSON.stringify({ attributes: { name: 'x', description: 'y' } }),
+          { status: 200, headers: { 'content-type': 'application/json' } },
+        ),
+      );
+    const server = createMcpServer(config, '<html></html>', {
+      header: 'Authorization',
+      value: 'Bearer token',
+    });
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '0.0.0' });
+    await Promise.all([
+      server.connect(serverTransport),
+      client.connect(clientTransport),
+    ]);
+
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { kind: EntityKind.Skill, id: ' skills/b/x ' },
+    });
+
+    expect(spy.mock.calls[0]![0]).toBe(
+      'https://core.example.com/v2/metadata/skills/b/x',
+    );
+    const structured = result.structuredContent as {
+      actions: { tryUrl?: string };
+    };
+    expect(structured.actions.tryUrl).toBe(
+      'https://chat.example.com/skills/skills%2Fb%2Fx/try',
+    );
+    expect(structured.actions.tryUrl).not.toContain('%20');
+
+    await client.close();
+    await server.close();
+  });
+
   test('never logs a credential value', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
@@ -290,6 +331,43 @@ describe('createMcpServer', () => {
     expect(loggedText).not.toContain(secretBearer);
     expect(loggedText).not.toContain(secretApiKey);
     expect(loggedText).not.toContain('UNIQUE_SECRET_TOKEN');
+
+    await client.close();
+    await server.close();
+  });
+
+  test('sanitizes a newline in the id so it cannot forge a log entry', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify({ error: 'nope' }), { status: 403 }),
+    );
+    const server = createMcpServer(config, '<html></html>', {
+      header: 'Authorization',
+      value: 'Bearer token',
+    });
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '0.0.0' });
+    await Promise.all([
+      server.connect(serverTransport),
+      client.connect(clientTransport),
+    ]);
+
+    await client.callTool({
+      name: 'show_entity_card',
+      arguments: {
+        kind: EntityKind.Skill,
+        id: 'skills/b/x\nFORGED LOG LINE',
+      },
+    });
+
+    for (const call of errorSpy.mock.calls) {
+      for (const arg of call) {
+        if (typeof arg === 'string') {
+          expect(arg.split('\n')).toHaveLength(1);
+        }
+      }
+    }
 
     await client.close();
     await server.close();

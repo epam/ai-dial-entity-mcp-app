@@ -48,4 +48,5 @@ httpServer.listen(config.port, () => {
 process.on('SIGTERM', () => {
   console.log('entity-mcp received SIGTERM, shutting down');
   httpServer.close(() => process.exit(0));
+  httpServer.closeIdleConnections();
 });

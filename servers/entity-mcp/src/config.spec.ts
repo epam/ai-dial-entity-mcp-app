@@ -55,4 +55,30 @@ describe('loadConfig', () => {
     });
     expect(config.coreBaseUrl).toBe('https://core.example.com');
   });
+
+  test('throws when PORT exceeds the maximum valid port number', () => {
+    expect(() =>
+      loadConfig({
+        DIAL_CORE_BASE_URL: 'https://core.example.com',
+        PORT: '70000',
+      }),
+    ).toThrow(/PORT/);
+  });
+
+  test('throws when PORT is 0', () => {
+    expect(() =>
+      loadConfig({
+        DIAL_CORE_BASE_URL: 'https://core.example.com',
+        PORT: '0',
+      }),
+    ).toThrow(/PORT/);
+  });
+
+  test('accepts a valid PORT', () => {
+    const config = loadConfig({
+      DIAL_CORE_BASE_URL: 'https://core.example.com',
+      PORT: '8080',
+    });
+    expect(config.port).toBe(8080);
+  });
 });

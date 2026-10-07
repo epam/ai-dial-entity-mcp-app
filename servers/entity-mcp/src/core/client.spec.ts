@@ -162,6 +162,30 @@ describe('fetchEntity', () => {
     expect(KNOWN_USER_MESSAGES).toContain((error as CoreError).userMessage);
   });
 
+  test('passes redirect: "error" and maps a redirect response to the fallback CoreError', async () => {
+    const spy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation((_url, init) => {
+        if ((init as RequestInit)?.redirect !== 'error') {
+          throw new Error('expected fetch to be called with redirect: "error"');
+        }
+        return Promise.reject(
+          new TypeError('fetch failed: unexpected redirect'),
+        );
+      });
+
+    const error = await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      credential: { header: 'Authorization', value: 'Bearer t' },
+    }).catch((caught: CoreError) => caught);
+
+    expect(error).toBeInstanceOf(CoreError);
+    expect(KNOWN_USER_MESSAGES).toContain((error as CoreError).userMessage);
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
   test('preserves the original status on a non-2xx CoreError', async () => {
     mockFetch(403, {});
     const error = await fetchEntity({

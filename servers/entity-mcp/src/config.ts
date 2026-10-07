@@ -9,6 +9,7 @@ export type ServerConfig = {
 const DEFAULT_PORT = 8080;
 const DEFAULT_APP_HTML = '../../../apps/entity-card/dist/index.html';
 const ALLOWED_PROTOCOLS = ['http:', 'https:'];
+const MAX_PORT = 65535;
 
 /**
  * Validates that `DIAL_CORE_BASE_URL` is a well-formed `http(s)` URL, throwing
@@ -42,8 +43,10 @@ export const loadConfig = (env: NodeJS.ProcessEnv): ServerConfig => {
     throw new Error('DIAL_CORE_BASE_URL is required and was not set');
   }
   const port = Number(env.PORT ?? DEFAULT_PORT);
-  if (!Number.isInteger(port) || port <= 0) {
-    throw new Error(`PORT must be a positive integer, got ${env.PORT}`);
+  if (!Number.isInteger(port) || port <= 0 || port > MAX_PORT) {
+    throw new Error(
+      `PORT must be a positive integer no greater than ${MAX_PORT}, got ${env.PORT}`,
+    );
   }
   return {
     coreBaseUrl: parseCoreBaseUrl(coreBaseUrl),

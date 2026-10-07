@@ -21,6 +21,13 @@ const RESOURCE_URI = 'ui://entity-card/index.html';
 const RESOURCE_MIME_TYPE = 'text/html';
 const DEFAULT_LOCALE = 'en';
 
+/**
+ * Renders a caller-controlled value for a log line, as a quoted JSON string
+ * so embedded newlines or control characters can't forge extra log entries.
+ * @param value - caller-controlled value to log
+ */
+const sanitizeForLog = (value: string): string => JSON.stringify(value);
+
 export type BuildCardPayloadOptions = {
   config: ServerConfig;
   kind: EntityKind;
@@ -86,17 +93,23 @@ export const createMcpServer = (
       _meta: { ui: { resourceUri: RESOURCE_URI } },
     },
     async ({ kind, id }) => {
+      const trimmedId = id.trim();
       if (!credential) {
         return errorResult(
           'This tool needs your DIAL identity, which was not forwarded with the request.',
         );
       }
       try {
-        const raw = await fetchEntity({ config, kind, id, credential });
+        const raw = await fetchEntity({
+          config,
+          kind,
+          id: trimmedId,
+          credential,
+        });
         const payload = buildCardPayload({
           config,
           kind,
-          id,
+          id: trimmedId,
           raw,
           activeLocale: DEFAULT_LOCALE,
         });
@@ -107,24 +120,24 @@ export const createMcpServer = (
       } catch (error) {
         if (error instanceof CoreError) {
           console.error(
-            `show_entity_card failed for ${kind} ${id}: ${error.message}`,
+            `show_entity_card failed for ${kind} ${sanitizeForLog(trimmedId)}: ${error.message}`,
           );
           return errorResult(error.userMessage);
         }
         if (error instanceof IncompleteEntity) {
           console.error(
-            `show_entity_card failed for ${kind} ${id}: ${error.message}`,
+            `show_entity_card failed for ${kind} ${sanitizeForLog(trimmedId)}: ${error.message}`,
           );
           return errorResult(error.userMessage);
         }
         if (error instanceof InvalidEntityId) {
           console.error(
-            `show_entity_card failed for ${kind} ${id}: ${error.message}`,
+            `show_entity_card failed for ${kind} ${sanitizeForLog(trimmedId)}: ${error.message}`,
           );
           return errorResult(error.userMessage);
         }
         console.error(
-          `show_entity_card failed for ${kind} ${id} with an unexpected error:`,
+          `show_entity_card failed for ${kind} ${sanitizeForLog(trimmedId)} with an unexpected error:`,
           error,
         );
         return errorResult(FALLBACK_MESSAGE);

@@ -72,6 +72,10 @@ export const fetchEntity = async (
         'x-correlation-id': randomUUID(),
       },
       signal: AbortSignal.timeout(TIMEOUT_MS),
+      // The fetch spec strips `Authorization` but not a forwarded `Api-Key` on
+      // a cross-origin redirect, so a redirect is rejected outright rather
+      // than followed.
+      redirect: 'error',
     });
   } catch (error) {
     if (isTimeoutError(error)) {
