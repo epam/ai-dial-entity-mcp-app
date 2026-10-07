@@ -129,39 +129,34 @@ check" notice. Examples are in
 
 ## How the MCP server consumes it
 
-1. Deploy the Docker image (below) so the app is reachable at
-   `https://<widget-origin>/_mcp-app/entity-card/index.html` (entity card) or
-   `https://<widget-origin>/_mcp-app/quality-check/index.html` (quality check).
-2. Declare the tool's UI resource with a `ui://` URI.
-3. On `resources/read` for that URI, fetch
-   that URL and return its body as the
-   resource contents with MIME type `text/html;profile=mcp-app`. AI DIAL Core
-   currently rejects that value, so for AI DIAL use plain `text/html`.
-4. Return the matching payload above as the tool result's `structuredContent`.
-   Each app has its own tool and its own `ui://` resource.
+The entity card's build output is baked directly into the MCP server image at
+build time (see Docker below) and served by the server itself as the
+`ui://entity-card/index.html` resource — there is no separate static origin to
+deploy or register. The quality check app is not part of that server; it is
+kept as components for future use and is not shipped.
+
+For the server's own configuration, tool and resource registration, and
+toolset registration in DIAL Admin, see
+[`servers/entity-mcp/README.md`](servers/entity-mcp/README.md).
 
 No `resourceDomains` (CSP) entries are needed: the file is self-contained and
 loads no external scripts, styles or fonts.
 
 ## Docker
 
-The image builds the apps and serves them with unprivileged nginx on port 8080.
-Only `/_mcp-app/entity-card/index.html`, `/_mcp-app/quality-check/index.html`
-and `/` (the entity card) are served, with `Cache-Control: no-cache`; every
-other path returns 404.
+The repo ships exactly one Docker image: the MCP server
+(`servers/entity-mcp`), built from the root `Dockerfile`, with the built
+entity card baked in. `apps/quality-check` is not included in the image.
 
 ```sh
 make docker-build
-make docker-run
-curl -I http://localhost:8080/_mcp-app/entity-card/index.html
-curl -I http://localhost:8080/_mcp-app/quality-check/index.html
+make docker-run DIAL_CORE_BASE_URL=https://core.example.com
 ```
 
-The image needs no environment variables, so one image works in every
-environment. It runs as a non-root user and works with a read-only root
-filesystem as long as `/tmp` is writable — `make docker-run` starts it that
-way, with a tmpfs on `/tmp`. Override the image name or host port with
-`make docker-run IMAGE=my-image PORT=9090`.
+See [`servers/entity-mcp/README.md`](servers/entity-mcp/README.md) for the
+server's required/optional environment variables, its `/mcp` and `/health`
+endpoints, and how to register it as a toolset in DIAL Admin. Override the
+image name or host port with `make docker-run IMAGE=my-image PORT=9090`.
 
 ## Manual check in other hosts
 
@@ -175,10 +170,11 @@ also check the built file in real hosts:
    the built `apps/entity-card/dist/index.html`.
 3. Run MCPJam Inspector with `npx @mcpjam/inspector` and connect it to
    `http://localhost:8080/mcp`.
-4. Repeat in Claude, ChatGPT (developer mode) and AI DIAL; for AI DIAL, push
-   the server's Docker image as its README describes. In each host check
-   that the card renders, the theme follows the host's light/dark setting, and
-   the buttons open their links.
+4. Repeat in Claude, ChatGPT (developer mode) and AI DIAL; for AI DIAL, build
+   and run the image as described under Docker above, or push it as
+   [`servers/entity-mcp/README.md`](servers/entity-mcp/README.md) describes.
+   In each host check that the card renders, the theme follows the host's
+   light/dark setting, and the buttons open their links.
 
 ## Git hooks
 

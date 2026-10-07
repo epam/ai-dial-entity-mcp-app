@@ -1,19 +1,34 @@
+FROM node:24-alpine AS deps
+WORKDIR /app
+COPY package.json package-lock.json ./
+COPY libs/mcp-app-kit/package.json libs/mcp-app-kit/
+COPY libs/entity-contract/package.json libs/entity-contract/
+COPY apps/entity-card/package.json apps/entity-card/
+COPY apps/quality-check/package.json apps/quality-check/
+COPY servers/entity-mcp/package.json servers/entity-mcp/
+RUN npm ci --omit=dev --ignore-scripts
+
 FROM node:24-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./
 COPY libs/mcp-app-kit/package.json libs/mcp-app-kit/
+COPY libs/entity-contract/package.json libs/entity-contract/
 COPY apps/entity-card/package.json apps/entity-card/
 COPY apps/quality-check/package.json apps/quality-check/
+COPY servers/entity-mcp/package.json servers/entity-mcp/
 RUN npm ci --ignore-scripts
 COPY . .
-RUN npm run build
+RUN npm run build -w ai-dial-entity-card
 
-FROM nginxinc/nginx-unprivileged:1.31-alpine3.24
+FROM node:24-alpine
 # Pick up Alpine security fixes released after the base image was built.
-USER root
 RUN apk upgrade --no-cache
-USER 101
-COPY nginx.conf /etc/nginx/conf.d/default.conf
-COPY --from=build /app/apps/entity-card/dist/index.html /usr/share/nginx/html/_mcp-app/entity-card/index.html
-COPY --from=build /app/apps/quality-check/dist/index.html /usr/share/nginx/html/_mcp-app/quality-check/index.html
+WORKDIR /app
+COPY --from=deps /app/node_modules ./node_modules
+COPY --from=build /app/servers/entity-mcp/src ./src
+RUN find ./src -name '*.spec.ts' -delete
+COPY --from=build /app/apps/entity-card/dist/index.html ./card/index.html
+ENV PORT=8080 APP_HTML=/app/card/index.html
+USER node
 EXPOSE 8080
+CMD ["node", "src/main.ts"]

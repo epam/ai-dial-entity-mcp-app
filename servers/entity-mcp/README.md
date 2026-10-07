@@ -59,26 +59,27 @@ The server listens on port 8080 (`PORT` overrides it) and serves `/mcp` and
 
 ## Docker image
 
+This is the repo's only shipped artifact, built from the root `Dockerfile`.
 Build from the repo root — the build needs the root lockfile and the other
 workspace packages:
 
 ```sh
-make server-build
-make server-run DIAL_CORE_BASE_URL=https://core.example.com
+make docker-build
+make docker-run DIAL_CORE_BASE_URL=https://core.example.com
 ```
 
 which is equivalent to:
 
 ```sh
-docker build -f servers/entity-mcp/Dockerfile -t ai-dial-entity-mcp .
+docker build -t ai-dial-entity-mcp .
 docker run --rm -p 8080:8080 -e DIAL_CORE_BASE_URL=https://core.example.com ai-dial-entity-mcp
 ```
 
 The image runs as the non-root `node` user and exposes port 8080. CI builds
-and pushes it as `ghcr.io/<repo>-entity-mcp:development` on every push to
-`development` or a `release-*` branch (`.github/workflows/release-server-image.yml`);
-release-tag versioning for this image is a follow-up — v1 publishes only the
-`development` tag.
+it from the root `Dockerfile` and publishes it as `${{ github.repository }}`
+via `.github/workflows/release.yml`, with semantic versioning, release
+tagging, Trivy scanning and both registries handled by the shared
+`node_release.yml` workflow.
 
 ## Toolset registration (DIAL Admin)
 
