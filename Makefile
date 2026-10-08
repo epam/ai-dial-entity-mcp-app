@@ -7,4 +7,5 @@ docker-build:
 	docker build -t $(IMAGE) .
 
 docker-run:
-	docker run --rm -p $(PORT):8080 --read-only --tmpfs /tmp $(IMAGE)
+	docker run --rm -p $(PORT):8080 -e DIAL_CORE_URL=$(DIAL_CORE_URL) \
+		--read-only --tmpfs /tmp $(IMAGE)

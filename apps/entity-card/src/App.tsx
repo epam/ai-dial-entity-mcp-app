@@ -10,7 +10,19 @@ import {
 import { type FC, memo, useEffect } from 'react';
 import EntityCard from './components/EntityCard';
 import EntityCardSkeleton from './components/EntityCardSkeleton';
-import { parseEntityCardPayload } from './contract';
+import { parseEntityCardPayload } from '@epam/ai-dial-entity-contract';
+
+const DEFAULT_ERROR_MESSAGE = "Couldn't load entity";
+
+/**
+ * Picks the error notification text: the tool result's own message when it
+ * has non-whitespace content, otherwise the generic fallback.
+ * @param error - the tool result's optional error text
+ */
+const getErrorMessage = (error: string | undefined): string => {
+  if (error?.trim()) return error;
+  return DEFAULT_ERROR_MESSAGE;
+};
 
 const App: FC = () => {
   const result = useToolResult(parseEntityCardPayload);
@@ -30,7 +42,7 @@ const App: FC = () => {
         <Notification
           type={NotificationType.SectionMessage}
           variant={NotificationVariant.Error}
-          message="Couldn't load entity"
+          message={getErrorMessage(result.error)}
         />
       );
     case ToolResultStatus.Invalid:

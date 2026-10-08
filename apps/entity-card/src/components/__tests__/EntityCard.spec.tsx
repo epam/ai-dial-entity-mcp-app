@@ -4,7 +4,10 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import agent from '../../../fixtures/agent.json';
 import withFailures from '../../../fixtures/default.json';
-import { parseEntityCardPayload, type EntityCardData } from '../../contract';
+import {
+  parseEntityCardPayload,
+  type EntityCardData,
+} from '@epam/ai-dial-entity-contract';
 import EntityCard from '../EntityCard';
 
 const toData = (raw: unknown): EntityCardData => {

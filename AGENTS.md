@@ -6,6 +6,11 @@ ChatGPT, AI DIAL) render it in a sandboxed iframe and talk to it over the
 MCP Apps postMessage protocol (`ui/initialize`, tool input/result
 notifications, `ui/open-link`, host-context changes).
 
+The repo ships exactly one artifact: the `servers/entity-mcp` MCP server,
+built as the root `Dockerfile`, with the entity card baked in as its `ui://`
+resource. `apps/quality-check` is components kept for future use — built and
+tested like any other workspace, but not shipped.
+
 ## Repo map
 
 - `apps/entity-card/` — the entity card app (renders skill and agent cards from one payload with optional sections). Builds to one self-contained
@@ -16,19 +21,30 @@ notifications, `ui/open-link`, host-context changes).
 - `apps/quality-check/` — the quality check app, a separate MCP App with its own
   payload contract (`src/contract.ts`) and fixtures. Builds to its own
   `dist/index.html`. Not rendered inside the entity card (separate iframes).
+  Components kept for future use: built and tested like any other workspace,
+  but not shipped in the Docker image.
 - `scripts/check-single-file.mjs` — build check shared by every app.
 - `libs/mcp-app-kit/` (`@epam/ai-dial-mcp-app-kit`) — reusable MCP App plumbing.
   Read `libs/mcp-app-kit/AGENTS.md` before changing it.
+- `servers/entity-mcp/` — the shipped production MCP server. Serves
+  `show_entity_card` and the `ui://entity-card/index.html` resource against real
+  DIAL Core data. Node, no build step, no stored credentials.
 - `tools/test-mcp-server/` — local test MCP server that serves the built card
   and the fixtures, for trying the card in real hosts. Not shipped.
-- `Dockerfile`, `nginx.conf` — serve the files at `/_mcp-app/entity-card/index.html` and
-  `/_mcp-app/quality-check/index.html`.
+- `tools/mcp-probe/` — CLI that calls an MCP endpoint as a Streamable-HTTP
+  client (lists tools/resources, calls `show_entity_card`), for checking
+  credential forwarding by hand. Not shipped.
+- `Dockerfile` — builds the repo's single shipped artifact, the MCP server
+  (`servers/entity-mcp`) with the entity card baked in as its `ui://` resource.
+  There is no static hosting and no `/_mcp-app/` paths.
 
 ## Where new code goes
 
 - `apps/<name>/` — an MCP App UI that ships. An npm workspace, built and
   released by CI.
 - `libs/<name>/` — reusable code shared by apps. An npm workspace.
+- `servers/<name>/` — a shipped backend. An npm workspace, released as its own
+  Docker image. May import from `libs/`; never from `apps/`.
 - `tools/<name>/` — anything for development or testing only (test servers,
   scripts with their own dependencies). Never shipped. Each tool:
   - has its own `package.json` and `package-lock.json` and is **not** an npm

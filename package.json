@@ -9,7 +9,8 @@
   },
   "workspaces": [
     "libs/*",
-    "apps/*"
+    "apps/*",
+    "servers/*"
   ],
   "scripts": {
     "dev": "npm run dev -w ai-dial-entity-card",

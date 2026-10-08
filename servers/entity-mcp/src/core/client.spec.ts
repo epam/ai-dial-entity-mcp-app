@@ -1,0 +1,243 @@
+import { afterEach, describe, expect, test, vi } from 'vitest';
+import { EntityKind } from './routing.ts';
+import { CoreError, fetchEntity } from './client.ts';
+
+const config = {
+  coreBaseUrl: 'https://core.example.com',
+  port: 8080,
+  appHtmlPath: 'x.html',
+};
+
+const mockFetch = (status: number, body: unknown) =>
+  vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+    new Response(JSON.stringify(body), {
+      status,
+      headers: { 'content-type': 'application/json' },
+    }),
+  );
+
+afterEach(() => vi.restoreAllMocks());
+
+const KNOWN_USER_MESSAGES = [
+  'Your session has expired. Sign in again and retry.',
+  "You don't have access to this entity.",
+  'That entity no longer exists.',
+  'Could not load this entity from DIAL.',
+  'DIAL took too long to respond. Please try again.',
+];
+
+describe('fetchEntity', () => {
+  test('forwards a bearer credential as Authorization, verbatim', async () => {
+    const spy = mockFetch(200, { name: 'x' });
+    await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      credential: { header: 'Authorization', value: 'Bearer abc.def' },
+      correlation: { correlationId: 'test-correlation-id' },
+    });
+    const [url, init] = spy.mock.calls[0]!;
+    expect(url).toBe('https://core.example.com/v2/metadata/skills/b/s');
+    const headers = init!.headers as Record<string, string>;
+    expect(headers['Authorization']).toBe('Bearer abc.def');
+    expect(headers['Api-Key']).toBeUndefined();
+  });
+
+  test('forwards an api-key credential as Api-Key, verbatim', async () => {
+    const spy = mockFetch(200, { name: 'x' });
+    await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      credential: { header: 'Api-Key', value: 'raw-key-value' },
+      correlation: { correlationId: 'test-correlation-id' },
+    });
+    const headers = spy.mock.calls[0]![1]!.headers as Record<string, string>;
+    expect(headers['Api-Key']).toBe('raw-key-value');
+    expect(headers['Authorization']).toBeUndefined();
+  });
+
+  test('sends the given correlation id verbatim', async () => {
+    const spy = mockFetch(200, {});
+    await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'given-correlation-id' },
+    });
+    const headers = spy.mock.calls[0]![1]!.headers as Record<string, string>;
+    expect(headers['x-correlation-id']).toBe('given-correlation-id');
+  });
+
+  test('forwards x-request-id and x-trace-id when present on the correlation context', async () => {
+    const spy = mockFetch(200, {});
+    await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: {
+        correlationId: 'given-correlation-id',
+        requestId: 'given-request-id',
+        traceId: 'given-trace-id',
+      },
+    });
+    const headers = spy.mock.calls[0]![1]!.headers as Record<string, string>;
+    expect(headers['x-request-id']).toBe('given-request-id');
+    expect(headers['x-trace-id']).toBe('given-trace-id');
+  });
+
+  test('omits x-request-id and x-trace-id when absent from the correlation context', async () => {
+    const spy = mockFetch(200, {});
+    await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'given-correlation-id' },
+    });
+    const headers = spy.mock.calls[0]![1]!.headers as Record<string, string>;
+    expect(headers['x-request-id']).toBeUndefined();
+    expect(headers['x-trace-id']).toBeUndefined();
+  });
+
+  test('maps 401 to an expired-session message', async () => {
+    mockFetch(401, { error: 'nope' });
+    await expect(
+      fetchEntity({
+        config,
+        kind: EntityKind.Skill,
+        id: 'skills/b/s',
+        credential: { header: 'Authorization', value: 'Bearer t' },
+        correlation: { correlationId: 'test-correlation-id' },
+      }),
+    ).rejects.toMatchObject({
+      status: 401,
+      userMessage: expect.stringMatching(/sign in|session/i),
+    });
+  });
+
+  test('maps 403 and 404 to distinct messages', async () => {
+    mockFetch(403, {});
+    const forbidden = await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'test-correlation-id' },
+    }).catch((error: CoreError) => error);
+    mockFetch(404, {});
+    const missing = await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'test-correlation-id' },
+    }).catch((error: CoreError) => error);
+    expect((forbidden as CoreError).userMessage).not.toBe(
+      (missing as CoreError).userMessage,
+    );
+  });
+
+  test('never leaks the Core error body into the user message', async () => {
+    mockFetch(500, { error: 'internal stack trace with secrets' });
+    const error = await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'test-correlation-id' },
+    }).catch((caught: CoreError) => caught);
+    expect(KNOWN_USER_MESSAGES).toContain((error as CoreError).userMessage);
+  });
+
+  test('maps a timed-out request to a CoreError with a timeout message', async () => {
+    vi.spyOn(globalThis, 'fetch').mockRejectedValue(
+      new DOMException(
+        'The operation was aborted due to timeout',
+        'TimeoutError',
+      ),
+    );
+    const error = await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'test-correlation-id' },
+    }).catch((caught: CoreError) => caught);
+    expect(error).toBeInstanceOf(CoreError);
+    expect((error as CoreError).status).toBe(504);
+    expect(KNOWN_USER_MESSAGES).toContain((error as CoreError).userMessage);
+  });
+
+  test('maps a 200 response with a non-JSON body to a CoreError with the fallback message', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('<html>not json</html>', {
+        status: 200,
+        headers: { 'content-type': 'text/html' },
+      }),
+    );
+    const error = await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'test-correlation-id' },
+    }).catch((caught: CoreError) => caught);
+    expect(error).toBeInstanceOf(CoreError);
+    expect(KNOWN_USER_MESSAGES).toContain((error as CoreError).userMessage);
+  });
+
+  test('maps a 200 response with an empty body to a CoreError with the fallback message', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response('', { status: 200 }),
+    );
+    const error = await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'test-correlation-id' },
+    }).catch((caught: CoreError) => caught);
+    expect(error).toBeInstanceOf(CoreError);
+    expect(KNOWN_USER_MESSAGES).toContain((error as CoreError).userMessage);
+  });
+
+  test('passes redirect: "error" and maps a redirect response to the fallback CoreError', async () => {
+    const spy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockImplementation((_url, init) => {
+        if ((init as RequestInit)?.redirect !== 'error') {
+          throw new Error('expected fetch to be called with redirect: "error"');
+        }
+        return Promise.reject(
+          new TypeError('fetch failed: unexpected redirect'),
+        );
+      });
+
+    const error = await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'test-correlation-id' },
+    }).catch((caught: CoreError) => caught);
+
+    expect(error).toBeInstanceOf(CoreError);
+    expect(KNOWN_USER_MESSAGES).toContain((error as CoreError).userMessage);
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  test('preserves the original status on a non-2xx CoreError', async () => {
+    mockFetch(403, {});
+    const error = await fetchEntity({
+      config,
+      kind: EntityKind.Skill,
+      id: 'skills/b/s',
+      credential: { header: 'Authorization', value: 'Bearer t' },
+      correlation: { correlationId: 'test-correlation-id' },
+    }).catch((caught: CoreError) => caught);
+    expect((error as CoreError).status).toBe(403);
+  });
+});

@@ -70,11 +70,11 @@ describe('App', () => {
     warn.mockRestore();
   });
 
-  it('shows an error message when the tool fails or is cancelled', () => {
+  it('shows the host error message when the tool fails or is cancelled', () => {
     renderApp(
       createFakeMcpApp({ phase: McpAppPhase.Error, error: 'Tool cancelled' }),
     );
-    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load entity");
+    expect(screen.getByRole('alert')).toHaveTextContent('Tool cancelled');
   });
 
   it('shows an error message for the error phase of an error tool result without warning', () => {
@@ -89,7 +89,7 @@ describe('App', () => {
         },
       }),
     );
-    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load entity");
+    expect(screen.getByRole('alert')).toHaveTextContent('skill not found');
     expect(warn).not.toHaveBeenCalled();
     warn.mockRestore();
   });
@@ -105,9 +105,19 @@ describe('App', () => {
         },
       }),
     );
-    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load entity");
+    expect(screen.getByRole('alert')).toHaveTextContent('skill not found');
     expect(warn).not.toHaveBeenCalled();
     warn.mockRestore();
+  });
+
+  it('falls back to the generic message when the error phase carries no error text', () => {
+    renderApp(createFakeMcpApp({ phase: McpAppPhase.Error }));
+    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load entity");
+  });
+
+  it('falls back to the generic message when the error phase error text is whitespace', () => {
+    renderApp(createFakeMcpApp({ phase: McpAppPhase.Error, error: '   ' }));
+    expect(screen.getByRole('alert')).toHaveTextContent("Couldn't load entity");
   });
 
   it('renders the agent from a JSON text block', () => {

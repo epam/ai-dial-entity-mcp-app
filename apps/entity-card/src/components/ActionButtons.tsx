@@ -9,7 +9,7 @@ import {
 import { useOpenLink } from '@epam/ai-dial-mcp-app-kit/react';
 import { IconPencil, IconPlayerPlay } from '@tabler/icons-react';
 import { type FC, memo, useCallback, useState } from 'react';
-import type { EntityCardData } from '../contract';
+import type { EntityCardData } from '@epam/ai-dial-entity-contract';
 
 type ActionButtonsProps = { actions: EntityCardData['actions'] };
 
