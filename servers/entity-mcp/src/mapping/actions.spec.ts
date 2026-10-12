@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { EntityKind } from '../core/routing.ts';
+import { EntityKind } from '../entities/types.ts';
 import { buildActions } from './actions.ts';
 
 const base = {
@@ -145,4 +145,19 @@ describe('buildActions', () => {
       expect(actions.tryUrl).toBe('https://host/agent/agent');
     });
   });
+
+  test.each([
+    [EntityKind.Toolset, 'toolsets/b/mail', 'toolset'],
+    [EntityKind.Prompt, 'prompts/b/greeter', 'prompt'],
+  ])(
+    'substitutes the %s kind into the {kind} placeholder',
+    (kind, id, label) => {
+      const actions = buildActions(
+        { ...base, tryUrlTemplate: 'https://chat.example.com/{kind}/try' },
+        kind,
+        id,
+      );
+      expect(actions.tryUrl).toBe(`https://chat.example.com/${label}/try`);
+    },
+  );
 });

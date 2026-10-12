@@ -27,8 +27,10 @@ tested like any other workspace, but not shipped.
 - `libs/mcp-app-kit/` (`@epam/ai-dial-mcp-app-kit`) — reusable MCP App plumbing.
   Read `libs/mcp-app-kit/AGENTS.md` before changing it.
 - `servers/entity-mcp/` — the shipped production MCP server. Serves
-  `show_entity_card` and the `ui://entity-card/index.html` resource against real
-  DIAL Core data. Node, no build step, no stored credentials.
+  `show_entity_card` (skill, agent, toolset and prompt cards, found by exact id
+  or by name; one module per entity type in `src/entities/`) and the
+  `ui://entity-card/index.html` resource against real DIAL Core data. Node, no
+  build step, no stored credentials.
 - `tools/test-mcp-server/` — local test MCP server that serves the built card
   and the fixtures, for trying the card in real hosts. Not shipped.
 - `tools/mcp-probe/` — CLI that calls an MCP endpoint as a Streamable-HTTP

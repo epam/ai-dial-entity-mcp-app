@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { EntityKind } from './routing.ts';
-import { CoreError, fetchEntity } from './client.ts';
+import {
+  CoreError,
+  coreGetJson,
+  coreGetRecord,
+  type CoreRequest,
+} from './client.ts';
 
 const config = {
   coreBaseUrl: 'https://core.example.com',
@@ -18,6 +22,9 @@ const mockFetch = (status: number, body: unknown) =>
 
 afterEach(() => vi.restoreAllMocks());
 
+const readSkill = (request: CoreRequest) =>
+  coreGetRecord(request, '/v2/metadata/skills/b/s');
+
 const KNOWN_USER_MESSAGES = [
   'Your session has expired. Sign in again and retry.',
   "You don't have access to this entity.",
@@ -26,13 +33,11 @@ const KNOWN_USER_MESSAGES = [
   'DIAL took too long to respond. Please try again.',
 ];
 
-describe('fetchEntity', () => {
+describe('reading a skill record', () => {
   test('forwards a bearer credential as Authorization, verbatim', async () => {
     const spy = mockFetch(200, { name: 'x' });
-    await fetchEntity({
+    await readSkill({
       config,
-      kind: EntityKind.Skill,
-      id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer abc.def' },
       correlation: { correlationId: 'test-correlation-id' },
     });
@@ -45,10 +50,8 @@ describe('fetchEntity', () => {
 
   test('forwards an api-key credential as Api-Key, verbatim', async () => {
     const spy = mockFetch(200, { name: 'x' });
-    await fetchEntity({
+    await readSkill({
       config,
-      kind: EntityKind.Skill,
-      id: 'skills/b/s',
       credential: { header: 'Api-Key', value: 'raw-key-value' },
       correlation: { correlationId: 'test-correlation-id' },
     });
@@ -59,10 +62,8 @@ describe('fetchEntity', () => {
 
   test('sends the given correlation id verbatim', async () => {
     const spy = mockFetch(200, {});
-    await fetchEntity({
+    await readSkill({
       config,
-      kind: EntityKind.Skill,
-      id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
       correlation: { correlationId: 'given-correlation-id' },
     });
@@ -72,10 +73,8 @@ describe('fetchEntity', () => {
 
   test('forwards x-request-id and x-trace-id when present on the correlation context', async () => {
     const spy = mockFetch(200, {});
-    await fetchEntity({
+    await readSkill({
       config,
-      kind: EntityKind.Skill,
-      id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
       correlation: {
         correlationId: 'given-correlation-id',
@@ -90,10 +89,8 @@ describe('fetchEntity', () => {
 
   test('omits x-request-id and x-trace-id when absent from the correlation context', async () => {
     const spy = mockFetch(200, {});
-    await fetchEntity({
+    await readSkill({
       config,
-      kind: EntityKind.Skill,
-      id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
       correlation: { correlationId: 'given-correlation-id' },
     });
@@ -105,10 +102,8 @@ describe('fetchEntity', () => {
   test('maps 401 to an expired-session message', async () => {
     mockFetch(401, { error: 'nope' });
     await expect(
-      fetchEntity({
+      readSkill({
         config,
-        kind: EntityKind.Skill,
-        id: 'skills/b/s',
         credential: { header: 'Authorization', value: 'Bearer t' },
         correlation: { correlationId: 'test-correlation-id' },
       }),
@@ -120,18 +115,14 @@ describe('fetchEntity', () => {
 
   test('maps 403 and 404 to distinct messages', async () => {
     mockFetch(403, {});
-    const forbidden = await fetchEntity({
+    const forbidden = await readSkill({
       config,
-      kind: EntityKind.Skill,
-      id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
       correlation: { correlationId: 'test-correlation-id' },
     }).catch((error: CoreError) => error);
     mockFetch(404, {});
-    const missing = await fetchEntity({
+    const missing = await readSkill({
       config,
-      kind: EntityKind.Skill,
-      id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
       correlation: { correlationId: 'test-correlation-id' },
     }).catch((error: CoreError) => error);
@@ -142,10 +133,8 @@ describe('fetchEntity', () => {
 
   test('never leaks the Core error body into the user message', async () => {
     mockFetch(500, { error: 'internal stack trace with secrets' });
-    const error = await fetchEntity({
+    const error = await readSkill({
       config,
-      kind: EntityKind.Skill,
-      id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
       correlation: { correlationId: 'test-correlation-id' },
     }).catch((caught: CoreError) => caught);
@@ -159,10 +148,8 @@ describe('fetchEntity', () => {
         'TimeoutError',
       ),
     );
-    const error = await fetchEntity({
+    const error = await readSkill({
       config,
-      kind: EntityKind.Skill,
-      id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
       correlation: { correlationId: 'test-correlation-id' },
     }).catch((caught: CoreError) => caught);
@@ -178,10 +165,8 @@ describe('fetchEntity', () => {
         headers: { 'content-type': 'text/html' },
       }),
     );
-    const error = await fetchEntity({
+    const error = await readSkill({
       config,
-      kind: EntityKind.Skill,
-      id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
       correlation: { correlationId: 'test-correlation-id' },
     }).catch((caught: CoreError) => caught);
@@ -193,10 +178,8 @@ describe('fetchEntity', () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response('', { status: 200 }),
     );
-    const error = await fetchEntity({
+    const error = await readSkill({
       config,
-      kind: EntityKind.Skill,
-      id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
       correlation: { correlationId: 'test-correlation-id' },
     }).catch((caught: CoreError) => caught);
@@ -216,10 +199,8 @@ describe('fetchEntity', () => {
         );
       });
 
-    const error = await fetchEntity({
+    const error = await readSkill({
       config,
-      kind: EntityKind.Skill,
-      id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
       correlation: { correlationId: 'test-correlation-id' },
     }).catch((caught: CoreError) => caught);
@@ -231,13 +212,97 @@ describe('fetchEntity', () => {
 
   test('preserves the original status on a non-2xx CoreError', async () => {
     mockFetch(403, {});
-    const error = await fetchEntity({
+    const error = await readSkill({
       config,
-      kind: EntityKind.Skill,
-      id: 'skills/b/s',
       credential: { header: 'Authorization', value: 'Bearer t' },
       correlation: { correlationId: 'test-correlation-id' },
     }).catch((caught: CoreError) => caught);
     expect((error as CoreError).status).toBe(403);
+  });
+});
+
+describe('coreGetJson', () => {
+  const request = {
+    config,
+    credential: { header: 'Authorization' as const, value: 'Bearer t' },
+    correlation: { correlationId: 'cid' },
+  };
+
+  test('requests the path against the Core base url with forwarded headers', async () => {
+    const spy = mockFetch(200, { data: [1] });
+    const body = await coreGetJson(request, '/openai/toolsets');
+    expect(body).toEqual({ data: [1] });
+    expect(spy.mock.calls[0]![0]).toBe(
+      'https://core.example.com/openai/toolsets',
+    );
+    const headers = spy.mock.calls[0]![1]!.headers as Record<string, string>;
+    expect(headers['Authorization']).toBe('Bearer t');
+    expect(headers['x-correlation-id']).toBe('cid');
+  });
+
+  test('keeps a query string in the path', async () => {
+    const spy = mockFetch(200, {});
+    await coreGetJson(
+      request,
+      '/v2/metadata/skills/b/?recursive=true&limit=1000',
+    );
+    expect(spy.mock.calls[0]![0]).toBe(
+      'https://core.example.com/v2/metadata/skills/b/?recursive=true&limit=1000',
+    );
+  });
+
+  test('uses a 30 second timeout by default and a custom one when given', async () => {
+    const timeout = vi.spyOn(AbortSignal, 'timeout');
+    mockFetch(200, {});
+    await coreGetJson(request, '/x');
+    mockFetch(200, {});
+    await coreGetJson(request, '/x', { timeoutMs: 60_000 });
+    expect(timeout.mock.calls).toEqual([[30_000], [60_000]]);
+  });
+
+  test('rejects with a timeout CoreError when the caller aborts through request.signal', async () => {
+    const controller = new AbortController();
+    vi.spyOn(globalThis, 'fetch').mockImplementation(
+      (_url, init) =>
+        new Promise((_resolve, reject) => {
+          init!.signal!.addEventListener('abort', () =>
+            reject(init!.signal!.reason),
+          );
+        }),
+    );
+    const pending = coreGetJson(
+      { ...request, signal: controller.signal },
+      '/x',
+    );
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ status: 504 });
+  });
+
+  test('maps a non-success status to a CoreError with the fixed message', async () => {
+    mockFetch(403, { secret: 'body' });
+    await expect(coreGetJson(request, '/x')).rejects.toMatchObject({
+      status: 403,
+      userMessage: "You don't have access to this entity.",
+    });
+  });
+});
+
+describe('coreGetRecord', () => {
+  const request = {
+    config,
+    credential: { header: 'Api-Key' as const, value: 'k' },
+    correlation: { correlationId: 'cid' },
+  };
+
+  test('returns an object body', async () => {
+    mockFetch(200, { id: 'a' });
+    await expect(coreGetRecord(request, '/x')).resolves.toEqual({ id: 'a' });
+  });
+
+  test('rejects a body that is not an object with a 502 CoreError', async () => {
+    mockFetch(200, [1, 2]);
+    await expect(coreGetRecord(request, '/x')).rejects.toMatchObject({
+      status: 502,
+    });
   });
 });

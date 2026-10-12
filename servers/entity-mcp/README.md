@@ -11,13 +11,23 @@ neither header is present.
 
 It exposes:
 
-- **Tool** `show_entity_card(kind, id)` — `kind` is `"skill"` or `"agent"`;
-  `id` is the exact entity id (`skills/{bucket}/{path}` for a skill, the
-  deployment id for an agent). It reads the entity from DIAL Core as the
+- **Tool** `show_entity_card({ id?, name?, kind? })` — shows a card for a
+  skill, agent, toolset or prompt. Always prefer `id` (from another tool,
+  agent or link), the exact entity id
+  (`skills/{bucket}/{path}`, `prompts/{bucket}/{path}`,
+  `toolsets/{bucket}/{path}`, or a deployment id for an agent): it is fetched
+  directly. Otherwise pass `name`: the server lists the caller's skills,
+  agents, toolsets and prompts and matches the name (case-insensitive, hyphens,
+  underscores and spaces are interchangeable; an exact match wins over a
+  partial one). `kind` optionally restricts the search to one type. When
+  several entities match, the result lists them with their ids so the caller
+  can ask again with an `id`. With neither `id` nor `name` the tool returns an
+  error; with both, `id` wins. It reads everything from DIAL Core as the
   caller, maps it onto the card payload contract
   (`@epam/ai-dial-entity-contract`), and returns it as `structuredContent`. On
-  a Core error, a malformed id, or an entity missing a required field, it
-  returns an `isError` result instead of an invalid payload.
+  a Core error, a malformed id, or an entity without a usable name, it
+  returns an `isError` result instead of an invalid payload. An agent or
+  toolset with no description gets the card text `No description provided.`
 - **Resource** `ui://entity-card/index.html` — the built entity card, served
   as `text/html` (DIAL Core rejects `text/html;profile=mcp-app`).
 
@@ -44,14 +54,24 @@ A future reader should not "helpfully" add these back:
   of its own.
 - `FIXTURES_DIR` — that belongs to `tools/test-mcp-server`; the shipped
   server has no fixture mode.
-- A configurable HTTP timeout — one Core call per request does not justify a
-  knob; the timeout is hardcoded to avoid hanging the card.
+- A configurable HTTP timeout — the limits (30 s per Core call, 60 s for the
+  full agent and toolset lists, 50 s for a whole name search) are hardcoded to
+  avoid hanging the card; nothing here justifies a knob yet.
 - `LOG_LEVEL` — same reasoning: no knob until there is more than one log
   level's worth of output to control.
 
+## Adding an entity type
+
+Each entity type is one module in `src/entities/` that implements
+`EntityType`: how to recognise a full id, fetch one record, list candidates for
+a name search, and map a record onto the card. Add the module to
+`src/entities/registry.ts` and write its spec; the tool, the resolver and the
+card need no change. Skills, agents, toolsets and prompts are the types
+registered today.
+
 ## Logging
 
-Every `show_entity_card` call logs exactly one completion line to `console`
+Every `show_entity_card` call logs one completion line to `console`
 — `console.log` on success, `console.error` on failure — carrying the
 outcome, the entity kind, the (sanitised) entity id, the call's duration in
 milliseconds, and a correlation id.
@@ -119,8 +139,8 @@ registration — it cannot be done by the server owner alone.
 
 ## Known Core-side assumptions
 
-The URL builder rejects literal path traversal (`..`, `.` segments) in an
-entity id before encoding it, but two related behaviours belong to DIAL Core,
+The id parsing in `src/entities/ids.ts` rejects literal path traversal (`..`,
+`.` segments) in an entity id before encoding it, but two related behaviours belong to DIAL Core,
 not to this server, and we have not verified them against a live Core:
 
 - whether Core double-decodes percent-encoded path segments before routing
@@ -136,9 +156,54 @@ callers.
 - whether Core resolves a percent-encoded `/` (`%2F`) inside the single path
   segment this server sends for a custom-application agent id of the form
   `applications/{bucket}/{path}` (`/openai/applications/applications%2F...`).
-  If Core does not decode `%2F` before routing, custom-application agents
-  will 404 while bare deployment names keep working. This should be the
-  first thing probed against a live Core once the toolset is registered.
+  A probe against one Core (2026-10-08) returned 200 for such an agent id, so
+  this works for agents there. The same probe got a 404 for the first custom
+  toolset id (`/openai/toolsets/toolsets%2F...`). Core lists resource-based ids
+  percent-encoded while its detail routes expect the plain id, which this
+  server now sends (list ids are decoded), so that 404 may already be fixed;
+  fetching a toolset by its exact `toolsets/...` id has not been re-checked
+  against a live Core. A name search is unaffected because it uses the list
+  record directly.
+
+## Known gaps
+
+- A name search has a 50 s overall deadline. Calls still running at that point
+  are aborted and their types are reported as "could not be searched", so an
+  unknown name costs at most that long. A single Core call has its own 30 s
+  timeout (60 s for the full agent and toolset lists). The detail fetch of the
+  one matched entity comes after the deadline, bounded to the rest of a 60 s
+  budget (at least 5 s), so a search ends within about a minute. The search is
+  not tied to the MCP host cancelling the request.
+- No page cap on list calls: a list follows its pages to the end.
+- An exact match anywhere makes the slow agent list unnecessary, so an agent
+  found only by a display name that differs from its id is not considered when
+  another type already matched exactly. Use `kind: "agent"` to search agents
+  on their own.
+- `/v1/deployment-names` can list entries the caller cannot read (394 names
+  against 385 agents in the full list in one measurement). An exact match on
+  such an entry ends in "no longer exists" or "no access" on the detail fetch.
+- When a name search finds a match but some type could not be searched, the
+  card is shown and the skipped types are only written to the log.
+- Entity names, descriptions and prompt content are written by other users and
+  go into the tool result unfiltered (the card shows them; the same text is in
+  the result's JSON `content`). Prompt bodies make this a larger channel than
+  before.
+- Skills and prompts are searched in the caller's own bucket only; shared and
+  published ones are not. Agents and toolsets come from Core's deployment
+  lists, which include private, shared and public entries.
+- Custom (bucket-based) agents only appear in a name search when Core's
+  `includeCustomApps` setting is on. An exact id fetch works either way.
+- Cost per search: `/openai/applications` reads every accessible agent in
+  full and can take tens of seconds on a large Core (43 s for 385 agents in
+  one measurement). Agents are therefore searched through the cheap
+  `/v1/deployment-names?type=application` call first (about a second), where
+  only an exact match on the id's name counts, so a loose id match never stands
+  in for the right entity. The full agent list, which can also match display
+  names that differ from the id, runs when no exact match was found in any
+  type, or when the names call failed. Searching a partial name such as
+  `digest` therefore takes the slow path unless something matches exactly.
+  Toolset, skill and prompt listing is fast enough to stay on the full list.
+  The `kind` hint narrows a search further.
 
 ## v1 limitations
 

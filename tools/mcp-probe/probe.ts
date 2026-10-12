@@ -7,10 +7,11 @@ type Args = {
   url: string;
   kind?: string;
   id?: string;
+  name?: string;
 };
 
 /**
- * Parses the probe's CLI flags: `--url`, `--kind` and `--id`.
+ * Parses the probe's CLI flags: `--url`, `--kind`, `--id` and `--name`.
  * @param argv - raw process arguments, excluding the node and script entries
  */
 const parseArgs = (argv: string[]): Args => {
@@ -26,6 +27,9 @@ const parseArgs = (argv: string[]): Args => {
       i += 1;
     } else if (flag === '--id' && value) {
       args.id = value;
+      i += 1;
+    } else if (flag === '--name' && value) {
+      args.name = value;
       i += 1;
     }
   }
@@ -68,10 +72,14 @@ const main = async (): Promise<void> => {
   const resources = await client.listResources();
   console.log('resources/list:', JSON.stringify(resources, null, 2));
 
-  if (args.kind && args.id) {
+  if (args.id || args.name) {
     const result = await client.callTool({
       name: 'show_entity_card',
-      arguments: { kind: args.kind, id: args.id },
+      arguments: {
+        ...(args.id && { id: args.id }),
+        ...(args.name && { name: args.name }),
+        ...(args.kind && { kind: args.kind }),
+      },
     });
     if (result.isError) {
       console.log(

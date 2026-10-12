@@ -1,7 +1,18 @@
 import type { ServerConfig } from '../config.ts';
-import { EntityKind, coreUrlForEntity } from './routing.ts';
 
-const TIMEOUT_MS = 10_000;
+const TIMEOUT_MS = 30_000;
+
+const callTimeout = (
+  callerSignal: AbortSignal | undefined,
+  timeoutMs: number = TIMEOUT_MS,
+): AbortSignal => {
+  const timeout = AbortSignal.timeout(timeoutMs);
+  return callerSignal ? AbortSignal.any([timeout, callerSignal]) : timeout;
+};
+
+export type CoreGetOptions = {
+  timeoutMs?: number;
+};
 
 const MESSAGES: Record<number, string> = {
   401: 'Your session has expired. Sign in again and retry.',
@@ -14,7 +25,8 @@ export const FALLBACK_MESSAGE = 'Could not load this entity from DIAL.';
 const TIMEOUT_MESSAGE = 'DIAL took too long to respond. Please try again.';
 
 const isTimeoutError = (error: unknown): boolean =>
-  error instanceof Error && error.name === 'TimeoutError';
+  error instanceof Error &&
+  (error.name === 'TimeoutError' || error.name === 'AbortError');
 
 /**
  * Raised when DIAL Core responds with a non-success status. The message
@@ -55,27 +67,28 @@ export type CorrelationContext = {
   traceId?: string;
 };
 
-export type FetchEntityOptions = {
+export type CoreRequest = {
   config: ServerConfig;
-  kind: EntityKind;
-  id: string;
   credential: InboundCredential;
   correlation: CorrelationContext;
+  signal?: AbortSignal;
 };
 
 /**
- * Reads one entity record from DIAL Core as the calling user. The caller's
+ * Reads one JSON document from DIAL Core as the calling user. The caller's
  * credential is forwarded verbatim, under the same header it arrived on; this
  * server holds no credential of its own and never retries under a different
  * identity.
- * @param options - config, entity coordinates and the forwarded credential
+ * @param request - config, forwarded credential and correlation context
+ * @param path - Core path with any query string, already URL-encoded
+ * @param options - `timeoutMs` overrides the 30 second default for a call known to be slow
  */
-export const fetchEntity = async (
-  options: FetchEntityOptions,
-): Promise<Record<string, unknown>> => {
-  const { config, kind, id, credential, correlation } = options;
-  const path = coreUrlForEntity(kind, id);
-
+export const coreGetJson = async (
+  request: CoreRequest,
+  path: string,
+  options: CoreGetOptions = {},
+): Promise<unknown> => {
+  const { config, credential, correlation } = request;
   let response: Response;
   try {
     response = await fetch(`${config.coreBaseUrl}${path}`, {
@@ -89,7 +102,7 @@ export const fetchEntity = async (
           : {}),
         ...(correlation.traceId ? { 'x-trace-id': correlation.traceId } : {}),
       },
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      signal: callTimeout(request.signal, options.timeoutMs),
       // The fetch spec strips `Authorization` but not a forwarded `Api-Key` on
       // a cross-origin redirect, so a redirect is rejected outright rather
       // than followed.
@@ -110,8 +123,24 @@ export const fetchEntity = async (
   }
 
   try {
-    return (await response.json()) as Record<string, unknown>;
+    return (await response.json()) as unknown;
   } catch {
     throw new CoreError(502, FALLBACK_MESSAGE);
   }
+};
+
+/**
+ * Like `coreGetJson`, but requires the body to be a JSON object.
+ * @param request - config, forwarded credential and correlation context
+ * @param path - Core path with any query string, already URL-encoded
+ */
+export const coreGetRecord = async (
+  request: CoreRequest,
+  path: string,
+): Promise<Record<string, unknown>> => {
+  const body = await coreGetJson(request, path);
+  if (typeof body !== 'object' || body === null || Array.isArray(body)) {
+    throw new CoreError(502, FALLBACK_MESSAGE);
+  }
+  return body as Record<string, unknown>;
 };

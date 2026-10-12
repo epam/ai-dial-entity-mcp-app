@@ -5,6 +5,6 @@
     "moduleResolution": "bundler",
     "erasableSyntaxOnly": false
   },
-  "include": ["src/**/*.spec.ts"],
+  "include": ["src/**/*.spec.ts", "src/**/test-utils.ts"],
   "exclude": []
 }
