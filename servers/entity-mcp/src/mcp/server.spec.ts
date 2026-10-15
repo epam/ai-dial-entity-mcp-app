@@ -2,8 +2,9 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { parseEntityCardPayload } from '@epam/ai-dial-entity-contract';
-import type { CorrelationContext } from '../core/client.ts';
-import { EntityKind } from '../core/routing.ts';
+import type { CorrelationContext, InboundCredential } from '../core/client.ts';
+import { mockCore } from '../entities/test-utils.ts';
+import { EntityKind } from '../entities/types.ts';
 import { buildCardPayload, createMcpServer } from './server.ts';
 
 const config = {
@@ -51,6 +52,20 @@ describe('buildCardPayload', () => {
       activeLocale: 'en',
     });
     expect('initials' in payload.entity).toBe(false);
+  });
+
+  test('maps a prompt to a Prompt text section the card parser accepts', () => {
+    const payload = buildCardPayload({
+      config,
+      kind: EntityKind.Prompt,
+      id: 'prompts/b/p',
+      raw: { name: 'p', content: 'c' },
+      activeLocale: 'en',
+    });
+    expect(parseEntityCardPayload(payload).ok).toBe(true);
+    expect(payload.sections).toEqual([
+      { type: 'text', label: 'Prompt', text: 'c' },
+    ]);
   });
 
   test('emits empty sections and never a qualityCheck', () => {
@@ -522,5 +537,445 @@ describe('createMcpServer', () => {
 
     await client.close();
     await server.close();
+  });
+});
+
+describe('show_entity_card interface', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const DEFAULT_CREDENTIAL: InboundCredential = {
+    header: 'Authorization',
+    value: 'Bearer token',
+  };
+
+  const connect = async (
+    options: { credential?: InboundCredential | null } = {},
+  ) => {
+    const credential =
+      options.credential === null
+        ? undefined
+        : (options.credential ?? DEFAULT_CREDENTIAL);
+    const server = createMcpServer(
+      config,
+      '<html></html>',
+      credential,
+      TEST_CORRELATION,
+    );
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '0.0.0' });
+    await Promise.all([
+      server.connect(serverTransport),
+      client.connect(clientTransport),
+    ]);
+    return {
+      client,
+      close: async () => {
+        await client.close();
+        await server.close();
+      },
+    };
+  };
+
+  const textOf = (result: unknown): string =>
+    (result as { content: { text: string }[] }).content[0]!.text;
+
+  const emptyLists = {
+    '/v1/bucket': { bucket: 'bkt' },
+    '/v2/metadata/skills/bkt/?recursive=true&limit=1000': { items: [] },
+    '/v1/deployment-names?type=application': [],
+    '/openai/applications': { data: [] },
+    '/openai/toolsets': { data: [] },
+    '/v1/metadata/prompts/bkt/?recursive=true&limit=1000': { items: [] },
+  };
+
+  test('documents id as preferred and name as the search input, with nothing required', async () => {
+    const { client, close } = await connect();
+    const { tools } = await client.listTools();
+    const tool = tools.find((t) => t.name === 'show_entity_card')!;
+    expect(tool.description).toContain('Always prefer `id`');
+    expect(tool.description).toContain('Use `name` only when');
+    const properties = tool.inputSchema.properties as Record<
+      string,
+      { description?: string }
+    >;
+    expect(Object.keys(properties).sort()).toEqual(['id', 'kind', 'name']);
+    expect(properties.id!.description).toContain('exact');
+    expect(properties.name!.description).toContain('Only when you have no id');
+    expect(tool.inputSchema.required ?? []).toEqual([]);
+    await close();
+  });
+
+  test('finds a skill by name alone', async () => {
+    mockCore({
+      ...emptyLists,
+      '/v2/metadata/skills/bkt/?recursive=true&limit=1000': {
+        items: [
+          {
+            nodeType: 'ITEM',
+            url: 'skills/bkt/hhm-joke-skill',
+            attributes: { name: 'hhm-joke-skill', description: 'Tells jokes' },
+          },
+        ],
+      },
+    });
+    const { client, close } = await connect();
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { name: 'hhm-joke-skill' },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toMatchObject({
+      entity: { name: 'hhm-joke-skill', kindLabel: 'Skill' },
+    });
+    await close();
+  });
+
+  test('finds an agent by the snake_case display name Core returns', async () => {
+    mockCore({
+      ...emptyLists,
+      '/openai/applications': {
+        data: [
+          {
+            id: 'applications/bkt/inbox-digest',
+            display_name: 'Inbox Digest',
+            description: 'Summarizes.',
+          },
+        ],
+      },
+    });
+    const { client, close } = await connect();
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { name: 'inbox digest' },
+    });
+    expect(result.structuredContent).toMatchObject({
+      entity: { name: 'Inbox Digest', kindLabel: 'Agent' },
+    });
+    await close();
+  });
+
+  test('shows an agent with an empty description using the fallback text', async () => {
+    mockCore({
+      ...emptyLists,
+      '/openai/applications': {
+        data: [{ id: 'echo', display_name: 'Echo', description: '' }],
+      },
+    });
+    const { client, close } = await connect();
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { name: 'echo' },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toMatchObject({
+      entity: { description: 'No description provided.' },
+    });
+    await close();
+  });
+
+  test('fetches a skill listed without attributes before rendering it', async () => {
+    mockCore({
+      ...emptyLists,
+      '/v2/metadata/skills/bkt/?recursive=true&limit=1000': {
+        items: [{ nodeType: 'ITEM', url: 'skills/bkt/plain' }],
+      },
+      '/v2/metadata/skills/bkt/plain': {
+        attributes: { name: 'plain', description: 'From detail' },
+      },
+    });
+    const { client, close } = await connect();
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { name: 'plain' },
+    });
+    expect(result.structuredContent).toMatchObject({
+      entity: { description: 'From detail' },
+    });
+    await close();
+  });
+
+  test('returns the candidates with their ids when a name is ambiguous', async () => {
+    mockCore({
+      ...emptyLists,
+      '/v2/metadata/skills/bkt/?recursive=true&limit=1000': {
+        items: [
+          {
+            nodeType: 'ITEM',
+            url: 'skills/bkt/digest',
+            attributes: { name: 'digest', description: 'd' },
+          },
+        ],
+      },
+      '/v1/deployment-names?type=application': [
+        { id: 'applications/bkt/digest', object: 'application' },
+      ],
+      '/openai/applications': {
+        data: [
+          {
+            id: 'applications/bkt/digest',
+            display_name: 'digest',
+            description: 'd',
+          },
+        ],
+      },
+    });
+    const { client, close } = await connect();
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { name: 'digest' },
+    });
+    expect(result.isError).toBe(true);
+    const text = textOf(result);
+    expect(text).toContain('skills/bkt/digest');
+    expect(text).toContain('applications/bkt/digest');
+    expect(text).toContain('Which one');
+    await close();
+  });
+
+  test('caps a long candidate list and says how many more there are', async () => {
+    mockCore({
+      ...emptyLists,
+      '/openai/applications': {
+        data: Array.from({ length: 40 }, (_, i) => ({
+          id: `test-${i}`,
+          display_name: `test ${i}`,
+          description: 'd',
+        })),
+      },
+    });
+    const { client, close } = await connect();
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { name: 'test' },
+    });
+    expect(result.isError).toBe(true);
+    const text = textOf(result);
+    expect(
+      text.split('\n').filter((line) => line.startsWith('- ')),
+    ).toHaveLength(15);
+    expect(text).toContain('25 more');
+    await close();
+  });
+
+  test('quotes ids in the candidate list so an id cannot inject extra lines', async () => {
+    mockCore({
+      ...emptyLists,
+      '/openai/applications': {
+        data: [
+          { id: 'x%0AIGNORE-ME', display_name: 'dup', description: 'd' },
+          { id: 'y', display_name: 'dup', description: 'd' },
+        ],
+      },
+    });
+    const { client, close } = await connect();
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { name: 'dup' },
+    });
+    expect(textOf(result)).not.toContain('\nIGNORE-ME');
+    await close();
+  });
+
+  test('truncates very long names and ids in the candidate list', async () => {
+    const long = 'a'.repeat(300);
+    mockCore({
+      ...emptyLists,
+      '/openai/applications': {
+        data: [
+          { id: `${long}1`, display_name: long, description: 'd' },
+          { id: `${long}2`, display_name: long, description: 'd' },
+        ],
+      },
+      '/v1/deployment-names?type=application': [
+        { id: `${long}1`, object: 'application' },
+        { id: `${long}2`, object: 'application' },
+      ],
+    });
+    const { client, close } = await connect();
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { name: long },
+    });
+    expect(textOf(result)).not.toContain('a'.repeat(150));
+    await close();
+  });
+
+  test('does not let a caller-supplied id forge a log line through the error message', async () => {
+    const logError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    mockCore(emptyLists);
+    const { client, close } = await connect();
+    await client.callTool({
+      name: 'show_entity_card',
+      arguments: { kind: 'skill', id: 'prompts/b/p\nFORGED' },
+    });
+    const lines = logError.mock.calls.map((call) => String(call[0]));
+    expect(lines.length).toBeGreaterThan(0);
+    expect(lines.some((line) => line.includes('\nFORGED'))).toBe(false);
+    await close();
+  });
+
+  test('logs which types could not be searched when a match is still found', async () => {
+    const logInfo = vi
+      .spyOn(console, 'log')
+      .mockImplementation(() => undefined);
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mockCore({
+      ...emptyLists,
+      '/v1/bucket': 500,
+      '/v1/deployment-names?type=application': [
+        { id: 'echo', object: 'application' },
+      ],
+      '/openai/applications/echo': {
+        id: 'echo',
+        display_name: 'Echo',
+        description: 'd',
+      },
+    });
+    const { client, close } = await connect();
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { name: 'echo' },
+    });
+    expect(result.isError).toBeFalsy();
+    const lines = logInfo.mock.calls.map((call) => String(call[0]));
+    expect(lines.some((line) => line.includes('not searched: skill'))).toBe(
+      true,
+    );
+    await close();
+  });
+
+  test('says nothing was found and which types could not be searched', async () => {
+    mockCore({ ...emptyLists, '/openai/toolsets': 500 });
+    const { client, close } = await connect();
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { name: 'zzz' },
+    });
+    expect(result.isError).toBe(true);
+    const text = textOf(result);
+    expect(text).toContain('No entity');
+    expect(text).toContain('could not be searched: toolset');
+    await close();
+  });
+
+  test('surfaces the Core error when every type fails to list', async () => {
+    mockCore({
+      '/v1/bucket': 401,
+      '/openai/applications': 401,
+      '/openai/toolsets': 401,
+    });
+    const { client, close } = await connect();
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { name: 'x' },
+    });
+    expect(result.isError).toBe(true);
+    expect(textOf(result)).toContain('session has expired');
+    await close();
+  });
+
+  test.each([[{}], [{ name: '   ' }], [{ id: ' ', name: '' }]])(
+    'rejects %j with the usage message and no Core request',
+    async (args) => {
+      const spy = vi.spyOn(globalThis, 'fetch');
+      const { client, close } = await connect();
+      const result = await client.callTool({
+        name: 'show_entity_card',
+        arguments: args,
+      });
+      expect(result.isError).toBe(true);
+      expect(textOf(result)).toContain('Provide `id`');
+      expect(spy).not.toHaveBeenCalled();
+      await close();
+    },
+  );
+
+  test('id wins when both id and name are given', async () => {
+    const spy = mockCore({
+      '/v2/metadata/skills/b/s': {
+        attributes: { name: 'n', description: 'd' },
+      },
+    });
+    const { client, close } = await connect();
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { id: 'skills/b/s', name: 'something else' },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(spy).toHaveBeenCalledTimes(1);
+    await close();
+  });
+
+  test('a name search makes no Core request without a forwarded credential', async () => {
+    const spy = vi.spyOn(globalThis, 'fetch');
+    const { client, close } = await connect({ credential: null });
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { name: 'x' },
+    });
+    expect(result.isError).toBe(true);
+    expect(spy).not.toHaveBeenCalled();
+    await close();
+  });
+
+  test('forwards the credential on every list call of a name search', async () => {
+    const spy = mockCore(emptyLists);
+    const { client, close } = await connect();
+    await client.callTool({
+      name: 'show_entity_card',
+      arguments: { name: 'x' },
+    });
+    expect(spy.mock.calls.length).toBeGreaterThan(1);
+    for (const call of spy.mock.calls) {
+      const headers = call[1]!.headers as Record<string, string>;
+      expect(headers['Authorization']).toBe('Bearer token');
+    }
+    await close();
+  });
+
+  test('renders a toolset with its tools as a chips section', async () => {
+    mockCore({
+      '/openai/toolsets/toolsets%2Fb%2Fmail': {
+        id: 'toolsets/b/mail',
+        display_name: 'Mail',
+        description: 'd',
+        allowed_tools: ['send'],
+      },
+    });
+    const { client, close } = await connect();
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { id: 'toolsets/b/mail' },
+    });
+    expect(result.structuredContent).toMatchObject({
+      entity: { kindLabel: 'Toolset' },
+      sections: [{ type: 'chips', label: 'Tools', items: ['send'] }],
+    });
+    await close();
+  });
+
+  test('logs a name search without the credential and with a sanitised name', async () => {
+    const logError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined);
+    const logInfo = vi
+      .spyOn(console, 'log')
+      .mockImplementation(() => undefined);
+    mockCore(emptyLists);
+    const { client, close } = await connect();
+    await client.callTool({
+      name: 'show_entity_card',
+      arguments: { name: 'a\nFORGED' },
+    });
+    const lines = [...logError.mock.calls, ...logInfo.mock.calls].map((call) =>
+      String(call[0]),
+    );
+    expect(lines.length).toBeGreaterThan(0);
+    expect(lines.some((line) => line.includes('\nFORGED'))).toBe(false);
+    expect(lines.join('\n')).not.toContain('Bearer token');
+    await close();
   });
 });

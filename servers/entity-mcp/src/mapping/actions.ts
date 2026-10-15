@@ -1,5 +1,5 @@
 import type { ServerConfig } from '../config.ts';
-import type { EntityKind } from '../core/routing.ts';
+import type { EntityKind } from '../entities/types.ts';
 
 export type CardActions = { tryUrl?: string; editUrl?: string };
 
