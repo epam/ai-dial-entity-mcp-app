@@ -23,6 +23,11 @@ import {
 import { IncompleteEntity } from '../entities/shared.ts';
 import { EntityKind } from '../entities/types.ts';
 import { buildActions } from '../mapping/actions.ts';
+import {
+  RENDER_TOOL_DESCRIPTION,
+  buildRenderedPayload,
+  renderCardInputSchema,
+} from './render-card.ts';
 
 const RESOURCE_URI = 'ui://entity-card/index.html';
 // DIAL Core rejects the spec's `text/html;profile=mcp-app` resource MIME type.
@@ -239,6 +244,27 @@ export const createMcpServer = (
         );
         return errorResult(FALLBACK_MESSAGE);
       }
+    },
+  );
+
+  registerAppTool(
+    server,
+    'render_entity_card',
+    {
+      title: 'Render entity card',
+      description: RENDER_TOOL_DESCRIPTION,
+      inputSchema: renderCardInputSchema,
+      _meta: { ui: { resourceUri: RESOURCE_URI } },
+    },
+    (input) => {
+      const payload = buildRenderedPayload(input);
+      console.log(
+        `render_entity_card succeeded (correlation ${sanitizeForLog(correlation.correlationId)})`,
+      );
+      return {
+        structuredContent: payload,
+        content: [{ type: 'text', text: JSON.stringify(payload) }],
+      };
     },
   );
 

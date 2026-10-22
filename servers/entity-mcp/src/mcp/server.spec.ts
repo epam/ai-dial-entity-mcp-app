@@ -979,3 +979,110 @@ describe('show_entity_card interface', () => {
     await close();
   });
 });
+
+describe('render_entity_card', () => {
+  const connect = async (credential?: InboundCredential) => {
+    const server = createMcpServer(
+      config,
+      '<html></html>',
+      credential,
+      TEST_CORRELATION,
+    );
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '0.0.0' });
+    await Promise.all([
+      server.connect(serverTransport),
+      client.connect(clientTransport),
+    ]);
+    return { client, server };
+  };
+
+  const render = async (args: Record<string, unknown>) => {
+    const { client, server } = await connect();
+    const result = await client.callTool({
+      name: 'render_entity_card',
+      arguments: args,
+    });
+    await client.close();
+    await server.close();
+    return result;
+  };
+
+  const validArgs = {
+    entity: { name: ' Inbox Digest ', description: 'Summarizes.' },
+    actions: { editUrl: 'https://chat.example.com/edit?id=1' },
+    sections: [
+      { type: 'chips', label: 'Tools', items: ['Urgency scorer'] },
+      { type: 'text', label: 'Prompt', text: 'Concise.' },
+    ],
+  };
+
+  test('is listed next to show_entity_card on the same card resource', async () => {
+    const { client, server } = await connect();
+    const { tools } = await client.listTools();
+    const uris = Object.fromEntries(
+      tools.map((tool) => [
+        tool.name,
+        (tool._meta?.ui as { resourceUri?: string } | undefined)?.resourceUri,
+      ]),
+    );
+    expect(uris).toEqual({
+      show_entity_card: 'ui://entity-card/index.html',
+      render_entity_card: 'ui://entity-card/index.html',
+    });
+    await client.close();
+    await server.close();
+  });
+
+  test('returns a payload the card parser accepts, without a credential or a Core call', async () => {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch');
+    const result = await render(validArgs);
+    expect(result.isError).toBeFalsy();
+    const parsed = parseEntityCardPayload(result.structuredContent);
+    expect(parsed.ok).toBe(true);
+    expect(result.structuredContent).toMatchObject({
+      entity: { name: 'Inbox Digest', description: 'Summarizes.' },
+      actions: { editUrl: 'https://chat.example.com/edit?id=1' },
+    });
+    expect(fetchSpy).not.toHaveBeenCalled();
+    fetchSpy.mockRestore();
+  });
+
+  test('defaults to no buttons and no sections', async () => {
+    const result = await render({
+      entity: { name: 'x', description: 'y' },
+    });
+    expect(result.structuredContent).toEqual({
+      entity: { name: 'x', description: 'y' },
+      actions: {},
+      sections: [],
+    });
+  });
+
+  test.each([
+    ['a missing description', { entity: { name: 'x' } }],
+    ['a blank name', { entity: { name: '  ', description: 'y' } }],
+    [
+      'a non-http(s) url',
+      {
+        entity: { name: 'x', description: 'y' },
+        actions: { tryUrl: 'javascript:alert(1)' },
+      },
+    ],
+    [
+      'an empty chips section',
+      {
+        entity: { name: 'x', description: 'y' },
+        sections: [{ type: 'chips', label: 'Tools', items: [] }],
+      },
+    ],
+    [
+      'an oversized description',
+      { entity: { name: 'x', description: 'y'.repeat(2001) } },
+    ],
+  ])('rejects %s', async (_label, args) => {
+    const result = await render(args);
+    expect(result.isError).toBe(true);
+  });
+});
