@@ -89,6 +89,16 @@ const errorResult = (text: string): CallToolResult => ({
   content: [{ type: 'text', text }],
 });
 
+/**
+ * Builds a successful tool result carrying the card payload as structured
+ * content, with the same JSON as text for hosts that only read content.
+ * @param payload - the card payload to return
+ */
+const cardResult = (payload: object): CallToolResult => ({
+  structuredContent: { ...payload },
+  content: [{ type: 'text', text: JSON.stringify(payload) }],
+});
+
 const clip = (value: string): string =>
   value.length > MAX_LISTED_TEXT
     ? `${value.slice(0, MAX_LISTED_TEXT)}…`
@@ -214,10 +224,7 @@ export const createMcpServer = (
         console.log(
           `show_entity_card succeeded for ${resolved.kind} ${sanitizeForLog(resolved.id)} in ${Date.now() - startedAt}ms (correlation ${correlationLabel})${notSearched}`,
         );
-        return {
-          structuredContent: payload,
-          content: [{ type: 'text', text: JSON.stringify(payload) }],
-        };
+        return cardResult(payload);
       } catch (error) {
         const durationMs = Date.now() - startedAt;
         if (error instanceof CoreError) {
@@ -261,10 +268,7 @@ export const createMcpServer = (
       console.log(
         `render_entity_card succeeded (correlation ${sanitizeForLog(correlation.correlationId)})`,
       );
-      return {
-        structuredContent: payload,
-        content: [{ type: 'text', text: JSON.stringify(payload) }],
-      };
+      return cardResult(payload);
     },
   );
 

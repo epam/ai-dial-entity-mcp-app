@@ -981,11 +981,11 @@ describe('show_entity_card interface', () => {
 });
 
 describe('render_entity_card', () => {
-  const connect = async (credential?: InboundCredential) => {
+  const connect = async () => {
     const server = createMcpServer(
       config,
       '<html></html>',
-      credential,
+      undefined,
       TEST_CORRELATION,
     );
     const [clientTransport, serverTransport] =
@@ -1049,6 +1049,30 @@ describe('render_entity_card', () => {
     fetchSpy.mockRestore();
   });
 
+  test('keeps show_entity_card failing closed without a credential', async () => {
+    const { client, server } = await connect();
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { id: 'skills/b/my-skill' },
+    });
+    expect(result.isError).toBe(true);
+    expect(JSON.stringify(result.content)).toContain('DIAL identity');
+    await client.close();
+    await server.close();
+  });
+
+  test('truncates long initials and trims urls', async () => {
+    const result = await render({
+      entity: { name: 'x', description: 'y', initials: 'INBX' },
+      actions: { tryUrl: ' https://chat.example.com/try ' },
+    });
+    expect(result.isError).toBeFalsy();
+    expect(result.structuredContent).toMatchObject({
+      entity: { initials: 'INB' },
+      actions: { tryUrl: 'https://chat.example.com/try' },
+    });
+  });
+
   test('defaults to no buttons and no sections', async () => {
     const result = await render({
       entity: { name: 'x', description: 'y' },
@@ -1075,6 +1099,13 @@ describe('render_entity_card', () => {
       {
         entity: { name: 'x', description: 'y' },
         sections: [{ type: 'chips', label: 'Tools', items: [] }],
+      },
+    ],
+    [
+      'an oversized url',
+      {
+        entity: { name: 'x', description: 'y' },
+        actions: { tryUrl: `https://chat.example.com/${'a'.repeat(2100)}` },
       },
     ],
     [

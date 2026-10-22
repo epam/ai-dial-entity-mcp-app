@@ -5,7 +5,11 @@ export const RENDER_TOOL_DESCRIPTION =
 
 const nonEmpty = (max: number) => z.string().trim().min(1).max(max);
 
-const httpUrl = z.url({ protocol: /^https?$/ });
+const httpUrl = z
+  .string()
+  .trim()
+  .max(2048)
+  .pipe(z.url({ protocol: /^https?$/ }));
 
 const entitySchema = z.object({
   name: nonEmpty(200).describe('Entity name, shown as the card title.'),
@@ -13,9 +17,11 @@ const entitySchema = z.object({
   kindLabel: nonEmpty(40)
     .optional()
     .describe('Entity type shown above the name, e.g. "Agent" or "Skill".'),
-  initials: nonEmpty(3)
+  initials: nonEmpty(20)
     .optional()
-    .describe('Avatar initials; derived from the name when omitted.'),
+    .describe(
+      'Avatar initials, at most three characters are used; derived from the name when omitted.',
+    ),
 });
 
 const actionsSchema = z.object({
@@ -58,11 +64,9 @@ export const renderCardInputSchema = {
     ),
 };
 
-export type RenderCardInput = {
-  [K in keyof typeof renderCardInputSchema]: z.infer<
-    (typeof renderCardInputSchema)[K]
-  >;
-};
+export type RenderCardInput = z.infer<
+  z.ZodObject<typeof renderCardInputSchema>
+>;
 
 /**
  * Builds the card payload from caller-supplied data, dropping parts that
@@ -74,7 +78,10 @@ export const buildRenderedPayload = ({
   actions,
   sections,
 }: RenderCardInput) => ({
-  entity,
+  entity: {
+    ...entity,
+    ...(entity.initials && { initials: entity.initials.slice(0, 3) }),
+  },
   actions: {
     ...(actions?.tryUrl && { tryUrl: actions.tryUrl }),
     ...(actions?.editUrl && { editUrl: actions.editUrl }),
