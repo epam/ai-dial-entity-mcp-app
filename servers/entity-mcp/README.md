@@ -7,7 +7,8 @@ accepts two inbound headers, `Authorization` and `Api-Key` — `Authorization`
 wins when both are present, matching DIAL's own auth precedence (user JWT,
 then `Api-Key`) — and forwards whichever one it got back to Core under the
 same header name. It never reads an ambient credential and fails closed when
-neither header is present.
+neither header is present: `show_entity_card` returns an error without one.
+`render_entity_card` makes no Core call and does not need a credential.
 
 It exposes:
 
@@ -28,6 +29,14 @@ It exposes:
   a Core error, a malformed id, or an entity without a usable name, it
   returns an `isError` result instead of an invalid payload. An agent or
   toolset with no description gets the card text `No description provided.`
+- **Tool** `render_entity_card({ entity, actions?, sections? })` — draws the
+  same card from data the caller already has, with no Core lookup and no
+  credential. `entity` needs `name` and `description` (optional `kindLabel`,
+  `initials`); `actions` holds optional http(s) `tryUrl` / `editUrl`;
+  `sections` is a list of `chips` or `text` rows. Invalid input (a non-http(s)
+  URL, an empty chips list, an oversized field) returns a tool error. Use it
+  when another toolset created or described the entity and the model passes
+  the details on.
 - **Resource** `ui://entity-card/index.html` — the built entity card, served
   as `text/html` (DIAL Core rejects `text/html;profile=mcp-app`).
 
@@ -155,7 +164,7 @@ Register the deployed container as an MCP toolset with:
 - `forwardAuthToken: true`
 - `forwardPerRequestKey: true`
 - `authentication_type: none`
-- `allowedTools: ["show_entity_card"]`
+- `allowedTools: ["show_entity_card", "render_entity_card"]`
 
 `forwardAuthToken` is admin-only to set, so an admin must perform this
 registration — it cannot be done by the server owner alone.
