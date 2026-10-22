@@ -75,7 +75,7 @@ export const buildCardPayload = (options: BuildCardPayloadOptions) => {
       description: mapped.description,
       kindLabel: mapped.kindLabel,
     },
-    actions: buildActions(config, kind, id),
+    actions: buildActions(config, kind, id, raw),
     sections: mapped.sections,
   };
 };
