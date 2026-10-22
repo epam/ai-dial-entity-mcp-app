@@ -28,7 +28,8 @@ tested like any other workspace, but not shipped.
   Read `libs/mcp-app-kit/AGENTS.md` before changing it.
 - `servers/entity-mcp/` — the shipped production MCP server. Serves
   `show_entity_card` (skill, agent, toolset and prompt cards, found by exact id
-  or by name; one module per entity type in `src/entities/`) and the
+  or by name; one module per entity type in `src/entities/`), `render_entity_card`
+  (draws a card from caller-supplied data, no Core lookup, no credential) and the
   `ui://entity-card/index.html` resource against real DIAL Core data. Node, no
   build step, no stored credentials.
 - `tools/test-mcp-server/` — local test MCP server that serves the built card
