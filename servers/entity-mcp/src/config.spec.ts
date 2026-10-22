@@ -81,4 +81,39 @@ describe('loadConfig', () => {
     });
     expect(config.port).toBe(8080);
   });
+
+  test('reads and normalises DIAL_CHAT_URL', () => {
+    const config = loadConfig({
+      DIAL_CORE_URL: 'https://core.example.com',
+      DIAL_CHAT_URL: ' https://chat.example.com/ ',
+    });
+    expect(config.chatBaseUrl).toBe('https://chat.example.com');
+  });
+
+  test('leaves chatBaseUrl undefined when unset', () => {
+    expect(
+      loadConfig({ DIAL_CORE_URL: 'https://core.example.com' }).chatBaseUrl,
+    ).toBeUndefined();
+  });
+
+  test('throws a named error for a non-http(s) DIAL_CHAT_URL', () => {
+    expect(() =>
+      loadConfig({
+        DIAL_CORE_URL: 'https://core.example.com',
+        DIAL_CHAT_URL: 'javascript:alert(1)',
+      }),
+    ).toThrow(/DIAL_CHAT_URL/);
+  });
+
+  test.each([
+    'https://chat.example.com/?lang=en',
+    'https://chat.example.com/#x',
+  ])('rejects DIAL_CHAT_URL with a query or fragment: %s', (value) => {
+    expect(() =>
+      loadConfig({
+        DIAL_CORE_URL: 'https://core.example.com',
+        DIAL_CHAT_URL: value,
+      }),
+    ).toThrow(/DIAL_CHAT_URL/);
+  });
 });

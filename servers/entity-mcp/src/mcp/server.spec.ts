@@ -43,6 +43,23 @@ describe('buildCardPayload', () => {
     expect(payload.entity.kindLabel).toBe('Agent');
   });
 
+  test('routes an agent with an application type schema to the schema editor', () => {
+    const payload = buildCardPayload({
+      config: { ...config, chatBaseUrl: 'https://chat.example.com' },
+      kind: EntityKind.Agent,
+      id: 'my-app',
+      raw: {
+        displayName: 'My app',
+        description: 'x',
+        application_type_schema_id: 'rag',
+      },
+      activeLocale: 'en',
+    });
+    expect(payload.actions.editUrl).toBe(
+      'https://chat.example.com/apps-editor?schema=rag&appId=my-app',
+    );
+  });
+
   test('omits initials so the card derives them', () => {
     const payload = buildCardPayload({
       config,

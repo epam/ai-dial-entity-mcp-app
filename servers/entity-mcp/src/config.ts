@@ -1,5 +1,6 @@
 export type ServerConfig = {
   coreBaseUrl: string;
+  chatBaseUrl?: string;
   tryUrlTemplate?: string;
   editUrlTemplate?: string;
   port: number;
@@ -12,21 +13,20 @@ const ALLOWED_PROTOCOLS = ['http:', 'https:'];
 const MAX_PORT = 65535;
 
 /**
- * Validates that `DIAL_CORE_URL` is a well-formed `http(s)` URL, throwing
- * a startup error naming the variable otherwise.
- * @param value - trimmed value of `DIAL_CORE_URL`
+ * Validates that a base URL variable is a well-formed `http(s)` URL, throwing
+ * a startup error naming the variable otherwise, and strips trailing slashes.
+ * @param name - variable name, used in the error message
+ * @param value - trimmed value of the variable
  */
-const parseCoreBaseUrl = (value: string): string => {
+const parseHttpBaseUrl = (name: string, value: string): string => {
   let parsed: URL;
   try {
     parsed = new URL(value);
   } catch {
-    throw new Error(
-      `DIAL_CORE_URL must be an absolute http(s) URL, got: ${value}`,
-    );
+    throw new Error(`${name} must be an absolute http(s) URL, got: ${value}`);
   }
   if (!ALLOWED_PROTOCOLS.includes(parsed.protocol)) {
-    throw new Error(`DIAL_CORE_URL must use http or https, got: ${value}`);
+    throw new Error(`${name} must use http or https, got: ${value}`);
   }
   return value.replace(/\/+$/, '');
 };
@@ -48,8 +48,17 @@ export const loadConfig = (env: NodeJS.ProcessEnv): ServerConfig => {
       `PORT must be a positive integer no greater than ${MAX_PORT}, got ${env.PORT}`,
     );
   }
+  const chatBaseUrl = env.DIAL_CHAT_URL?.trim();
+  if (chatBaseUrl && /[?#]/.test(chatBaseUrl)) {
+    throw new Error(
+      `DIAL_CHAT_URL must not contain a query or fragment, got: ${chatBaseUrl}`,
+    );
+  }
   return {
-    coreBaseUrl: parseCoreBaseUrl(coreBaseUrl),
+    coreBaseUrl: parseHttpBaseUrl('DIAL_CORE_URL', coreBaseUrl),
+    chatBaseUrl: chatBaseUrl
+      ? parseHttpBaseUrl('DIAL_CHAT_URL', chatBaseUrl)
+      : undefined,
     tryUrlTemplate: env.ENTITY_TRY_URL_TEMPLATE?.trim() || undefined,
     editUrlTemplate: env.ENTITY_EDIT_URL_TEMPLATE?.trim() || undefined,
     port,
