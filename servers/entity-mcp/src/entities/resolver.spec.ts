@@ -472,6 +472,48 @@ describe('searchByName', () => {
     });
   });
 
+  test('a non-public match wins over its public copy of the same kind', async () => {
+    const agent = stubType(EntityKind.Agent, 'applications/', [
+      cand(EntityKind.Agent, 'applications/abc/my-agent', ['my-agent'], {}),
+      cand(
+        EntityKind.Agent,
+        'applications/public/hhm/my-agent__1.0.0',
+        ['my-agent'],
+        {},
+      ),
+    ]);
+    const outcome = await searchByName(TEST_CTX, 'my-agent', undefined, [
+      agent,
+    ]);
+    expect(outcome).toMatchObject({
+      status: 'found',
+      resolved: { id: 'applications/abc/my-agent' },
+    });
+  });
+
+  test('public matches stay ambiguous when nothing non-public matched', async () => {
+    const agent = stubType(EntityKind.Agent, 'applications/', [
+      cand(EntityKind.Agent, 'applications/public/a/x__1.0.0', ['x'], {}),
+      cand(EntityKind.Agent, 'applications/public/b/x__1.0.0', ['x'], {}),
+    ]);
+    const outcome = await searchByName(TEST_CTX, 'x', undefined, [agent]);
+    expect(outcome.status).toBe('ambiguous');
+  });
+
+  test('a public match of another kind is not dropped for a non-public one', async () => {
+    const skill = stubType(EntityKind.Skill, 'skills/', [
+      cand(EntityKind.Skill, 'skills/public/digest', ['digest'], {}),
+    ]);
+    const agent = stubType(EntityKind.Agent, 'applications/', [
+      cand(EntityKind.Agent, 'applications/abc/digest', ['digest'], {}),
+    ]);
+    const outcome = await searchByName(TEST_CTX, 'digest', undefined, [
+      skill,
+      agent,
+    ]);
+    expect(outcome.status).toBe('ambiguous');
+  });
+
   test('several partial matches are ambiguous', async () => {
     const skill = stubType(EntityKind.Skill, 'skills/', [
       cand(EntityKind.Skill, 'skills/b/joke-a', ['joke-a'], {}),
