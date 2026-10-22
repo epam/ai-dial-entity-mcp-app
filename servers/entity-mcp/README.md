@@ -20,7 +20,9 @@ It exposes:
   directly. Otherwise pass `name`: the server lists the caller's skills,
   agents, toolsets and prompts and matches the name (case-insensitive, hyphens,
   underscores and spaces are interchangeable; an exact match wins over a
-  partial one). `kind` optionally restricts the search to one type. When
+  partial one; a public entity is dropped when a non-public one of the same
+  type matches too, so a published agent does not hide its private source).
+  `kind` optionally restricts the search to one type. When
   several entities match, the result lists them with their ids so the caller
   can ask again with an `id`. With neither `id` nor `name` the tool returns an
   error; with both, `id` wins. It reads everything from DIAL Core as the

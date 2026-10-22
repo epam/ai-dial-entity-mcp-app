@@ -95,6 +95,27 @@ const bestMatches = (candidates: Candidate[], name: string): Candidate[] => {
     .map(({ candidate }) => candidate);
 };
 
+const isPublicId = (id: string): boolean => id.split('/')[1] === 'public';
+
+/**
+ * Drops a public candidate when the same kind also matched a non-public one:
+ * Core lists only the caller's own, shared-with-them and public entities, so a
+ * non-public match is one the caller can already use and is the likelier
+ * target of a name that also matches its published copy.
+ * @param candidates - best-ranked matches
+ */
+const preferNonPublic = (candidates: Candidate[]): Candidate[] => {
+  const kindsWithNonPublic = new Set(
+    candidates
+      .filter((candidate) => !isPublicId(candidate.id))
+      .map((candidate) => candidate.kind),
+  );
+  return candidates.filter(
+    (candidate) =>
+      !isPublicId(candidate.id) || !kindsWithNonPublic.has(candidate.kind),
+  );
+};
+
 const uniqueCandidates = (candidates: Candidate[]): Candidate[] => {
   const byKey = new Map<string, Candidate>();
   for (const candidate of candidates) {
@@ -190,7 +211,9 @@ export const searchByName = async (
   } finally {
     clearTimeout(timer);
   }
-  const matches = bestMatches(uniqueCandidates(candidates), name);
+  const matches = preferNonPublic(
+    bestMatches(uniqueCandidates(candidates), name),
+  );
 
   if (searched.length > 0 && failures.size === searched.length) {
     throw failures.get(searched.find((type) => failures.has(type.kind))!.kind);
