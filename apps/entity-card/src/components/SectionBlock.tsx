@@ -18,7 +18,7 @@ const SectionBlock: FC<SectionBlockProps> = ({ section }) => {
       {section.type === SectionType.Chips ? (
         <ul className="flex flex-wrap gap-2">
           {section.items.map((item, index) => (
-            <li key={`${item}-${index}`} className="min-w-0 max-w-full">
+            <li key={`${item}-${index}`} className="max-w-full min-w-0">
               <Badge
                 label={item}
                 className="max-w-full"
@@ -28,7 +28,7 @@ const SectionBlock: FC<SectionBlockProps> = ({ section }) => {
           ))}
         </ul>
       ) : (
-        <p className="whitespace-pre-line break-words text-sm text-primary">
+        <p className="text-sm break-words whitespace-pre-line text-primary">
           {section.text}
         </p>
       )}

@@ -1,0 +1,73 @@
+/*
+ * Tailwind v4 theme for an MCP App: ui-kit 2.0 colour utilities
+ * (`bg-layer-raised`, `text-secondary`, `border-secondary`, …) and MCP host
+ * typography, radius and weight tokens, so app markup themes like ui-kit
+ * components. Colour fallbacks are the `:root` literals of `host-tokens.css`;
+ * typography and radius fallbacks are the D18 / Tailwind literals, so without
+ * host tokens nothing changes.
+ *
+ * Import it after `tailwindcss/theme.css` with `theme(reference inline)`:
+ * utilities get the value written into them and nothing is declared on
+ * `:root`, which matters because several keys read a variable of the same
+ * name (`--font-weight-normal: var(--font-weight-normal, 400)`).
+ */
+@theme inline reference {
+  --background-color-layer-raised: var(--bg-layer-raised, #fcfcfc);
+  --background-color-layer-base: var(--bg-layer-base, #f5f7fa);
+  --background-color-layer-sunken: var(--bg-layer-sunken, #eef1f7);
+  --background-color-info: var(--bg-info, #e1eaf9);
+  --background-color-success: var(--bg-success, #dbf1eb);
+  --background-color-warning: var(--bg-warning, #faf0cf);
+  --background-color-error: var(--bg-error, #f3d6d8);
+
+  --text-color-primary: var(--text-primary, #161b2d);
+  --text-color-secondary: var(--text-secondary, #57647a);
+  --text-color-tertiary: var(--text-tertiary, #848e9c);
+  --text-color-info: var(--text-info, #1d4ed8);
+  --text-color-success: var(--text-success, #007274);
+  --text-color-warning: var(--text-warning, #7f6300);
+  --text-color-error: var(--text-error, #ae2f2f);
+
+  --border-color-primary: var(--stroke-primary, #57647a);
+  --border-color-secondary: var(--stroke-secondary, #d1dbea);
+  --border-color-tertiary: var(--stroke-tertiary, #e0e6f0);
+
+  --font-sans: var(--theme-font, Inter, system-ui), sans-serif;
+
+  --font-weight-normal: var(--font-weight-normal, 400);
+  --font-weight-medium: var(--font-weight-medium, 500);
+  --font-weight-semibold: var(--font-weight-semibold, 600);
+  --font-weight-bold: var(--font-weight-bold, 700);
+
+  --text-xs: var(--font-text-xs-size, 12px);
+  --text-xs--line-height: var(--font-text-xs-line-height, 16px);
+  --text-sm: var(--font-text-sm-size, 14px);
+  --text-sm--line-height: var(--font-text-sm-line-height, 20px);
+  --text-base: var(--font-text-md-size, 16px);
+  --text-base--line-height: var(--font-text-md-line-height, 24px);
+  --text-md: var(--font-text-md-size, 16px);
+  --text-md--line-height: var(--font-text-md-line-height, 24px);
+  --text-lg: var(--font-text-lg-size, 16px);
+  --text-lg--line-height: var(--font-text-lg-line-height, 26px);
+  --text-heading-xs: var(--font-heading-xs-size, 16px);
+  --text-heading-xs--line-height: var(--font-heading-xs-line-height, 24px);
+  --text-heading-sm: var(--font-heading-sm-size, 18px);
+  --text-heading-sm--line-height: var(--font-heading-sm-line-height, 26px);
+  --text-heading-md: var(--font-heading-md-size, 20px);
+  --text-heading-md--line-height: var(--font-heading-md-line-height, 28px);
+  --text-heading-lg: var(--font-heading-lg-size, 22px);
+  --text-heading-lg--line-height: var(--font-heading-lg-line-height, 32px);
+  --text-heading-xl: var(--font-heading-xl-size, 28px);
+  --text-heading-xl--line-height: var(--font-heading-xl-line-height, 40px);
+  --text-heading-2xl: var(--font-heading-2xl-size, 32px);
+  --text-heading-2xl--line-height: var(--font-heading-2xl-line-height, 48px);
+  --text-heading-3xl: var(--font-heading-3xl-size, 32px);
+  --text-heading-3xl--line-height: var(--font-heading-3xl-line-height, 48px);
+
+  --radius-sm: var(--border-radius-xs, 0.125rem);
+  --radius: var(--border-radius-sm, 0.25rem);
+  --radius-md: var(--border-radius-md, 0.375rem);
+  --radius-lg: var(--border-radius-lg, 0.5rem);
+  --radius-xl: var(--border-radius-xl, 0.75rem);
+  --radius-full: var(--border-radius-full, 9999px);
+}

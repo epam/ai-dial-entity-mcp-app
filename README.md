@@ -19,7 +19,7 @@ Repository layout (npm workspaces):
   payload. Its build output is `apps/quality-check/dist/index.html`.
 - `libs/mcp-app-kit` — `@epam/ai-dial-mcp-app-kit`, the reusable layer every MCP
   App here is built on: host connection, React hooks, host theming, Vite and
-  Tailwind presets, test helpers and a local dev host. See
+  Tailwind theme, test helpers and a local dev host. See
   [its README](libs/mcp-app-kit/README.md).
 
 Outside the workspaces, `tools/` holds development-only tools that are never

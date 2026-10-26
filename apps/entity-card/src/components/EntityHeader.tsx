@@ -13,13 +13,13 @@ const EntityHeader: FC<EntityHeaderProps> = ({ entity }) => (
       size={44}
     />
     <div className="min-w-0 flex-1">
-      <p className="text-xs font-semibold uppercase tracking-wider text-info">
+      <p className="text-xs font-semibold tracking-wider text-info uppercase">
         {entity.kindLabel}
       </p>
-      <h1 className="mt-1 break-words text-heading-md font-semibold text-primary">
+      <h1 className="mt-1 text-heading-md font-semibold break-words text-primary">
         {entity.name}
       </h1>
-      <p className="mt-2 break-words text-sm text-primary">
+      <p className="mt-2 text-sm break-words text-primary">
         {entity.description}
       </p>
     </div>
