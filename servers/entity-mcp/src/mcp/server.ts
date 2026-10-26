@@ -13,6 +13,7 @@ import {
   type InboundCredential,
 } from '../core/client.ts';
 import { InvalidEntityId } from '../entities/ids.ts';
+import { isOwnEntity } from '../entities/ownership.ts';
 import { entityTypeFor } from '../entities/registry.ts';
 import {
   resolveById,
@@ -59,15 +60,16 @@ export type BuildCardPayloadOptions = {
   id: string;
   raw: Record<string, unknown>;
   activeLocale: string;
+  canEdit: boolean;
 };
 
 /**
  * Builds the entity card payload from a Core record. `initials` is omitted
  * so the card derives them itself.
- * @param options - config, entity coordinates, the Core record and the locale
+ * @param options - config, entity coordinates, the Core record, the locale and whether the caller owns the entity
  */
 export const buildCardPayload = (options: BuildCardPayloadOptions) => {
-  const { config, kind, id, raw, activeLocale } = options;
+  const { config, kind, id, raw, activeLocale, canEdit } = options;
   const mapped = entityTypeFor(kind).map(raw, activeLocale);
   return {
     entity: {
@@ -75,7 +77,7 @@ export const buildCardPayload = (options: BuildCardPayloadOptions) => {
       description: mapped.description,
       kindLabel: mapped.kindLabel,
     },
-    actions: buildActions(config, kind, id, raw),
+    actions: buildActions(config, kind, id, raw, canEdit),
     sections: mapped.sections,
   };
 };
@@ -220,6 +222,7 @@ export const createMcpServer = (
           id: resolved.id,
           raw: resolved.raw,
           activeLocale: DEFAULT_LOCALE,
+          canEdit: await isOwnEntity(ctx, resolved.id),
         });
         console.log(
           `show_entity_card succeeded for ${resolved.kind} ${sanitizeForLog(resolved.id)} in ${Date.now() - startedAt}ms (correlation ${correlationLabel})${notSearched}`,

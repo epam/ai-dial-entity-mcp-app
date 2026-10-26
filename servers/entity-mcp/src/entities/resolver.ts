@@ -1,5 +1,6 @@
 import { CoreError } from '../core/client.ts';
 import { MatchRank, rankMatch } from './match.ts';
+import { isPublicId } from './ownership.ts';
 import { ENTITY_TYPES } from './registry.ts';
 import {
   EntityKind,
@@ -94,8 +95,6 @@ const bestMatches = (candidates: Candidate[], name: string): Candidate[] => {
     .filter(({ rank }) => rank === best)
     .map(({ candidate }) => candidate);
 };
-
-const isPublicId = (id: string): boolean => id.split('/')[1] === 'public';
 
 /**
  * Drops a public candidate when the same kind also matched a non-public one:

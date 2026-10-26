@@ -41,6 +41,8 @@ describe('buildActions', () => {
       },
       EntityKind.Agent,
       'gpt-4o',
+      {},
+      true,
     );
     expect(actions.tryUrl).toBeUndefined();
     expect(actions.editUrl).toBe('https://chat.example.com/agents/gpt-4o/edit');
@@ -189,31 +191,43 @@ describe('buildActions with DIAL_CHAT_URL', () => {
     [EntityKind.Toolset, '/toolset-editor'],
     [EntityKind.Agent, '/custom-app-editor'],
   ])('builds the Edit url for a %s', (kind, path) => {
-    expect(buildActions(chat, kind, 'a/b c').editUrl).toBe(
+    expect(buildActions(chat, kind, 'a/b c', {}, true).editUrl).toBe(
       `https://chat.example.com${path}?id=a%2Fb%20c`,
     );
   });
 
   test('opens the schema editor for an agent with an application type schema', () => {
-    const actions = buildActions(chat, EntityKind.Agent, 'my-app', {
-      application_type_schema_id: 'https://dial.example.com/schemas/rag',
-    });
+    const actions = buildActions(
+      chat,
+      EntityKind.Agent,
+      'my-app',
+      { application_type_schema_id: 'https://dial.example.com/schemas/rag' },
+      true,
+    );
     expect(actions.editUrl).toBe(
       'https://chat.example.com/apps-editor?schema=https%3A%2F%2Fdial.example.com%2Fschemas%2Frag&appId=my-app',
     );
   });
 
   test('accepts the camelCase schema field', () => {
-    const actions = buildActions(chat, EntityKind.Agent, 'my-app', {
-      applicationTypeSchemaId: 'rag',
-    });
+    const actions = buildActions(
+      chat,
+      EntityKind.Agent,
+      'my-app',
+      { applicationTypeSchemaId: 'rag' },
+      true,
+    );
     expect(actions.editUrl).toContain('/apps-editor?schema=rag&appId=my-app');
   });
 
   test('ignores a schema id on a non-agent entity', () => {
-    const actions = buildActions(chat, EntityKind.Skill, 'skills/b/s', {
-      application_type_schema_id: 'rag',
-    });
+    const actions = buildActions(
+      chat,
+      EntityKind.Skill,
+      'skills/b/s',
+      { application_type_schema_id: 'rag' },
+      true,
+    );
     expect(actions.editUrl).toContain('/skill-editor?id=');
   });
 
@@ -222,6 +236,8 @@ describe('buildActions with DIAL_CHAT_URL', () => {
       { ...chat, editUrlTemplate: 'https://other.example.com/e/{id}' },
       EntityKind.Skill,
       'skills/b/s',
+      {},
+      true,
     );
     expect(actions.editUrl).toBe('https://other.example.com/e/skills%2Fb%2Fs');
     expect(actions.tryUrl).toBeUndefined();
@@ -232,6 +248,8 @@ describe('buildActions with DIAL_CHAT_URL', () => {
       { ...base, chatBaseUrl: 'https://host.example.com/chat' },
       EntityKind.Skill,
       'skills/b/s',
+      {},
+      true,
     );
     expect(actions.editUrl).toBe(
       'https://host.example.com/chat/skill-editor?id=skills%2Fb%2Fs',
@@ -243,10 +261,20 @@ describe('buildActions with DIAL_CHAT_URL', () => {
       { ...chat, editUrlTemplate: '/my-app/{id}/edit' },
       EntityKind.Skill,
       'skills/b/s',
+      {},
+      true,
     );
     expect(actions.editUrl).toBe(
       'https://chat.example.com/my-app/skills%2Fb%2Fs/edit',
     );
+  });
+
+  test('builds no Edit url unless the caller owns the entity', () => {
+    const actions = buildActions(chat, EntityKind.Skill, 'skills/b/s');
+    expect(actions.editUrl).toBeUndefined();
+    expect(
+      buildActions(chat, EntityKind.Skill, 'skills/b/s', {}, false),
+    ).toEqual(actions);
   });
 
   test('drops a relative template override without a base url', () => {
