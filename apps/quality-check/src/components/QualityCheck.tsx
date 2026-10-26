@@ -80,7 +80,7 @@ const QualityCheck: FC<QualityCheckProps> = ({ qualityCheck }) => {
               </span>
               <span className="break-words">{item.label}</span>
               {!item.passed && item.hint && (
-                <p className="mt-1 break-words text-sm text-secondary">
+                <p className="mt-1 text-sm break-words text-secondary">
                   {item.hint}
                 </p>
               )}

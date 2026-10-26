@@ -16,23 +16,23 @@ or the testing layer, and the React layer imports nothing from Vite. ESLint
 enforces this.
 
 `@epam/ai-dial-ui-kit` is an optional peer dependency
-(`>=0.15.0-dev.36 <0.16.0`): only an app that uses ui-kit needs it.
+(`>=0.16.0-dev.46 <0.17.0`): only an app that uses ui-kit needs it.
 `host-tokens.css` and `ui-kit-overrides.css` target the ui-kit 2.0 variables
 and classes.
 
 ## Entry points
 
-| Import                                                                 | Contents                                                                                                                                                                                                                    |
-| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `@epam/ai-dial-mcp-app-kit`                                            | Framework-free core: `createMcpApp`, `applyHostContext`, `getStructuredContent`, `getToolError`, `ParseResult`, `McpAppPhase`, `McpAppError`, host helpers.                                                                 |
-| `@epam/ai-dial-mcp-app-kit/react`                                      | `McpAppProvider`, `useMcpApp`, `useHostContext`, `useOpenLink`, `useToolResult`, `ToolResultStatus`.                                                                                                                        |
-| `@epam/ai-dial-mcp-app-kit/testing`                                    | `createFakeMcpApp` — an in-memory store for component tests; `MCP_STYLE_VARIABLE_KEYS` — the 76 standard style keys.                                                                                                        |
-| `@epam/ai-dial-mcp-app-kit/vite`                                       | `mcpAppVite()` plugin list, `mcpAppEndpoint()`, `MCP_APP_PATH` (`/_mcp-app/index.html`).                                                                                                                                    |
-| `@epam/ai-dial-mcp-app-kit/tailwind`                                   | Tailwind preset: ui-kit 2.0 colour utilities (`bg-layer-raised`, `text-secondary`, `border-secondary`, …) and MCP host typography (`font-*`, `text-xs…lg`, `text-heading-*`), radius (`rounded-*`) and border-width tokens. |
-| `@epam/ai-dial-mcp-app-kit/styles/host-tokens.css`                     | Maps MCP host variables onto ui-kit variables.                                                                                                                                                                              |
-| `@epam/ai-dial-mcp-app-kit/styles/ui-kit-overrides.css`                | Re-declares ui-kit's `.dial-*-text` typography classes with MCP host type tokens, and paints the primary button gradient under its border.                                                                                  |
-| `@epam/ai-dial-mcp-app-kit/styles/layout.css`                          | Base layout: transparent page, safe-area padding on `#root`, `[hidden]` forced to `display: none`, container `min-height` in fullscreen/pip.                                                                                |
-| `dev-host/` (run with `npm run dev-host -w @epam/ai-dial-mcp-app-kit`) | Local host harness that embeds an app in an iframe and plays the host side of the protocol.                                                                                                                                 |
+| Import                                                                 | Contents                                                                                                                                                                                                                                                                                |
+| ---------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `@epam/ai-dial-mcp-app-kit`                                            | Framework-free core: `createMcpApp`, `applyHostContext`, `getStructuredContent`, `getToolError`, `ParseResult`, `McpAppPhase`, `McpAppError`, host helpers.                                                                                                                             |
+| `@epam/ai-dial-mcp-app-kit/react`                                      | `McpAppProvider`, `useMcpApp`, `useHostContext`, `useOpenLink`, `useToolResult`, `ToolResultStatus`.                                                                                                                                                                                    |
+| `@epam/ai-dial-mcp-app-kit/testing`                                    | `createFakeMcpApp` — an in-memory store for component tests; `MCP_STYLE_VARIABLE_KEYS` — the 76 standard style keys.                                                                                                                                                                    |
+| `@epam/ai-dial-mcp-app-kit/vite`                                       | `mcpAppVite()` plugin list, `mcpAppEndpoint()`, `MCP_APP_PATH` (`/_mcp-app/index.html`).                                                                                                                                                                                                |
+| `@epam/ai-dial-mcp-app-kit/styles/tailwind-theme.css`                  | Tailwind v4 theme: ui-kit 2.0 colour utilities (`bg-layer-raised`, `text-secondary`, `border-secondary`, …) and MCP host typography (`font-*`, `text-xs…lg`, `text-heading-*`) and radius (`rounded-*`) tokens. Import it after `tailwindcss/theme.css` with `theme(reference inline)`. |
+| `@epam/ai-dial-mcp-app-kit/styles/host-tokens.css`                     | Maps MCP host variables onto ui-kit variables.                                                                                                                                                                                                                                          |
+| `@epam/ai-dial-mcp-app-kit/styles/ui-kit-overrides.css`                | Re-declares ui-kit's `.dial-*-text` typography classes with MCP host type tokens, and paints the primary button gradient under its border.                                                                                                                                              |
+| `@epam/ai-dial-mcp-app-kit/styles/layout.css`                          | Base layout: transparent page, safe-area padding on `#root`, `[hidden]` forced to `display: none`, container `min-height` in fullscreen/pip.                                                                                                                                            |
+| `dev-host/` (run with `npm run dev-host -w @epam/ai-dial-mcp-app-kit`) | Local host harness that embeds an app in an iframe and plays the host side of the protocol.                                                                                                                                                                                             |
 
 ## Minimal usage
 
@@ -172,8 +172,8 @@ through the variables it sends; there is no host detection.
   `Badge`'s colour at the host's semantic tone. Put the class on the badge,
   never on a container — the `Avatar` shares the same palette.
 
-The Tailwind preset (`@epam/ai-dial-mcp-app-kit/tailwind`) exposes the same
-ui-kit variables and the MCP type, radius and border-width tokens as
+The Tailwind theme (`@epam/ai-dial-mcp-app-kit/styles/tailwind-theme.css`)
+exposes the same ui-kit variables and the MCP type and radius tokens as
 utilities, so app markup follows the host theme without hardcoded colours.
 
 ### Host token contract

@@ -140,11 +140,13 @@ describe('host-tokens.css theme blocks', () => {
     expect(preferredDarkBlock).toEqual(darkBlock);
   });
 
-  it("light literals are ui-kit's own fallbacks", () => {
+  it("light literals are ui-kit's own fallbacks where it reads the variable", () => {
     lightBlock.forEach(({ name }) => {
       const fallback = fallbackOf(lightBlock, name);
       if (!fallback?.startsWith('#')) return;
-      expect(uiKitFallbacks(name), name).toContain(fallback);
+      const kitFallbacks = uiKitFallbacks(name);
+      if (!kitFallbacks.size) return;
+      expect(kitFallbacks, name).toContain(fallback);
     });
   });
 

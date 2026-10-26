@@ -9,7 +9,7 @@
     "./react": "./src/react/index.ts",
     "./testing": "./src/testing/index.ts",
     "./vite": "./src/vite/index.ts",
-    "./tailwind": "./src/tailwind/preset.js",
+    "./styles/tailwind-theme.css": "./src/styles/tailwind-theme.css",
     "./styles/host-tokens.css": "./src/styles/host-tokens.css",
     "./styles/ui-kit-overrides.css": "./src/styles/ui-kit-overrides.css",
     "./styles/layout.css": "./src/styles/layout.css"
@@ -19,7 +19,7 @@
     "dev-host": "vite --configLoader runner --config dev-host/vite.config.ts"
   },
   "peerDependencies": {
-    "@epam/ai-dial-ui-kit": ">=0.15.0-dev.36 <0.16.0",
+    "@epam/ai-dial-ui-kit": ">=0.16.0-dev.46 <0.17.0",
     "@vitejs/plugin-react": "^6.0.0",
     "react": "^19.2.0",
     "vite": "^8.1.0",
@@ -48,7 +48,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@epam/ai-dial-ui-kit": "0.15.0-dev.36",
+    "@epam/ai-dial-ui-kit": "0.16.0-dev.46",
     "@vitejs/plugin-react": "^6.1.1",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
