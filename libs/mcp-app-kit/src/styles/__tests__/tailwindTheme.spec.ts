@@ -2,12 +2,22 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import preset from '../preset.js';
 
-const hostTokensCss = readFileSync(
-  fileURLToPath(new URL('../../styles/host-tokens.css', import.meta.url)),
-  'utf8',
+const read = (name: string) =>
+  readFileSync(fileURLToPath(new URL(`../${name}`, import.meta.url)), 'utf8');
+
+const hostTokensCss = read('host-tokens.css');
+const themeCss = read('tailwind-theme.css');
+
+/** Theme keys of `tailwind-theme.css` as `{ '--key': 'value' }`. */
+const theme = Object.fromEntries(
+  [...themeCss.matchAll(/^\s+(--[a-z0-9-]+):\s*([^;]+);/gm)].map(
+    ([, key, value]) => [key, value!.replace(/\s+/g, ' ').trim()],
+  ),
 );
+const keys = (prefix: string) =>
+  Object.keys(theme).filter((key) => key.startsWith(prefix));
+
 const lightLiteral = (name: string) =>
   hostTokensCss
     .match(
@@ -15,15 +25,13 @@ const lightLiteral = (name: string) =>
     )?.[1]
     ?.toLowerCase();
 
-const { extend } = preset.theme;
-
-describe('tailwind preset', () => {
+describe('tailwind theme', () => {
   it('colour fallbacks equal the light block of host-tokens.css', () => {
     const colours = [
-      ...Object.values(extend.backgroundColor),
-      ...Object.values(extend.textColor),
-      ...Object.values(extend.borderColor),
-    ];
+      ...keys('--background-color-'),
+      ...keys('--text-color-'),
+      ...keys('--border-color-'),
+    ].map((key) => theme[key]!);
     expect(colours.length).toBe(17);
     colours.forEach((value) => {
       const [, name, literal] = value.match(
@@ -41,8 +49,10 @@ describe('tailwind preset', () => {
       'layer-3',
       'layer-4',
       'accent-primary-alpha',
-    ].forEach((key) => expect(extend.backgroundColor).not.toHaveProperty(key));
-    expect(extend.textColor).not.toHaveProperty('accent-primary');
+    ].forEach((key) =>
+      expect(theme).not.toHaveProperty(`--background-color-${key}`),
+    );
+    expect(theme).not.toHaveProperty('--text-color-accent-primary');
   });
 
   it.each([
@@ -51,7 +61,7 @@ describe('tailwind preset', () => {
     ['semibold', '600'],
     ['bold', '700'],
   ])('font-%s reads --font-weight-* with fallback %s', (key, fallback) => {
-    expect(extend.fontWeight[key]).toBe(
+    expect(theme[`--font-weight-${key}`]).toBe(
       `var(--font-weight-${key}, ${fallback})`,
     );
   });
@@ -72,24 +82,27 @@ describe('tailwind preset', () => {
   ])(
     'text-%s reads --font-%s-* with D18 fallbacks',
     (key, token, size, lineHeight) => {
-      expect(extend.fontSize[key]).toEqual([
-        `var(--font-${token}-size, ${size})`,
-        { lineHeight: `var(--font-${token}-line-height, ${lineHeight})` },
-      ]);
+      expect(theme[`--text-${key}`]).toBe(`var(--font-${token}-size, ${size})`);
+      expect(theme[`--text-${key}--line-height`]).toBe(
+        `var(--font-${token}-line-height, ${lineHeight})`,
+      );
     },
   );
 
   it("radii read MCP tokens with Tailwind's own values as fallbacks", () => {
-    expect(extend.borderRadius).toEqual({
-      sm: 'var(--border-radius-xs, 0.125rem)',
-      DEFAULT: 'var(--border-radius-sm, 0.25rem)',
-      md: 'var(--border-radius-md, 0.375rem)',
-      lg: 'var(--border-radius-lg, 0.5rem)',
-      xl: 'var(--border-radius-xl, 0.75rem)',
-      full: 'var(--border-radius-full, 9999px)',
-    });
-    expect(extend.borderWidth).toEqual({
-      DEFAULT: 'var(--border-width-regular, 1px)',
-    });
+    expect(keys('--radius')).toEqual([
+      '--radius-sm',
+      '--radius',
+      '--radius-md',
+      '--radius-lg',
+      '--radius-xl',
+      '--radius-full',
+    ]);
+    expect(theme['--radius-sm']).toBe('var(--border-radius-xs, 0.125rem)');
+    expect(theme['--radius']).toBe('var(--border-radius-sm, 0.25rem)');
+    expect(theme['--radius-md']).toBe('var(--border-radius-md, 0.375rem)');
+    expect(theme['--radius-lg']).toBe('var(--border-radius-lg, 0.5rem)');
+    expect(theme['--radius-xl']).toBe('var(--border-radius-xl, 0.75rem)');
+    expect(theme['--radius-full']).toBe('var(--border-radius-full, 9999px)');
   });
 });

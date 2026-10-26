@@ -15,17 +15,16 @@
   "dependencies": {
     "@epam/ai-dial-entity-contract": "*",
     "@epam/ai-dial-mcp-app-kit": "*",
-    "@epam/ai-dial-ui-kit": "0.15.0-dev.36",
+    "@epam/ai-dial-ui-kit": "0.16.0-dev.46",
     "@tabler/icons-react": "^3.48.0",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^6.1.1",
-    "autoprefixer": "^10.6.1",
     "concurrently": "^9.2.4",
-    "postcss": "^8.5.28",
-    "tailwindcss": "^3.4.19",
+    "@tailwindcss/vite": "^4.3.3",
+    "tailwindcss": "^4.3.3",
     "vite": "^8.3.2",
     "vite-plugin-singlefile": "^2.3.3"
   }

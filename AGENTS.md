@@ -95,7 +95,7 @@ tested like any other workspace, but not shipped.
   `NeutralButton`, `CardShell`, `Avatar`, `Accordion`, `Badge`,
   `Notification`; not the 1.0 `Dial*` ones; `Skeleton` has no 2.0 version, so
   the unprefixed one is used) and `@tabler/icons-react` with
-  `stroke={DIAL_KIT_ICON_STROKE}`. Local markup uses kit-preset classes. No
+  `stroke={DIAL_KIT_ICON_STROKE}`. Local markup uses kit-theme classes. No
   hardcoded colours, no host-specific code: hosts style the app only through
   MCP tokens.
 - Accessibility: native elements first (`button`, `ul`), `aria-expanded`/`aria-controls`

@@ -20,9 +20,9 @@
   --bg-layer-base: var(--color-background-secondary, #f5f7fa);
   --bg-layer-sunken: var(--color-background-tertiary, #eef1f7);
   --bg-control-inverted: var(--color-background-inverse, #57647a);
-  --bg-info: var(--color-background-info, #d6e2f9);
+  --bg-info: var(--color-background-info, #e1eaf9);
   --bg-error: var(--color-background-danger, #f3d6d8);
-  --bg-success: var(--color-background-success, #d9f0f1);
+  --bg-success: var(--color-background-success, #dbf1eb);
   --bg-warning: var(--color-background-warning, #faf0cf);
   --bg-control-disable-primary: var(--color-background-disabled, #dce0e8);
   --text-primary: var(--color-text-primary, #161b2d);
@@ -167,6 +167,8 @@ html {
   --shadow-xs-1: color-mix(in srgb, var(--color-text-primary) 10%, transparent);
   --shadow-xs-2: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
   --shadow-md: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
+  --shadow-md-1: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
+  --shadow-md-2: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
 }
 
 /*

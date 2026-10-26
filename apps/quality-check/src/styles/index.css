@@ -1,2 +1,6 @@
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss/theme.css' theme(reference inline);
+@import '@epam/ai-dial-mcp-app-kit/styles/tailwind-theme.css';
+@import 'tailwindcss/utilities.css' source(none);
+
+@source '../../index.html';
+@source '../**/*.{ts,tsx}';
