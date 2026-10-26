@@ -116,32 +116,53 @@
   }
 }
 
-/* A separate selector keeps these out of the theme blocks; nothing else sets them. */
+/* A separate selector keeps these out of the theme blocks. The `--button-*` names are the optional `styleExtensions` contract; without them the standard MCP tokens apply. */
 html {
-  --radius-control: var(--border-radius-md, 9999px);
-  --radius-control-small: var(--border-radius-sm, 9999px);
+  --radius-control: var(--button-radius, var(--border-radius-md, 9999px));
+  --radius-control-small: var(
+    --button-radius-small,
+    var(--border-radius-sm, 9999px)
+  );
   --mcp-card-radius: var(--border-radius-xl, 20px);
-  --bg-gradient-1: var(--color-background-inverse);
-  --bg-gradient-2: var(--color-background-inverse);
-  --bg-gradient-1-hover: color-mix(
-    in srgb,
-    var(--color-background-inverse) 88%,
-    var(--color-text-inverse, #fff)
+  --bg-gradient-1: var(
+    --button-primary-gradient-start,
+    var(--color-background-inverse)
   );
-  --bg-gradient-2-hover: color-mix(
-    in srgb,
-    var(--color-background-inverse) 88%,
-    var(--color-text-inverse, #fff)
+  --bg-gradient-2: var(
+    --button-primary-gradient-end,
+    var(--color-background-inverse)
   );
-  --bg-gradient-1-active: color-mix(
-    in srgb,
-    var(--color-background-inverse) 80%,
-    var(--color-text-inverse, #fff)
+  --bg-gradient-1-hover: var(
+    --button-primary-gradient-hover-start,
+    color-mix(
+      in srgb,
+      var(--color-background-inverse) 88%,
+      var(--color-text-inverse, #fff)
+    )
   );
-  --bg-gradient-2-active: color-mix(
-    in srgb,
-    var(--color-background-inverse) 80%,
-    var(--color-text-inverse, #fff)
+  --bg-gradient-2-hover: var(
+    --button-primary-gradient-hover-end,
+    color-mix(
+      in srgb,
+      var(--color-background-inverse) 88%,
+      var(--color-text-inverse, #fff)
+    )
+  );
+  --bg-gradient-1-active: var(
+    --button-primary-gradient-active-start,
+    color-mix(
+      in srgb,
+      var(--color-background-inverse) 80%,
+      var(--color-text-inverse, #fff)
+    )
+  );
+  --bg-gradient-2-active: var(
+    --button-primary-gradient-active-end,
+    color-mix(
+      in srgb,
+      var(--color-background-inverse) 80%,
+      var(--color-text-inverse, #fff)
+    )
   );
   --shadow-xs-1: color-mix(in srgb, var(--color-text-primary) 10%, transparent);
   --shadow-xs-2: color-mix(in srgb, var(--color-text-primary) 4%, transparent);
@@ -166,6 +187,18 @@ html {
   );
   --stroke-accent-alpha: var(--color-border-secondary);
   --text-accent: var(--color-text-primary);
+}
+
+/*
+ * Scoped to the primary button: its label has to pair with the fill the host
+ * sends via `styleExtensions`, while other ui-kit components keep reading the
+ * theme's inverse text.
+ */
+.dial-kit-primary-solid-button {
+  --text-control-permanent: var(
+    --button-primary-text,
+    var(--color-text-inverse, #fcfcfc)
+  );
 }
 
 .mcp-tone-success {

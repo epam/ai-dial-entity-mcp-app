@@ -49,6 +49,7 @@ const buildHostContext = (): McpUiHostContext => {
       maxHeight: 2000,
     },
     styles: { variables: preset[theme] as McpUiStyles },
+    ...(preset.styleExtensions && { styleExtensions: preset.styleExtensions }),
   };
 };
 

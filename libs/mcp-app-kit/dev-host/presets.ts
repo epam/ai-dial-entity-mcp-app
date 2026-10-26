@@ -1,4 +1,5 @@
 import type { McpUiStyles } from '@modelcontextprotocol/ext-apps/app-bridge';
+import type { McpAppStyleExtensions } from '../src/core';
 
 export enum HostPresetId {
   Claude = 'claude',
@@ -10,7 +11,12 @@ export enum HostPresetId {
 
 type Tokens = Partial<McpUiStyles>;
 
-export type HostPreset = { label: string; light: Tokens; dark: Tokens };
+export type HostPreset = {
+  label: string;
+  light: Tokens;
+  dark: Tokens;
+  styleExtensions?: McpAppStyleExtensions;
+};
 
 const STATES = [
   'primary',
@@ -548,6 +554,19 @@ export const HOST_PRESETS: Record<HostPresetId, HostPreset> = {
     label: 'AI DIAL (D18; dark approximate)',
     light: DIAL_LIGHT,
     dark: DIAL_DARK,
+    styleExtensions: {
+      variables: {
+        '--button-radius': '9999px',
+        '--button-radius-small': '9999px',
+        '--button-primary-gradient-start': '#1d4ed8',
+        '--button-primary-gradient-end': '#885df2',
+        '--button-primary-gradient-hover-start': '#6785fb',
+        '--button-primary-gradient-hover-end': '#885df2',
+        '--button-primary-gradient-active-start': '#1d4ed8',
+        '--button-primary-gradient-active-end': '#7c3aed',
+        '--button-primary-text': '#fcfcfc',
+      },
+    },
   },
   [HostPresetId.Reference]: {
     label: 'Reference design (light only)',

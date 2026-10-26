@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
+import { STYLE_EXTENSION_VARIABLE_KEYS } from '../../core';
 import { MCP_STYLE_VARIABLE_KEYS } from '../../testing';
 
 type CssRule = { context: string[]; selector: string; body: string };
@@ -20,6 +21,10 @@ const uiKitCss = readFileSync(
 );
 
 const MCP_KEYS = new Set<string>(MCP_STYLE_VARIABLE_KEYS);
+const DERIVED_SOURCE_KEYS = new Set<string>([
+  ...MCP_STYLE_VARIABLE_KEYS,
+  ...STYLE_EXTENSION_VARIABLE_KEYS,
+]);
 
 /**
  * Splits CSS into rules with balanced braces, so native nesting (as in the
@@ -85,6 +90,7 @@ const preferredDarkBlock = findBlock(':root:not([data-theme])', [
 ]);
 const derivedBlock = findBlock('html');
 const neutralButtonBlock = findBlock('.dial-kit-neutral-solid-button');
+const primaryButtonBlock = findBlock('.dial-kit-primary-solid-button');
 const toneBlocks = {
   success: findBlock('.mcp-tone-success'),
   warning: findBlock('.mcp-tone-warning'),
@@ -205,29 +211,32 @@ describe('round trip with DIAL (D18)', () => {
 describe('theme-independent derivations (html block)', () => {
   it('derives radii with ui-kit shapes as fallbacks', () => {
     expect(valueOf(derivedBlock, '--radius-control')).toBe(
-      'var(--border-radius-md, 9999px)',
+      'var(--button-radius, var(--border-radius-md, 9999px))',
     );
     expect(valueOf(derivedBlock, '--radius-control-small')).toBe(
-      'var(--border-radius-sm, 9999px)',
+      'var(--button-radius-small, var(--border-radius-sm, 9999px))',
     );
     expect(valueOf(derivedBlock, '--mcp-card-radius')).toBe(
       'var(--border-radius-xl, 20px)',
     );
   });
 
-  it('paints the primary button solid from the inverse pair, with no fallback colour', () => {
+  it('paints the primary button from styleExtensions, solid inverse when absent', () => {
     expect(valueOf(derivedBlock, '--bg-gradient-1')).toBe(
-      'var(--color-background-inverse)',
+      'var(--button-primary-gradient-start, var(--color-background-inverse))',
     );
     expect(valueOf(derivedBlock, '--bg-gradient-2')).toBe(
-      'var(--color-background-inverse)',
+      'var(--button-primary-gradient-end, var(--color-background-inverse))',
     );
-    ['-1', '-2'].forEach((stop) => {
+    [
+      ['-1', 'start'],
+      ['-2', 'end'],
+    ].forEach(([stop, side]) => {
       expect(valueOf(derivedBlock, `--bg-gradient${stop}-hover`)).toBe(
-        'color-mix(in srgb, var(--color-background-inverse) 88%, var(--color-text-inverse, #fff))',
+        `var(--button-primary-gradient-hover-${side}, color-mix(in srgb, var(--color-background-inverse) 88%, var(--color-text-inverse, #fff)))`,
       );
       expect(valueOf(derivedBlock, `--bg-gradient${stop}-active`)).toBe(
-        'color-mix(in srgb, var(--color-background-inverse) 80%, var(--color-text-inverse, #fff))',
+        `var(--button-primary-gradient-active-${side}, color-mix(in srgb, var(--color-background-inverse) 80%, var(--color-text-inverse, #fff)))`,
       );
     });
   });
@@ -244,10 +253,10 @@ describe('theme-independent derivations (html block)', () => {
     );
   });
 
-  it('reads only MCP variables', () => {
+  it('reads only MCP and styleExtensions variables', () => {
     derivedBlock.forEach(({ name, value }) =>
       sourcesOf(value).forEach((source) =>
-        expect(MCP_KEYS, `${name} → ${source}`).toContain(source),
+        expect(DERIVED_SOURCE_KEYS, `${name} → ${source}`).toContain(source),
       ),
     );
   });
@@ -280,6 +289,18 @@ describe('component-scoped derivations', () => {
     );
     expect(valueOf(neutralButtonBlock, '--text-accent')).toBe(
       'var(--color-text-primary)',
+    );
+  });
+
+  it('scopes the primary label colour to the primary button, from styleExtensions', () => {
+    expect(valueOf(primaryButtonBlock, '--text-control-permanent')).toBe(
+      'var(--button-primary-text, var(--color-text-inverse, #fcfcfc))',
+    );
+    [lightBlock, darkBlock, preferredDarkBlock].forEach((block) =>
+      expect(
+        valueOf(block, '--text-control-permanent'),
+        'theme blocks keep the plain inverse mapping',
+      ).toBe('var(--color-text-inverse, #fcfcfc)'),
     );
   });
 

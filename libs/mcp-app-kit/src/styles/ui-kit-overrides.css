@@ -1,4 +1,9 @@
 /*
+ * Also fixes the primary button gradient, which ui-kit paints from the padding
+ * box and repeats under the button's transparent 1px border (a sliver of the
+ * opposite end shows on the rounded edges); the rule sits at the end of the
+ * file.
+ *
  * Re-declares ui-kit's hard-coded `.dial-*-text` classes with MCP host
  * typography tokens (DIAL D18 correspondence). Unlayered and imported after
  * ui-kit's stylesheet, so it wins by source order. Every fallback is ui-kit's
@@ -145,4 +150,8 @@
 
 .dial-italic-text {
   font-weight: var(--font-weight-normal, 400);
+}
+
+.dial-kit-primary-solid-button {
+  background-origin: border-box;
 }

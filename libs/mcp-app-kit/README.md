@@ -30,7 +30,7 @@ and classes.
 | `@epam/ai-dial-mcp-app-kit/vite`                                       | `mcpAppVite()` plugin list, `mcpAppEndpoint()`, `MCP_APP_PATH` (`/_mcp-app/index.html`).                                                                                                                                    |
 | `@epam/ai-dial-mcp-app-kit/tailwind`                                   | Tailwind preset: ui-kit 2.0 colour utilities (`bg-layer-raised`, `text-secondary`, `border-secondary`, …) and MCP host typography (`font-*`, `text-xs…lg`, `text-heading-*`), radius (`rounded-*`) and border-width tokens. |
 | `@epam/ai-dial-mcp-app-kit/styles/host-tokens.css`                     | Maps MCP host variables onto ui-kit variables.                                                                                                                                                                              |
-| `@epam/ai-dial-mcp-app-kit/styles/ui-kit-overrides.css`                | Re-declares ui-kit's `.dial-*-text` typography classes with MCP host type tokens.                                                                                                                                           |
+| `@epam/ai-dial-mcp-app-kit/styles/ui-kit-overrides.css`                | Re-declares ui-kit's `.dial-*-text` typography classes with MCP host type tokens, and paints the primary button gradient under its border.                                                                                  |
 | `@epam/ai-dial-mcp-app-kit/styles/layout.css`                          | Base layout: transparent page, safe-area padding on `#root`, `[hidden]` forced to `display: none`, container `min-height` in fullscreen/pip.                                                                                |
 | `dev-host/` (run with `npm run dev-host -w @epam/ai-dial-mcp-app-kit`) | Local host harness that embeds an app in an iframe and plays the host side of the protocol.                                                                                                                                 |
 
@@ -157,15 +157,17 @@ through the variables it sends; there is no host detection.
   light literals are ui-kit's own fallbacks, dark literals are approximate.
 - **Derived variables** (`html` block, except where scoped) have no colour
   fallback, so without host tokens ui-kit's defaults apply:
-  - primary button: solid `--color-background-inverse` with
-    `--color-text-inverse` label; hover/active mix the two;
+  - primary button: gradient from the `styleExtensions` `--button-primary-gradient-*`
+    stops, else solid `--color-background-inverse`; label from
+    `--button-primary-text`, else `--color-text-inverse`; hover/active mix the two;
   - neutral button ("Edit"): fill `--color-background-tertiary`, border
     `--color-border-secondary`, label `--color-text-primary` — scoped to
     `.dial-kit-neutral-solid-button`, because ui-kit reads the same variables
     elsewhere (e.g. the `Avatar` palette);
   - button glow: `--color-text-primary` at 10% / 4%;
-  - radii: `--radius-control` ← `--border-radius-md`, small ←
-    `--border-radius-sm`, `--mcp-card-radius` ← `--border-radius-xl`.
+  - radii: `--radius-control` ← `--button-radius`, else `--border-radius-md`;
+    small ← `--button-radius-small`, else `--border-radius-sm`;
+    `--mcp-card-radius` ← `--border-radius-xl`.
 - **Badge tones:** `.mcp-tone-success|warning|danger` re-point a filled
   `Badge`'s colour at the host's semantic tone. Put the class on the badge,
   never on a container — the `Avatar` shares the same palette.
@@ -194,6 +196,28 @@ What a host sends to style the entity card and the quality check:
 | `--border-radius-md` / `-sm`                                           | buttons / small buttons                                   |
 | `--border-radius-xl`                                                   | card and quality-check block                              |
 | `--border-width-regular`                                               | borders                                                   |
+
+### Style extensions
+
+`styles.variables` accepts only the standard MCP names (the SDK schema rejects
+others), so non-standard variables travel in a separate host-context field,
+`styleExtensions`, with the same shape: `{ variables: { … } }`. Every variable
+is optional; any name outside the list below, or a non-string value, is
+ignored. Without them the standard tokens in the table above apply. The three
+gradient stop pairs (rest, hover, active) belong together: send all six or
+none, otherwise the unsent state falls back to the flat inverse colour. Send
+`--button-primary-text` with them: the label otherwise follows the theme's
+inverse text, which can flip between themes while the gradient does not. The key and
+names are exported from the kit as `STYLE_EXTENSIONS_KEY` and
+`STYLE_EXTENSION_VARIABLE_KEYS`.
+
+| Variable                                          | Drives                         |
+| ------------------------------------------------- | ------------------------------ |
+| `--button-radius` / `--button-radius-small`       | buttons / small buttons        |
+| `--button-primary-gradient-start` / `-end`        | primary button ("Try it") fill |
+| `--button-primary-gradient-hover-start` / `-end`  | primary button on hover        |
+| `--button-primary-gradient-active-start` / `-end` | primary button while pressed   |
+| `--button-primary-text`                           | primary button label           |
 
 ## Display modes
 
