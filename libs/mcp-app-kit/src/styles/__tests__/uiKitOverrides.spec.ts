@@ -83,4 +83,14 @@ describe('ui-kit-overrides.css', () => {
       ),
     );
   });
+
+  it('paints the primary button gradient under its transparent border', () => {
+    const css = readFileSync(
+      fileURLToPath(new URL('../ui-kit-overrides.css', import.meta.url)),
+      'utf8',
+    );
+    const rule = css.match(/\.dial-kit-primary-solid-button\s*\{([^}]*)\}/);
+    expect(rule, 'primary button rule').not.toBeNull();
+    expect(rule![1]).toMatch(/background-origin:\s*border-box/);
+  });
 });

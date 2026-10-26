@@ -69,6 +69,47 @@ describe('applyHostContext', () => {
     root.style.removeProperty('--shadow-sm');
   });
 
+  it('applies allowed styleExtensions variables and cleans them up', () => {
+    const undo = applyHostContext({
+      styleExtensions: {
+        variables: {
+          '--button-radius': '9999px',
+          '--button-primary-gradient-start': '#1d4ed8',
+          '--button-primary-text': '#fcfcfc',
+        },
+      },
+    });
+    expect(root.style.getPropertyValue('--button-primary-text')).toBe(
+      '#fcfcfc',
+    );
+    expect(root.style.getPropertyValue('--button-radius')).toBe('9999px');
+    expect(root.style.getPropertyValue('--button-primary-gradient-start')).toBe(
+      '#1d4ed8',
+    );
+
+    undo();
+    expect(root.style.getPropertyValue('--button-primary-text')).toBe('');
+    expect(root.style.getPropertyValue('--button-radius')).toBe('');
+    expect(root.style.getPropertyValue('--button-primary-gradient-start')).toBe(
+      '',
+    );
+  });
+
+  it('ignores styleExtensions names outside the contract and non-string values', () => {
+    cleanup = applyHostContext({
+      styleExtensions: {
+        variables: {
+          '--color-text-primary': 'red',
+          '--button-radius-small': 8,
+          '--button-radius': '',
+        },
+      },
+    });
+    expect(root.style.getPropertyValue('--color-text-primary')).toBe('');
+    expect(root.style.getPropertyValue('--button-radius-small')).toBe('');
+    expect(root.style.getPropertyValue('--button-radius')).toBe('');
+  });
+
   it('injects host font css into a single managed style element', () => {
     cleanup = applyHostContext({ styles: { css: { fonts: '@font-face{}' } } });
     const styles = document.head.querySelectorAll('style[data-mcp-host-fonts]');

@@ -4,6 +4,7 @@ import {
   type McpUiStyles,
 } from '@modelcontextprotocol/ext-apps';
 import { resolveSafeArea } from './host/safeArea';
+import { readStyleExtensionVariables } from './styleExtensions';
 
 const FONT_STYLE_ATTR = 'data-mcp-host-fonts';
 const SIDES = ['top', 'right', 'bottom', 'left'] as const;
@@ -33,8 +34,9 @@ const setFontCss = (css: string): (() => void) => {
 /**
  * Applies a host context to the document: theme, host CSS variables, host
  * font CSS, display-mode / platform data attributes, container size and
- * safe-area CSS variables. Host `--shadow-*` variables are skipped (they are
- * full box-shadow values; ui-kit uses the same names for shadow colours).
+ * safe-area CSS variables, plus the allowed `styleExtensions` variables. Host
+ * `--shadow-*` variables are skipped (they are full box-shadow values; ui-kit
+ * uses the same names for shadow colours).
  * Call the returned function before applying the next context so stale
  * values never linger.
  * @param context - host context from `ui/initialize` or a context-changed notification
@@ -72,6 +74,10 @@ export const applyHostContext = (
       Object.keys(variables).forEach((name) => root.style.removeProperty(name)),
     );
   }
+
+  Object.entries(readStyleExtensionVariables(context)).forEach(
+    ([name, value]) => setVar(name, value),
+  );
 
   const fontCss = context.styles?.css?.fonts;
   if (fontCss) cleanups.push(setFontCss(fontCss));
