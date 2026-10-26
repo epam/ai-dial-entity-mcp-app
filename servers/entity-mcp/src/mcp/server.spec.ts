@@ -26,6 +26,7 @@ describe('buildCardPayload', () => {
       id: 'skills/b/my-skill',
       raw: { attributes: { name: 'my-skill', description: 'Does a thing.' } },
       activeLocale: 'en',
+      canEdit: false,
     });
     const parsed = parseEntityCardPayload(payload);
     expect(parsed.ok).toBe(true);
@@ -38,6 +39,7 @@ describe('buildCardPayload', () => {
       id: 'gpt-4o',
       raw: { displayName: 'Inbox Digest', description: 'Summarizes.' },
       activeLocale: 'en',
+      canEdit: false,
     });
     expect(parseEntityCardPayload(payload).ok).toBe(true);
     expect(payload.entity.kindLabel).toBe('Agent');
@@ -54,6 +56,7 @@ describe('buildCardPayload', () => {
         application_type_schema_id: 'rag',
       },
       activeLocale: 'en',
+      canEdit: true,
     });
     expect(payload.actions.editUrl).toBe(
       'https://chat.example.com/apps-editor?schema=rag&appId=my-app',
@@ -67,6 +70,7 @@ describe('buildCardPayload', () => {
       id: 'skills/b/my-skill',
       raw: { attributes: { name: 'good morning', description: 'x' } },
       activeLocale: 'en',
+      canEdit: false,
     });
     expect('initials' in payload.entity).toBe(false);
   });
@@ -78,6 +82,7 @@ describe('buildCardPayload', () => {
       id: 'prompts/b/p',
       raw: { name: 'p', content: 'c' },
       activeLocale: 'en',
+      canEdit: false,
     });
     expect(parseEntityCardPayload(payload).ok).toBe(true);
     expect(payload.sections).toEqual([
@@ -92,6 +97,7 @@ describe('buildCardPayload', () => {
       id: 'skills/b/my-skill',
       raw: { attributes: { name: 'x', description: 'y' } },
       activeLocale: 'en',
+      canEdit: false,
     });
     expect(payload.sections).toEqual([]);
     expect(JSON.stringify(payload)).not.toContain('qualityCheck');
@@ -922,7 +928,11 @@ describe('show_entity_card interface', () => {
       arguments: { id: 'skills/b/s', name: 'something else' },
     });
     expect(result.isError).toBeFalsy();
-    expect(spy).toHaveBeenCalledTimes(1);
+    const paths = spy.mock.calls.map(([input]) => String(input));
+    expect(paths.filter((path) => path.includes('/v2/metadata'))).toHaveLength(
+      1,
+    );
+    expect(paths.some((path) => path.includes('/openai/'))).toBe(false);
     await close();
   });
 
@@ -1132,5 +1142,86 @@ describe('render_entity_card', () => {
   ])('rejects %s', async (_label, args) => {
     const result = await render(args);
     expect(result.isError).toBe(true);
+  });
+});
+
+describe('show_entity_card Edit ownership', () => {
+  const editConfig = { ...config, chatBaseUrl: 'https://chat.example.com' };
+
+  const showCard = async (
+    id: string,
+    routes: Record<string, unknown>,
+  ): Promise<{ editUrl?: string }> => {
+    mockCore(routes);
+    const server = createMcpServer(
+      editConfig,
+      '<html></html>',
+      { header: 'Authorization', value: 'Bearer token' },
+      TEST_CORRELATION,
+    );
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '0.0.0' });
+    await Promise.all([
+      server.connect(serverTransport),
+      client.connect(clientTransport),
+    ]);
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { id },
+    });
+    await client.close();
+    await server.close();
+    expect(result.isError).toBeFalsy();
+    return (result.structuredContent as { actions: { editUrl?: string } })
+      .actions;
+  };
+
+  const skill = { attributes: { name: 'n', description: 'd' } };
+
+  afterEach(() => vi.restoreAllMocks());
+
+  test('offers Edit for an entity in the caller bucket', async () => {
+    const actions = await showCard('skills/mine/s', {
+      '/v2/metadata/skills/mine/s': skill,
+      '/v1/bucket': { bucket: 'mine' },
+    });
+    expect(actions.editUrl).toContain('/skill-editor?id=');
+  });
+
+  test('offers no Edit for a public entity, even for its publisher', async () => {
+    const actions = await showCard('skills/public/s', {
+      '/v2/metadata/skills/public/s': skill,
+      '/v1/bucket': { bucket: 'public' },
+    });
+    expect(actions.editUrl).toBeUndefined();
+  });
+
+  test("offers no Edit for an entity in another user's bucket", async () => {
+    const actions = await showCard('skills/other/s', {
+      '/v2/metadata/skills/other/s': skill,
+      '/v1/bucket': { bucket: 'mine' },
+    });
+    expect(actions.editUrl).toBeUndefined();
+  });
+
+  test('offers no Edit when the caller bucket cannot be read, and still shows the card', async () => {
+    const actions = await showCard('skills/mine/s', {
+      '/v2/metadata/skills/mine/s': skill,
+      '/v1/bucket': 500,
+    });
+    expect(actions.editUrl).toBeUndefined();
+  });
+
+  test('offers no Edit for an agent without a bucket and does not ask for one', async () => {
+    const actions = await showCard('gpt-4o', {
+      '/openai/applications/gpt-4o': { id: 'gpt-4o', display_name: 'GPT' },
+      '/v1/bucket': { bucket: 'mine' },
+    });
+    expect(actions.editUrl).toBeUndefined();
+    const paths = vi
+      .mocked(globalThis.fetch)
+      .mock.calls.map(([input]) => String(input));
+    expect(paths.some((path) => path.includes('/v1/bucket'))).toBe(false);
   });
 });

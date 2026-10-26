@@ -102,17 +102,20 @@ const editPath = (kind: EntityKind, schemaId?: string): string =>
  * `ENTITY_EDIT_URL_TEMPLATE` replaces the default Chat route for the entity
  * kind; a template that is a path is appended to `DIAL_CHAT_URL`, an absolute
  * one is used as given. An unset or
- * unusable template yields no URL, which the card renders as no button.
+ * unusable template yields no URL, which the card renders as no button. Edit is
+ * only offered when the caller owns the entity.
  * @param config - server configuration holding the base URL and templates
  * @param kind - entity kind, substituted for `{kind}`
  * @param id - entity id, url-encoded and substituted for `{id}`
  * @param raw - the Core record, read for the agent's application type schema
+ * @param canEdit - whether the caller owns the entity; without it there is no Edit url
  */
 export const buildActions = (
   config: ServerConfig,
   kind: EntityKind,
   id: string,
   raw: Record<string, unknown> = {},
+  canEdit = false,
 ): CardActions => {
   const schemaId = kind === EntityKind.Agent ? readSchemaId(raw) : undefined;
   const values = { kind, id, schemaId };
@@ -121,12 +124,14 @@ export const buildActions = (
     resolveTemplate(config.tryUrlTemplate ?? TRY_PATHS[kind], chatBaseUrl),
     values,
   );
-  const editUrl = render(
-    resolveTemplate(
-      config.editUrlTemplate ?? editPath(kind, schemaId),
-      chatBaseUrl,
-    ),
-    values,
-  );
+  const editUrl = canEdit
+    ? render(
+        resolveTemplate(
+          config.editUrlTemplate ?? editPath(kind, schemaId),
+          chatBaseUrl,
+        ),
+        values,
+      )
+    : undefined;
   return { ...(tryUrl && { tryUrl }), ...(editUrl && { editUrl }) };
 };

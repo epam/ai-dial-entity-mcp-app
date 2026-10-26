@@ -10,6 +10,12 @@ same header name. It never reads an ambient credential and fails closed when
 neither header is present: `show_entity_card` returns an error without one.
 `render_entity_card` makes no Core call and does not need a credential.
 
+`Api-Key` is for local development and probing only; in production the host
+forwards the user's JWT. The Edit button is offered only for an entity in the
+caller's own bucket (`GET /v1/bucket`). A user's key resolves to that user's
+bucket, but an application key resolves to the application's, so a card reached
+with one shows no Edit button.
+
 It exposes:
 
 - **Tool** `show_entity_card({ id?, name?, kind? })` — shows a card for a
