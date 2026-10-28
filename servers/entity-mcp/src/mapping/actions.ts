@@ -39,7 +39,7 @@ const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
  * template is used as given, a path starting with `/` is appended to the base
  * URL, and anything else yields nothing.
  * @param template - configured template
- * @param chatBaseUrl - `DIAL_CHAT_URL`, if configured
+ * @param chatBaseUrl - `CHAT_BASE_URL`, if configured
  */
 export const resolveTemplate = (
   template: string | undefined,
@@ -94,7 +94,7 @@ const editTemplate = (
 /**
  * Builds the card's action URLs from the templates configured per action and
  * entity type. A template is an absolute URL or a path appended to
- * `DIAL_CHAT_URL`. An unset or unusable template yields no URL, which the card
+ * `CHAT_BASE_URL`. An unset or unusable template yields no URL, which the card
  * renders as no button; there are no built-in routes. Edit is only offered when
  * the caller owns the entity.
  * @param config - server configuration holding the base URL and templates

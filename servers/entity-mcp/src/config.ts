@@ -2,7 +2,7 @@ import { resolveTemplate } from './mapping/actions.ts';
 
 /**
  * Card button URL templates, one per action and entity type. A template is an
- * absolute URL or a path appended to `DIAL_CHAT_URL`, with `{id}` and, for
+ * absolute URL or a path appended to `CHAT_BASE_URL`, with `{id}` and, for
  * `editAgentSchema`, `{schemaId}` placeholders. An unset template means no
  * button.
  */
@@ -85,16 +85,16 @@ export const loadConfig = (env: NodeJS.ProcessEnv): ServerConfig => {
       `PORT must be a positive integer no greater than ${MAX_PORT}, got ${env.PORT}`,
     );
   }
-  const chatBaseUrl = env.DIAL_CHAT_URL?.trim();
+  const chatBaseUrl = env.CHAT_BASE_URL?.trim();
   if (chatBaseUrl && /[?#]/.test(chatBaseUrl)) {
     throw new Error(
-      `DIAL_CHAT_URL must not contain a query or fragment, got: ${chatBaseUrl}`,
+      `CHAT_BASE_URL must not contain a query or fragment, got: ${chatBaseUrl}`,
     );
   }
   return {
     coreBaseUrl: parseHttpBaseUrl('DIAL_CORE_URL', coreBaseUrl),
     chatBaseUrl: chatBaseUrl
-      ? parseHttpBaseUrl('DIAL_CHAT_URL', chatBaseUrl)
+      ? parseHttpBaseUrl('CHAT_BASE_URL', chatBaseUrl)
       : undefined,
     actionTemplates: loadActionTemplates(env),
     port,
@@ -105,12 +105,13 @@ export const loadConfig = (env: NodeJS.ProcessEnv): ServerConfig => {
 const LEGACY_TEMPLATE_VARS: Record<string, string> = {
   ENTITY_EDIT_URL_TEMPLATE: 'ENTITY_EDIT_URL_<TYPE>',
   ENTITY_TRY_URL_TEMPLATE: 'ENTITY_TRY_URL_AGENT',
+  DIAL_CHAT_URL: 'CHAT_BASE_URL',
 };
 
 /**
  * Lists startup problems that silently remove a card button: a template that
- * cannot be resolved (a path without `DIAL_CHAT_URL`, or neither an absolute
- * URL nor a path starting with `/`) and the removed all-types variables.
+ * cannot be resolved (a path without `CHAT_BASE_URL`, or neither an absolute
+ * URL nor a path starting with `/`) and the removed variables.
  * @param config - loaded server configuration
  * @param env - process environment the configuration was read from
  */
@@ -123,7 +124,7 @@ export const findConfigWarnings = (
       const template = config.actionTemplates[key as keyof ActionTemplates];
       if (!template || resolveTemplate(template, config.chatBaseUrl)) return [];
       return [
-        `${name} is ignored: it must be an absolute http(s) URL, or a path starting with "/" with DIAL_CHAT_URL set`,
+        `${name} is ignored: it must be an absolute http(s) URL, or a path starting with "/" with CHAT_BASE_URL set`,
       ];
     },
   );

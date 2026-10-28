@@ -42,7 +42,7 @@ describe('loadConfig', () => {
     expect(config.actionTemplates).toEqual({});
   });
 
-  test('ignores the removed all-kinds template variables', () => {
+  test('ignores the removed variables', () => {
     const config = loadConfig({
       DIAL_CORE_URL: 'https://core.example.com',
       ENTITY_EDIT_URL_TEMPLATE: '/x/{id}',
@@ -118,10 +118,10 @@ describe('loadConfig', () => {
     expect(config.port).toBe(8080);
   });
 
-  test('reads and normalises DIAL_CHAT_URL', () => {
+  test('reads and normalises CHAT_BASE_URL', () => {
     const config = loadConfig({
       DIAL_CORE_URL: 'https://core.example.com',
-      DIAL_CHAT_URL: ' https://chat.example.com/ ',
+      CHAT_BASE_URL: ' https://chat.example.com/ ',
     });
     expect(config.chatBaseUrl).toBe('https://chat.example.com');
   });
@@ -132,25 +132,25 @@ describe('loadConfig', () => {
     ).toBeUndefined();
   });
 
-  test('throws a named error for a non-http(s) DIAL_CHAT_URL', () => {
+  test('throws a named error for a non-http(s) CHAT_BASE_URL', () => {
     expect(() =>
       loadConfig({
         DIAL_CORE_URL: 'https://core.example.com',
-        DIAL_CHAT_URL: 'javascript:alert(1)',
+        CHAT_BASE_URL: 'javascript:alert(1)',
       }),
-    ).toThrow(/DIAL_CHAT_URL/);
+    ).toThrow(/CHAT_BASE_URL/);
   });
 
   test.each([
     'https://chat.example.com/?lang=en',
     'https://chat.example.com/#x',
-  ])('rejects DIAL_CHAT_URL with a query or fragment: %s', (value) => {
+  ])('rejects CHAT_BASE_URL with a query or fragment: %s', (value) => {
     expect(() =>
       loadConfig({
         DIAL_CORE_URL: 'https://core.example.com',
-        DIAL_CHAT_URL: value,
+        CHAT_BASE_URL: value,
       }),
-    ).toThrow(/DIAL_CHAT_URL/);
+    ).toThrow(/CHAT_BASE_URL/);
   });
 });
 
@@ -162,7 +162,7 @@ describe('findConfigWarnings', () => {
   test('is silent for a resolvable configuration', () => {
     expect(
       warningsFor({
-        DIAL_CHAT_URL: 'https://chat.example.com',
+        CHAT_BASE_URL: 'https://chat.example.com',
         ENTITY_EDIT_URL_SKILL: '/skill-editor?id={id}',
         ENTITY_TRY_URL_AGENT: 'https://other.example.com/{id}',
       }),
@@ -173,7 +173,7 @@ describe('findConfigWarnings', () => {
     expect(warningsFor({})).toEqual([]);
   });
 
-  test('warns about a path template without DIAL_CHAT_URL', () => {
+  test('warns about a path template without CHAT_BASE_URL', () => {
     expect(
       warningsFor({ ENTITY_EDIT_URL_SKILL: '/skill-editor?id={id}' }),
     ).toEqual([expect.stringContaining('ENTITY_EDIT_URL_SKILL')]);
@@ -182,7 +182,7 @@ describe('findConfigWarnings', () => {
   test('warns about a template that is neither a path nor an absolute URL', () => {
     expect(
       warningsFor({
-        DIAL_CHAT_URL: 'https://chat.example.com',
+        CHAT_BASE_URL: 'https://chat.example.com',
         ENTITY_EDIT_URL_TOOLSET: 'toolset-editor?id={id}',
       }),
     ).toEqual([expect.stringContaining('ENTITY_EDIT_URL_TOOLSET')]);
@@ -192,8 +192,10 @@ describe('findConfigWarnings', () => {
     const warnings = warningsFor({
       ENTITY_EDIT_URL_TEMPLATE: '/x/{id}',
       ENTITY_TRY_URL_TEMPLATE: '/y/{id}',
+      DIAL_CHAT_URL: 'https://chat.example.com',
     });
-    expect(warnings).toHaveLength(2);
+    expect(warnings).toHaveLength(3);
+    expect(warnings[2]).toContain('CHAT_BASE_URL');
     expect(warnings[0]).toContain('ENTITY_EDIT_URL_TEMPLATE');
     expect(warnings[1]).toContain('ENTITY_TRY_URL_AGENT');
   });

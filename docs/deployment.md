@@ -40,11 +40,11 @@ Run the image built from the root `Dockerfile`. It listens on `/mcp`, with
 | Variable                                    | Required    | Value                                                                                                          |
 | ------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------- |
 | `DIAL_CORE_URL`                             | yes         | DIAL Core base URL, reachable from this deployment                                                             |
-| `DIAL_CHAT_URL`                             | for buttons | the chat's public origin; the button paths below are appended to it                                            |
+| `CHAT_BASE_URL`                             | for buttons | the chat's base URL; the button paths below are appended to it                                                 |
 | `ENTITY_EDIT_URL_*`, `ENTITY_TRY_URL_AGENT` | no          | the card's Edit and Try buttons, one variable per entity type. A button appears only when its variable is set. |
 | `PORT`                                      | no          | default `8080`                                                                                                 |
 
-Run one instance per chat, each with its own `DIAL_CHAT_URL` and routes.
+Run one instance per chat, each with its own `CHAT_BASE_URL` and routes.
 Variable names, placeholders and a DIAL Chat example are in the
 [server README](../servers/entity-mcp/README.md#card-buttons).
 
