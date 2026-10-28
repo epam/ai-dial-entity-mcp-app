@@ -200,3 +200,123 @@ describe('findConfigWarnings', () => {
     expect(warnings[1]).toContain('ENTITY_TRY_URL_AGENT');
   });
 });
+
+describe('per-schema agent Edit templates', () => {
+  const core = { DIAL_CORE_URL: 'https://core.example.com' };
+  const env = {
+    ...core,
+    CHAT_BASE_URL: 'https://chat.example.com',
+    ENTITY_AGENT_SCHEMA_QUICKAPP: ' https://dial.example.com/quickapps2 ',
+    ENTITY_EDIT_URL_AGENT_SCHEMA_QUICKAPP: '/agent-builder?id={id}',
+    ENTITY_AGENT_SCHEMA_LOOP: 'https://dial.example.com/dial-loop',
+    ENTITY_EDIT_URL_AGENT_SCHEMA_LOOP: '/dial-loop-builder?id={id}',
+  };
+
+  test('maps each schema id to the template of its key', () => {
+    expect(loadConfig(env).actionTemplates.editAgentBySchema).toEqual({
+      'https://dial.example.com/quickapps2': '/agent-builder?id={id}',
+      'https://dial.example.com/dial-loop': '/dial-loop-builder?id={id}',
+    });
+  });
+
+  test('leaves the map out when no key is configured', () => {
+    expect(loadConfig(core).actionTemplates.editAgentBySchema).toBeUndefined();
+  });
+
+  test('keeps the any-schema variable apart from the keyed ones', () => {
+    const config = loadConfig({
+      ...env,
+      ENTITY_EDIT_URL_AGENT_SCHEMA: '/apps-editor?schema={schemaId}&appId={id}',
+    });
+    expect(config.actionTemplates.editAgentSchema).toBe(
+      '/apps-editor?schema={schemaId}&appId={id}',
+    );
+  });
+
+  test('throws when two keys share a schema id', () => {
+    expect(() =>
+      loadConfig({
+        ...env,
+        ENTITY_AGENT_SCHEMA_LOOP: 'https://dial.example.com/quickapps2',
+      }),
+    ).toThrow(
+      /ENTITY_AGENT_SCHEMA_LOOP.*ENTITY_AGENT_SCHEMA_QUICKAPP|ENTITY_AGENT_SCHEMA_QUICKAPP.*ENTITY_AGENT_SCHEMA_LOOP/,
+    );
+  });
+
+  test('ignores a key that has only one of its two variables', () => {
+    const config = loadConfig({
+      ...core,
+      ENTITY_AGENT_SCHEMA_LOOP: 'https://dial.example.com/dial-loop',
+      ENTITY_EDIT_URL_AGENT_SCHEMA_ORPHAN: '/x?id={id}',
+    });
+    expect(config.actionTemplates.editAgentBySchema).toBeUndefined();
+  });
+
+  test('warns about a key with only one of its two variables', () => {
+    const partial = {
+      ...core,
+      ENTITY_AGENT_SCHEMA_LOOP: 'https://dial.example.com/dial-loop',
+      ENTITY_EDIT_URL_AGENT_SCHEMA_ORPHAN: '/x?id={id}',
+    };
+    const warnings = findConfigWarnings(loadConfig(partial), partial);
+    expect(warnings).toHaveLength(2);
+    expect(warnings.some((w) => w.includes('key ORPHAN'))).toBe(true);
+    expect(warnings.some((w) => w.includes('key LOOP'))).toBe(true);
+  });
+
+  test('warns about an unresolvable per-schema template', () => {
+    const bad = {
+      ...env,
+      ENTITY_EDIT_URL_AGENT_SCHEMA_LOOP: 'builder?id={id}',
+    };
+    expect(findConfigWarnings(loadConfig(bad), bad)).toEqual([
+      expect.stringContaining('ENTITY_EDIT_URL_AGENT_SCHEMA_LOOP'),
+    ]);
+  });
+
+  test.each(['', '-x', 'a.b', 'a b'])(
+    'warns about and ignores the invalid key %j',
+    (key) => {
+      const bad = {
+        ...core,
+        [`ENTITY_EDIT_URL_AGENT_SCHEMA_${key}`]: '/x?id={id}',
+        [`ENTITY_AGENT_SCHEMA_${key}`]: 'https://dial.example.com/s',
+      };
+      const config = loadConfig(bad);
+      expect(config.actionTemplates.editAgentBySchema).toBeUndefined();
+      expect(findConfigWarnings(config, bad)).toHaveLength(2);
+    },
+  );
+
+  test('treats a whitespace-only variable as missing', () => {
+    const half = {
+      ...core,
+      ENTITY_AGENT_SCHEMA_LOOP: 'https://dial.example.com/dial-loop',
+      ENTITY_EDIT_URL_AGENT_SCHEMA_LOOP: '   ',
+    };
+    const config = loadConfig(half);
+    expect(config.actionTemplates.editAgentBySchema).toBeUndefined();
+    expect(findConfigWarnings(config, half)).toEqual([
+      expect.stringContaining('key LOOP'),
+    ]);
+  });
+
+  test('keys that differ only by case are separate keys', () => {
+    const config = loadConfig({
+      ...core,
+      ENTITY_AGENT_SCHEMA_Loop: 'https://dial.example.com/a',
+      ENTITY_EDIT_URL_AGENT_SCHEMA_Loop: '/a?id={id}',
+      ENTITY_AGENT_SCHEMA_LOOP: 'https://dial.example.com/b',
+      ENTITY_EDIT_URL_AGENT_SCHEMA_LOOP: '/b?id={id}',
+    });
+    expect(config.actionTemplates.editAgentBySchema).toEqual({
+      'https://dial.example.com/a': '/a?id={id}',
+      'https://dial.example.com/b': '/b?id={id}',
+    });
+  });
+
+  test('is silent for a complete configuration', () => {
+    expect(findConfigWarnings(loadConfig(env), env)).toEqual([]);
+  });
+});

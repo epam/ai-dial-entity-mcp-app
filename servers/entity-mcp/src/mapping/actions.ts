@@ -65,7 +65,10 @@ const readSchemaId = (raw: Record<string, unknown>): string | undefined => {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 };
 
-const EDIT_TEMPLATE: Record<EntityKind, keyof ActionTemplates> = {
+const EDIT_TEMPLATE: Record<
+  EntityKind,
+  'editSkill' | 'editPrompt' | 'editToolset' | 'editAgent'
+> = {
   [EntityKind.Skill]: 'editSkill',
   [EntityKind.Prompt]: 'editPrompt',
   [EntityKind.Toolset]: 'editToolset',
@@ -73,9 +76,9 @@ const EDIT_TEMPLATE: Record<EntityKind, keyof ActionTemplates> = {
 };
 
 /**
- * Picks the configured Edit template for an entity: an agent with an
- * application type schema uses the schema template and never falls back to the
- * plain agent one.
+ * Picks the configured Edit template for an entity. An agent with an
+ * application type schema uses the template configured for exactly that schema
+ * id, else the any-schema template, and never the plain agent one.
  * @param templates - configured action templates
  * @param kind - entity kind
  * @param schemaId - the agent's application type schema id, if it has one
@@ -84,12 +87,14 @@ const editTemplate = (
   templates: ActionTemplates,
   kind: EntityKind,
   schemaId?: string,
-): string | undefined =>
-  templates[
-    kind === EntityKind.Agent && schemaId
-      ? 'editAgentSchema'
-      : EDIT_TEMPLATE[kind]
-  ];
+): string | undefined => {
+  if (kind !== EntityKind.Agent || !schemaId)
+    return templates[EDIT_TEMPLATE[kind]];
+  const bySchema = templates.editAgentBySchema;
+  return bySchema && Object.hasOwn(bySchema, schemaId)
+    ? bySchema[schemaId]
+    : templates.editAgentSchema;
+};
 
 /**
  * Builds the card's action URLs from the templates configured per action and
