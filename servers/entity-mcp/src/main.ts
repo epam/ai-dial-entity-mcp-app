@@ -7,6 +7,7 @@ import {
   handleHealth,
   readInboundCorrelation,
   readInboundCredential,
+  rejectUnauthenticated,
 } from './http.ts';
 import { createMcpServer } from './mcp/server.ts';
 
@@ -24,10 +25,19 @@ const httpServer = createServer(async (req, res) => {
     return;
   }
 
+  const credential = readInboundCredential(req.headers);
+  if (rejectUnauthenticated(credential, res)) {
+    const { correlationId } = readInboundCorrelation(req.headers);
+    console.warn(
+      `refused unauthenticated ${req.method} /mcp correlationId=${JSON.stringify(correlationId)}`,
+    );
+    return;
+  }
+
   const server = createMcpServer(
     config,
     appHtml,
-    readInboundCredential(req.headers),
+    credential,
     readInboundCorrelation(req.headers),
   );
   const transport = new StreamableHTTPServerTransport({

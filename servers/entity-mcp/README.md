@@ -7,8 +7,11 @@ accepts two inbound headers, `Authorization` and `Api-Key` — `Authorization`
 wins when both are present, matching DIAL's own auth precedence (user JWT,
 then `Api-Key`) — and forwards whichever one it got back to Core under the
 same header name. It never reads an ambient credential and fails closed when
-neither header is present: `show_entity_card` returns an error without one.
-`render_entity_card` makes no Core call and does not need a credential.
+neither header is present: every `/mcp` request without one is refused with
+HTTP 401 and `WWW-Authenticate: Bearer`, so hosts that prompt the user to sign
+in on a 401 (DIAL Chat quick apps) can do so before retrying.
+`render_entity_card` makes no Core call, but the 401 applies to it too because
+the refusal happens before the tool is known.
 
 `Api-Key` is for local development and probing only; in production the host
 forwards the user's JWT. The Edit button is offered only for an entity in the
