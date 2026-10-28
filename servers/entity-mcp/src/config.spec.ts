@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { loadConfig } from './config.ts';
+import { findConfigWarnings, loadConfig } from './config.ts';
 
 describe('loadConfig', () => {
   test('throws a named error when DIAL_CORE_URL is missing', () => {
@@ -11,8 +11,44 @@ describe('loadConfig', () => {
       DIAL_CORE_URL: 'https://core.example.com',
     });
     expect(config.port).toBe(8080);
-    expect(config.tryUrlTemplate).toBeUndefined();
-    expect(config.editUrlTemplate).toBeUndefined();
+    expect(config.actionTemplates).toEqual({});
+  });
+
+  test('reads each action template from its own variable', () => {
+    const config = loadConfig({
+      DIAL_CORE_URL: 'https://core.example.com',
+      ENTITY_EDIT_URL_SKILL: ' /skill-editor?id={id} ',
+      ENTITY_EDIT_URL_PROMPT: '/prompt-editor?id={id}',
+      ENTITY_EDIT_URL_TOOLSET: '/toolset-editor?id={id}',
+      ENTITY_EDIT_URL_AGENT: '/custom-app-editor?id={id}',
+      ENTITY_EDIT_URL_AGENT_SCHEMA: '/apps-editor?schema={schemaId}&appId={id}',
+      ENTITY_TRY_URL_AGENT: '/?isolated-model-id={id}',
+    });
+    expect(config.actionTemplates).toEqual({
+      editSkill: '/skill-editor?id={id}',
+      editPrompt: '/prompt-editor?id={id}',
+      editToolset: '/toolset-editor?id={id}',
+      editAgent: '/custom-app-editor?id={id}',
+      editAgentSchema: '/apps-editor?schema={schemaId}&appId={id}',
+      tryAgent: '/?isolated-model-id={id}',
+    });
+  });
+
+  test('treats an empty template variable as unset', () => {
+    const config = loadConfig({
+      DIAL_CORE_URL: 'https://core.example.com',
+      ENTITY_EDIT_URL_TOOLSET: '  ',
+    });
+    expect(config.actionTemplates).toEqual({});
+  });
+
+  test('ignores the removed all-kinds template variables', () => {
+    const config = loadConfig({
+      DIAL_CORE_URL: 'https://core.example.com',
+      ENTITY_EDIT_URL_TEMPLATE: '/x/{id}',
+      ENTITY_TRY_URL_TEMPLATE: '/y/{id}',
+    });
+    expect(config.actionTemplates).toEqual({});
   });
 
   test('strips a trailing slash from the base url', () => {
@@ -115,5 +151,50 @@ describe('loadConfig', () => {
         DIAL_CHAT_URL: value,
       }),
     ).toThrow(/DIAL_CHAT_URL/);
+  });
+});
+
+describe('findConfigWarnings', () => {
+  const core = { DIAL_CORE_URL: 'https://core.example.com' };
+  const warningsFor = (env: Record<string, string>) =>
+    findConfigWarnings(loadConfig({ ...core, ...env }), { ...core, ...env });
+
+  test('is silent for a resolvable configuration', () => {
+    expect(
+      warningsFor({
+        DIAL_CHAT_URL: 'https://chat.example.com',
+        ENTITY_EDIT_URL_SKILL: '/skill-editor?id={id}',
+        ENTITY_TRY_URL_AGENT: 'https://other.example.com/{id}',
+      }),
+    ).toEqual([]);
+  });
+
+  test('is silent when nothing is configured', () => {
+    expect(warningsFor({})).toEqual([]);
+  });
+
+  test('warns about a path template without DIAL_CHAT_URL', () => {
+    expect(
+      warningsFor({ ENTITY_EDIT_URL_SKILL: '/skill-editor?id={id}' }),
+    ).toEqual([expect.stringContaining('ENTITY_EDIT_URL_SKILL')]);
+  });
+
+  test('warns about a template that is neither a path nor an absolute URL', () => {
+    expect(
+      warningsFor({
+        DIAL_CHAT_URL: 'https://chat.example.com',
+        ENTITY_EDIT_URL_TOOLSET: 'toolset-editor?id={id}',
+      }),
+    ).toEqual([expect.stringContaining('ENTITY_EDIT_URL_TOOLSET')]);
+  });
+
+  test('warns about each removed variable and names its replacement', () => {
+    const warnings = warningsFor({
+      ENTITY_EDIT_URL_TEMPLATE: '/x/{id}',
+      ENTITY_TRY_URL_TEMPLATE: '/y/{id}',
+    });
+    expect(warnings).toHaveLength(2);
+    expect(warnings[0]).toContain('ENTITY_EDIT_URL_TEMPLATE');
+    expect(warnings[1]).toContain('ENTITY_TRY_URL_AGENT');
   });
 });

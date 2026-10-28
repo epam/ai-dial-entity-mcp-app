@@ -7,6 +7,7 @@ const config = {
   coreBaseUrl: 'https://core.example.com',
   port: 0,
   appHtmlPath: 'x',
+  actionTemplates: {},
 };
 const CARD_HTML = '<html>card</html>';
 

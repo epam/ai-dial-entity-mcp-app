@@ -10,6 +10,7 @@ const config = {
   coreBaseUrl: 'https://core.example.com',
   port: 8080,
   appHtmlPath: 'x.html',
+  actionTemplates: {},
 };
 
 const mockFetch = (status: number, body: unknown) =>
