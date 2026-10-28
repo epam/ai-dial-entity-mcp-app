@@ -12,17 +12,11 @@ prints the result.
 
 ## Credential
 
-The probe reads a credential from the environment and sends it the same way
-DIAL Core would receive it from the real server, so it can exercise both
-headers the entity MCP server accepts:
-
-- `DIAL_API_KEY` is sent as `Api-Key`.
-- `DIAL_USER_JWT` is sent as `Authorization: Bearer <value>`.
-
-If both are set, the JWT is used and the probe says so. If neither is set,
-the probe still runs — it lists tools and resources — but prints a note that
-`show_entity_card` will fail closed, since the server has no credential to
-forward.
+The probe reads a user JWT from `DIAL_USER_JWT` and sends it as
+`Authorization: Bearer <value>`, the way DIAL Core would deliver it to the real
+server. The server answers 401 to `tools/list` and `tools/call` without it, so
+the probe prints a note when the variable is not set and still connects, which
+is how to check the 401 path.
 
 **This env var lives only here, in the dev tool.** The entity MCP server
 itself never reads or stores a credential; it only forwards whatever the
@@ -34,17 +28,14 @@ inbound request carried.
 cd tools/mcp-probe
 npm ci
 
-# against the entity-mcp server with a DIAL API key
-DIAL_API_KEY=... npm start -- --url http://localhost:8080/mcp --kind skill --id skills/my-bucket/my-skill
+# against the entity-mcp server
+DIAL_USER_JWT=... npm start -- --url http://localhost:8080/mcp --kind skill --id skills/my-bucket/my-skill
 
 # find an entity by name instead of by exact id
-DIAL_API_KEY=... npm start -- --name hhm-joke-skill
+DIAL_USER_JWT=... npm start -- --name hhm-joke-skill
 
-# against a JWT instead
+# an agent by id
 DIAL_USER_JWT=... npm start -- --kind agent --id gpt-4o
-
-# just list tools/resources, no credential
-npm start
 ```
 
 `--url` defaults to `http://localhost:8080/mcp`.

@@ -1,6 +1,11 @@
 import { describe, expect, test } from 'vitest';
 import type { ServerResponse } from 'node:http';
-import { readInboundCorrelation, rejectUnauthenticated } from './http.ts';
+import {
+  readInboundCorrelation,
+  readInboundCredential,
+  rejectUnauthenticated,
+  requiresCredential,
+} from './http.ts';
 
 const fakeResponse = () => {
   const calls: {
@@ -82,5 +87,58 @@ describe('readInboundCorrelation', () => {
     expect(correlation.correlationId).toBe('given-correlation-id');
     expect(correlation.requestId).toBe('given-request-id');
     expect(correlation.traceId).toBe('given-trace-id');
+  });
+});
+
+describe('readInboundCredential', () => {
+  test('returns a bearer Authorization header value verbatim', () => {
+    expect(readInboundCredential({ authorization: 'Bearer abc.def' })).toEqual({
+      header: 'Authorization',
+      value: 'Bearer abc.def',
+    });
+  });
+
+  test('ignores an Api-Key header', () => {
+    expect(readInboundCredential({ 'api-key': 'raw-key' })).toBeUndefined();
+  });
+
+  test.each(['', 'Bearer', 'Basic dXNlcjpwYXNz', 'abc.def'])(
+    'ignores the Authorization value %j',
+    (authorization) => {
+      expect(readInboundCredential({ authorization })).toBeUndefined();
+    },
+  );
+});
+
+describe('requiresCredential', () => {
+  const call = (method: string) => ({ jsonrpc: '2.0', id: 1, method });
+
+  test.each(['tools/list', 'tools/call'])('%s needs a credential', (method) => {
+    expect(requiresCredential(call(method))).toBe(true);
+  });
+
+  test.each([
+    'initialize',
+    'notifications/initialized',
+    'ping',
+    'resources/read',
+    'resources/list',
+    'prompts/get',
+  ])('%s does not need a credential', (method) => {
+    expect(requiresCredential(call(method))).toBe(false);
+  });
+
+  test('a batch needs a credential when any message does', () => {
+    expect(requiresCredential([call('ping'), call('tools/call')])).toBe(true);
+    expect(requiresCredential([call('ping'), call('resources/read')])).toBe(
+      false,
+    );
+  });
+
+  test('a body without a method is left to the transport', () => {
+    expect(requiresCredential(undefined)).toBe(false);
+    expect(requiresCredential(null)).toBe(false);
+    expect(requiresCredential('tools/call')).toBe(false);
+    expect(requiresCredential({ method: 42 })).toBe(false);
   });
 });
