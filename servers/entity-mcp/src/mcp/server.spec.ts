@@ -11,7 +11,11 @@ const config = {
   coreBaseUrl: 'https://core.example.com',
   port: 8080,
   appHtmlPath: 'x',
-  tryUrlTemplate: 'https://chat.example.com/{kind}s/{id}/try',
+  actionTemplates: {
+    tryAgent: 'https://chat.example.com/try/{id}',
+    editSkill: '/skill-editor?id={id}',
+    editAgentSchema: '/apps-editor?schema={schemaId}&appId={id}',
+  },
 };
 
 const TEST_CORRELATION: CorrelationContext = {
@@ -295,7 +299,7 @@ describe('createMcpServer', () => {
       .spyOn(globalThis, 'fetch')
       .mockResolvedValue(
         new Response(
-          JSON.stringify({ attributes: { name: 'x', description: 'y' } }),
+          JSON.stringify({ id: 'gpt-4o', display_name: 'x', description: 'y' }),
           { status: 200, headers: { 'content-type': 'application/json' } },
         ),
       );
@@ -318,17 +322,17 @@ describe('createMcpServer', () => {
 
     const result = await client.callTool({
       name: 'show_entity_card',
-      arguments: { kind: EntityKind.Skill, id: ' skills/b/x ' },
+      arguments: { kind: EntityKind.Agent, id: ' gpt-4o ' },
     });
 
     expect(spy.mock.calls[0]![0]).toBe(
-      'https://core.example.com/v2/metadata/skills/b/x',
+      'https://core.example.com/openai/applications/gpt-4o',
     );
     const structured = result.structuredContent as {
       actions: { tryUrl?: string };
     };
     expect(structured.actions.tryUrl).toBe(
-      'https://chat.example.com/skills/skills%2Fb%2Fx/try',
+      'https://chat.example.com/try/gpt-4o',
     );
     expect(structured.actions.tryUrl).not.toContain('%20');
 

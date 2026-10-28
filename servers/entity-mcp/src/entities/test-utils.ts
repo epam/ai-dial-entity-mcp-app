@@ -6,6 +6,7 @@ export const TEST_CTX: EntityContext = {
     coreBaseUrl: 'https://core.example.com',
     port: 8080,
     appHtmlPath: 'x.html',
+    actionTemplates: {},
   },
   credential: { header: 'Authorization', value: 'Bearer token' },
   correlation: { correlationId: 'test-correlation-id' },

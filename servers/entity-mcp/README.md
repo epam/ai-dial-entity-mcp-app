@@ -6,7 +6,7 @@ user, identified by the `Authorization` header, which is forwarded to DIAL Core
 verbatim (a bearer token). It reads no other credential, and in particular never accepts an
 `Api-Key`, so a lookup can never run as an application or any other identity.
 The Edit button is offered only for an entity in the caller's own bucket
-(`GET /v1/bucket`).
+(`GET /v1/bucket`), and only when its URL template is configured.
 
 ## Authentication modes
 
@@ -94,36 +94,48 @@ It exposes:
 
 There is nothing else to configure:
 
-| Var                        | Required | Default                               | Purpose                                                                                                                                                                             |
-| -------------------------- | -------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DIAL_CORE_URL`            | **yes**  | —                                     | Where to call Core back. Not a credential; the server fails to start without it.                                                                                                    |
-| `DIAL_CHAT_URL`            | no       | unset                                 | DIAL Chat origin of this installation (no query or fragment). With it set, Try and Edit use Chat's own routes (below); unset means no buttons unless a template is an absolute URL. |
-| `ENTITY_TRY_URL_TEMPLATE`  | no       | Chat route per kind, see Card buttons | Override of the Try button URL for every kind: an absolute URL or a path appended to `DIAL_CHAT_URL` (`{kind}`, `{id}`).                                                            |
-| `ENTITY_EDIT_URL_TEMPLATE` | no       | Chat route per kind, see Card buttons | Override of the Edit button URL for every kind: an absolute URL or a path appended to `DIAL_CHAT_URL` (`{kind}`, `{id}`).                                                           |
-| `PORT`                     | no       | `8080`                                | Matches the test server and the proven DIAL Admin registration.                                                                                                                     |
-| `APP_HTML`                 | no       | `apps/entity-card/dist/index.html`    | Path to the built card, for local runs.                                                                                                                                             |
+| Var                            | Required | Default                            | Purpose                                                                                                    |
+| ------------------------------ | -------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `DIAL_CORE_URL`                | **yes**  | —                                  | Where to call Core back. Not a credential; the server fails to start without it.                           |
+| `CHAT_BASE_URL`                | no       | unset                              | Base URL of the chat this instance serves (no query or fragment). Path templates below are appended to it. |
+| `ENTITY_EDIT_URL_SKILL`        | no       | unset                              | Edit button for a skill.                                                                                   |
+| `ENTITY_EDIT_URL_PROMPT`       | no       | unset                              | Edit button for a prompt.                                                                                  |
+| `ENTITY_EDIT_URL_TOOLSET`      | no       | unset                              | Edit button for a toolset.                                                                                 |
+| `ENTITY_EDIT_URL_AGENT`        | no       | unset                              | Edit button for an agent without an application type schema.                                               |
+| `ENTITY_EDIT_URL_AGENT_SCHEMA` | no       | unset                              | Edit button for an agent with an application type schema (may use `{schemaId}`).                           |
+| `ENTITY_TRY_URL_AGENT`         | no       | unset                              | Try button, for agents only.                                                                               |
+| `PORT`                         | no       | `8080`                             | Matches the test server and the proven DIAL Admin registration.                                            |
+| `APP_HTML`                     | no       | `apps/entity-card/dist/index.html` | Path to the built card, for local runs.                                                                    |
 
 ### Card buttons
 
-With `DIAL_CHAT_URL` set (for example `https://chat.example.com`), the
-server appends Chat's routes, so only the domain changes between installations:
+A button appears only when its variable is set: there are no built-in routes,
+so an instance never links to a page its chat does not have. Run one instance
+per chat, each with its own `CHAT_BASE_URL` and the routes of that chat.
 
-| Entity              | Edit                                        | Try                        |
-| ------------------- | ------------------------------------------- | -------------------------- |
-| Skill               | `/skill-editor?id={id}`                     | none                       |
-| Prompt              | `/prompt-editor?id={id}`                    | none                       |
-| Toolset             | `/toolset-editor?id={id}`                   | none                       |
-| Agent (no schema)   | `/custom-app-editor?id={id}`                | `/?isolated-model-id={id}` |
-| Agent (with schema) | `/apps-editor?schema={schemaId}&appId={id}` | `/?isolated-model-id={id}` |
+A value is a path that starts with `/`, appended to `CHAT_BASE_URL`, or an
+absolute `http(s)` URL used as given. Placeholders: `{id}`, the url-encoded
+entity id, and `{schemaId}`, the url-encoded application type schema id of an
+agent. An agent with a schema uses only `ENTITY_EDIT_URL_AGENT_SCHEMA`; it never
+falls back to `ENTITY_EDIT_URL_AGENT`, and a template with `{schemaId}` gives
+no button for an agent without a schema. At start the server logs which
+variables are unset.
 
-`{schemaId}` is the agent's `application_type_schema_id`. Try depends on Chat's
-`?isolated-model-id` query parameter, which opens Chat pinned to that agent
-with the agent picker and navigation hidden. Chat marks that parameter for
-removal; when it goes, update `TRY_PATHS` in `src/mapping/actions.ts`. An
-explicit `ENTITY_TRY_URL_TEMPLATE` / `ENTITY_EDIT_URL_TEMPLATE` replaces the
-default for every kind. Overrides may use `{kind}`, `{id}` and `{schemaId}`;
-a template that uses `{schemaId}` yields no button for an entity without a
-schema.
+Example for DIAL Chat:
+
+```sh
+CHAT_BASE_URL=https://chat.example.com
+ENTITY_EDIT_URL_SKILL='/skill-editor?id={id}'
+ENTITY_EDIT_URL_PROMPT='/prompt-editor?id={id}'
+ENTITY_EDIT_URL_TOOLSET='/toolset-editor?id={id}'
+ENTITY_EDIT_URL_AGENT='/custom-app-editor?id={id}'
+ENTITY_EDIT_URL_AGENT_SCHEMA='/apps-editor?schema={schemaId}&appId={id}'
+ENTITY_TRY_URL_AGENT='/?isolated-model-id={id}'
+```
+
+DIAL Chat's Try depends on its `?isolated-model-id` query parameter, which Chat
+marks for removal. A chat that lacks an editor route for a type leaves that
+variable unset.
 
 ### Deliberately absent
 
