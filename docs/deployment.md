@@ -37,12 +37,12 @@ If `ENABLED_UI_FEATURES` is set, it must include `live-chat-interaction` for the
 Run the image built from the root `Dockerfile`. It listens on `/mcp`, with
 `/health` for probes.
 
-| Variable                                    | Required    | Value                                                                                                          |
-| ------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------------------------- |
-| `DIAL_CORE_URL`                             | yes         | DIAL Core base URL, reachable from this deployment                                                             |
-| `CHAT_BASE_URL`                             | for buttons | the chat's base URL; the button paths below are appended to it                                                 |
-| `ENTITY_EDIT_URL_*`, `ENTITY_TRY_URL_AGENT` | no          | the card's Edit and Try buttons, one variable per entity type. A button appears only when its variable is set. |
-| `PORT`                                      | no          | default `8080`                                                                                                 |
+| Variable                                    | Required    | Value                                                                                                                                                                                                                                 |
+| ------------------------------------------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DIAL_CORE_URL`                             | yes         | DIAL Core base URL, reachable from this deployment                                                                                                                                                                                    |
+| `CHAT_BASE_URL`                             | for buttons | the chat's base URL; the button paths below are appended to it                                                                                                                                                                        |
+| `ENTITY_EDIT_URL_*`, `ENTITY_TRY_URL_AGENT` | no          | the card's Edit and Try buttons, one variable per entity type. A button appears only when its variable is set. An agent Edit button chosen by schema needs both `ENTITY_AGENT_SCHEMA_<KEY>` and `ENTITY_EDIT_URL_AGENT_SCHEMA_<KEY>`. |
+| `PORT`                                      | no          | default `8080`                                                                                                                                                                                                                        |
 
 Run one instance per chat, each with its own `CHAT_BASE_URL` and routes.
 Variable names, placeholders and a DIAL Chat example are in the

@@ -104,6 +104,87 @@ describe('buildActions', () => {
       expect(actions.editUrl).toContain('/apps-editor?schema=rag&appId=my-app');
     });
 
+    describe('per-schema templates', () => {
+      const quickApp = 'https://dial.example.com/schemas/quickapps2';
+      const loop = 'https://dial.example.com/schemas/dial-loop';
+      const perSchema = withTemplates(
+        {
+          editAgentSchema: templates.editAgentSchema,
+          editAgentBySchema: {
+            [quickApp]: '/agent-builder?id={id}',
+            [loop]: '/dial-loop-builder?id={id}',
+          },
+        },
+        'https://chat.example.com',
+      );
+      const edit = (config: typeof perSchema, schema: string) =>
+        buildActions(
+          config,
+          EntityKind.Agent,
+          'applications/b/a',
+          { application_type_schema_id: schema },
+          true,
+        ).editUrl;
+
+      test('picks the template of the agent schema', () => {
+        expect(edit(perSchema, quickApp)).toBe(
+          'https://chat.example.com/agent-builder?id=applications%2Fb%2Fa',
+        );
+        expect(edit(perSchema, loop)).toBe(
+          'https://chat.example.com/dial-loop-builder?id=applications%2Fb%2Fa',
+        );
+      });
+
+      test('falls back to the any-schema template for another schema', () => {
+        expect(edit(perSchema, 'other')).toContain('/apps-editor?schema=other');
+      });
+
+      test('has no button for another schema without an any-schema template', () => {
+        const config = withTemplates(
+          { editAgentBySchema: { [quickApp]: '/agent-builder?id={id}' } },
+          'https://chat.example.com',
+        );
+        expect(edit(config, 'other')).toBeUndefined();
+      });
+
+      test('matches the schema id exactly', () => {
+        expect(edit(perSchema, `${quickApp}-als`)).toContain('/apps-editor?');
+        expect(edit(perSchema, quickApp.toUpperCase())).toContain(
+          '/apps-editor?',
+        );
+      });
+
+      test('does not read inherited object properties as a schema', () => {
+        const config = withTemplates(
+          { editAgentBySchema: {} },
+          'https://chat.example.com',
+        );
+        for (const schema of ['__proto__', 'constructor', 'toString']) {
+          expect(edit(config, schema)).toBeUndefined();
+        }
+      });
+
+      test('finds a configured schema whose id is __proto__', () => {
+        const config = withTemplates(
+          {
+            editAgentBySchema: Object.fromEntries([
+              ['__proto__', '/proto?id={id}'],
+            ]),
+          },
+          'https://chat.example.com',
+        );
+        expect(edit(config, '__proto__')).toBe(
+          'https://chat.example.com/proto?id=applications%2Fb%2Fa',
+        );
+      });
+
+      test('an agent without a schema never uses a per-schema template', () => {
+        expect(
+          buildActions(perSchema, EntityKind.Agent, 'a', {}, true).editUrl,
+        ).toBeUndefined();
+      });
+    });
+
     test('has no Edit button when only the plain agent template is set', () => {
       const actions = buildActions(
         withTemplates(
