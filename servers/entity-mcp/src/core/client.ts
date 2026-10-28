@@ -44,14 +44,11 @@ export class CoreError extends Error {
 }
 
 /**
- * The caller's forwarded credential, tagged with the exact header it was read
- * from and must be sent back as. `Authorization` carries a bearer token;
- * `Api-Key` carries DIAL's per-request key. Keeping the two variants explicit
- * makes it impossible to forward a value under the wrong header.
+ * The caller's forwarded credential: the `Authorization` header value, sent
+ * back to Core verbatim. Only the user's own token is accepted, so a lookup
+ * can never run as an application or any other identity.
  */
-export type InboundCredential =
-  | { header: 'Authorization'; value: string }
-  | { header: 'Api-Key'; value: string };
+export type InboundCredential = { header: 'Authorization'; value: string };
 
 /**
  * The correlation id established once per inbound request, so this server's
@@ -103,9 +100,8 @@ export const coreGetJson = async (
         ...(correlation.traceId ? { 'x-trace-id': correlation.traceId } : {}),
       },
       signal: callTimeout(request.signal, options.timeoutMs),
-      // The fetch spec strips `Authorization` but not a forwarded `Api-Key` on
-      // a cross-origin redirect, so a redirect is rejected outright rather
-      // than followed.
+      // A redirect is rejected outright rather than followed, so the
+      // credential can never reach another origin.
       redirect: 'error',
     });
   } catch (error) {

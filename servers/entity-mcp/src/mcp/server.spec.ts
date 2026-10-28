@@ -254,46 +254,6 @@ describe('createMcpServer', () => {
     });
     const headers = spy.mock.calls[0]![1]!.headers as Record<string, string>;
     expect(headers['Authorization']).toBe('Bearer abc.def');
-    expect(headers['Api-Key']).toBeUndefined();
-
-    await client.close();
-    await server.close();
-  });
-
-  test('forwards an api-key credential to Core as Api-Key', async () => {
-    const spy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
-      new Response(
-        JSON.stringify({ attributes: { name: 'x', description: 'y' } }),
-        {
-          status: 200,
-          headers: { 'content-type': 'application/json' },
-        },
-      ),
-    );
-    const server = createMcpServer(
-      config,
-      '<html></html>',
-      {
-        header: 'Api-Key',
-        value: 'raw-key-value',
-      },
-      TEST_CORRELATION,
-    );
-    const [clientTransport, serverTransport] =
-      InMemoryTransport.createLinkedPair();
-    const client = new Client({ name: 'test-client', version: '0.0.0' });
-    await Promise.all([
-      server.connect(serverTransport),
-      client.connect(clientTransport),
-    ]);
-
-    await client.callTool({
-      name: 'show_entity_card',
-      arguments: { kind: EntityKind.Skill, id: 'skills/b/s' },
-    });
-    const headers = spy.mock.calls[0]![1]!.headers as Record<string, string>;
-    expect(headers['Api-Key']).toBe('raw-key-value');
-    expect(headers['Authorization']).toBeUndefined();
 
     await client.close();
     await server.close();
@@ -382,7 +342,6 @@ describe('createMcpServer', () => {
       new Response(JSON.stringify({ error: 'nope' }), { status: 403 }),
     );
     const secretBearer = 'Bearer UNIQUE_SECRET_TOKEN';
-    const secretApiKey = 'UNIQUE_SECRET_API_KEY';
     const server = createMcpServer(
       config,
       '<html></html>',
@@ -407,7 +366,6 @@ describe('createMcpServer', () => {
 
     const loggedText = errorSpy.mock.calls.flat().map(String).join('\n');
     expect(loggedText).not.toContain(secretBearer);
-    expect(loggedText).not.toContain(secretApiKey);
     expect(loggedText).not.toContain('UNIQUE_SECRET_TOKEN');
 
     await client.close();
@@ -1223,5 +1181,31 @@ describe('show_entity_card Edit ownership', () => {
       .mocked(globalThis.fetch)
       .mock.calls.map(([input]) => String(input));
     expect(paths.some((path) => path.includes('/v1/bucket'))).toBe(false);
+  });
+});
+
+describe('server capabilities', () => {
+  test('are only tools and resources, which the credential gate in src/http.ts covers', async () => {
+    const server = createMcpServer(
+      config,
+      '<html></html>',
+      undefined,
+      TEST_CORRELATION,
+    );
+    const [clientTransport, serverTransport] =
+      InMemoryTransport.createLinkedPair();
+    const client = new Client({ name: 'test-client', version: '0.0.0' });
+    await Promise.all([
+      server.connect(serverTransport),
+      client.connect(clientTransport),
+    ]);
+
+    expect(Object.keys(client.getServerCapabilities() ?? {}).sort()).toEqual([
+      'resources',
+      'tools',
+    ]);
+
+    await client.close();
+    await server.close();
   });
 });

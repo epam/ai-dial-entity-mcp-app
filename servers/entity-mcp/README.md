@@ -2,22 +2,59 @@
 
 The production MCP server for the entity card. It is a stateless Streamable
 HTTP MCP server with no stored credentials: every request runs as the calling
-user, identified by an inbound credential forwarded to DIAL Core verbatim. It
-accepts two inbound headers, `Authorization` and `Api-Key` — `Authorization`
-wins when both are present, matching DIAL's own auth precedence (user JWT,
-then `Api-Key`) — and forwards whichever one it got back to Core under the
-same header name. It never reads an ambient credential and fails closed when
-neither header is present: every `/mcp` request without one is refused with
-HTTP 401 and `WWW-Authenticate: Bearer`, so hosts that prompt the user to sign
-in on a 401 (DIAL Chat quick apps) can do so before retrying.
-`render_entity_card` makes no Core call, but the 401 applies to it too because
-the refusal happens before the tool is known.
+user, identified by the `Authorization` header, which is forwarded to DIAL Core
+verbatim (a bearer token). It reads no other credential, and in particular never accepts an
+`Api-Key`, so a lookup can never run as an application or any other identity.
+The Edit button is offered only for an entity in the caller's own bucket
+(`GET /v1/bucket`).
 
-`Api-Key` is for local development and probing only; in production the host
-forwards the user's JWT. The Edit button is offered only for an entity in the
-caller's own bucket (`GET /v1/bucket`). A user's key resolves to that user's
-bucket, but an application key resolves to the application's, so a card reached
-with one shows no Edit button.
+## Authentication modes
+
+Two registrations are supported. Both end the same way: DIAL Core delivers the
+user's token in `Authorization`.
+
+|                                   | Custom OAuth on the toolset                                                           | `NONE` (recommended)                                |
+| --------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------- |
+| Toolset `authentication_type`     | `OAUTH`, with your own client                                                         | `NONE`                                              |
+| Toolset `forward_auth_token`      | `false`                                                                               | `true`                                              |
+| Toolset `forward_per_request_key` | `false`                                                                               | `false`                                             |
+| Quick app `forward_auth_token`    | not needed                                                                            | `true`, on every quick app that uses the toolset    |
+| Where the token comes from        | the user signs in to the toolset once; Core sends the OAuth token                     | Core forwards the token of the user's own session   |
+| Constraint                        | the OAuth client must belong to the same identity provider as the user's DIAL session | none; works with any provider the platform supports |
+
+`forward_auth_token` can only be set by an admin, on the toolset and on each
+quick app. With `NONE`, a quick app that lacks the flag sends no token, the
+server answers 401, and the user is shown a sign-in prompt for a toolset that
+has nothing to sign in to. Fix it by setting the flag, not by signing in.
+
+### What requires a credential
+
+| JSON-RPC method                                                                 | Without a bearer `Authorization`     |
+| ------------------------------------------------------------------------------- | ------------------------------------ |
+| `tools/list`, `tools/call`                                                      | HTTP 401, `WWW-Authenticate: Bearer` |
+| every other method, e.g. `initialize`, `notifications/*`, `ping`, `resources/*` | allowed                              |
+
+Only a bearer `Authorization` counts; an `Api-Key` or another scheme is treated
+as no credential.
+
+Core reads the card with `initialize` and `resources/read` and sends no
+credential for a `NONE` toolset, so those stay open; the card is a static page
+with no user data. `tools/call` reads from Core as the caller, so it needs the
+token. `tools/list` is gated for another reason: DIAL Chat quick apps open a
+session with `initialize` and then `tools/list`, and read a 401 on that
+`tools/list` as the signal to prompt the user to sign in. A 401 on `tools/call`
+is not seen as that signal and leaves them waiting for a timeout. This ties the
+server to how quick apps work today. Once quick apps detect a missing sign-in
+some other way, `tools/list` can be removed from `CREDENTIAL_METHODS` in
+`src/http.ts`.
+
+The gated set is a deny-list, so a method added later is open until it is
+listed. The server serves only tools and resources, and no other method reaches
+user data. **When you add a capability** (prompts, completions, logging,
+subscriptions) **or a tool that reads user data, add its methods to
+`CREDENTIAL_METHODS`.** The test "server capabilities" in
+`src/mcp/server.spec.ts` fails when the server's capabilities change, as a
+reminder.
 
 It exposes:
 
@@ -172,11 +209,12 @@ tagging, Trivy scanning and both registries handled by the shared
 Register the deployed container as an MCP toolset with:
 
 - `transport: HTTP`
-- `forwardAuthToken: true`
-- `forwardPerRequestKey: true`
-- `authentication_type: none`
 - `allowedTools: ["show_entity_card", "render_entity_card"]`
+- the authentication fields of one of the two modes in
+  [Authentication modes](#authentication-modes).
 
+For `NONE` that is `authentication_type: none`, `forwardAuthToken: true` and
+`forwardPerRequestKey: false`, and `forwardAuthToken: true` on each quick app.
 `forwardAuthToken` is admin-only to set, so an admin must perform this
 registration — it cannot be done by the server owner alone.
 
@@ -277,7 +315,7 @@ error mapping without a real DIAL deployment:
 # terminal 1: a stub that only checks which header it received
 node -e "
 require('node:http').createServer((req, res) => {
-  console.log('stub received headers:', req.headers.authorization ?? req.headers['api-key']);
+  console.log('stub received Authorization:', req.headers.authorization);
   res.writeHead(200, { 'content-type': 'application/json' })
      .end(JSON.stringify({ attributes: { name: 'stub', description: 'from stub Core' } }));
 }).listen(9000);
@@ -289,23 +327,21 @@ DIAL_CORE_URL=http://localhost:9000 npm start
 
 # terminal 3
 cd tools/mcp-probe && npm ci
-DIAL_API_KEY=test-key npm start -- --kind skill --id skills/b/my-skill
 DIAL_USER_JWT=test-jwt npm start -- --kind skill --id skills/b/my-skill
 ```
 
-Terminal 1 should log the `Api-Key` value for the first probe call and the
-`Authorization` value for the second.
+Terminal 1 should log the `Authorization` value `Bearer test-jwt`.
 
 **3. This server against real Core** — a smoke test, not an access-control
 check. Run the server with a real `DIAL_CORE_URL` and call it with a real
-`DIAL_API_KEY`:
+user JWT:
 
 ```sh
 cd servers/entity-mcp
 DIAL_CORE_URL=https://your-core.example.com npm start
 
 cd tools/mcp-probe && npm ci
-DIAL_API_KEY=... npm start -- --kind skill --id skills/your-bucket/your-skill
+DIAL_USER_JWT=... npm start -- --kind skill --id skills/your-bucket/your-skill
 ```
 
 A DIAL API key is often a _service_ key with broader access than a real end

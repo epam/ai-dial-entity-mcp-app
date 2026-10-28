@@ -37,21 +37,15 @@ const parseArgs = (argv: string[]): Args => {
 };
 
 /**
- * Picks the credential to send from the environment. `DIAL_USER_JWT` wins
- * over `DIAL_API_KEY` when both are set, matching the server's own
- * Authorization-over-Api-Key precedence. This env var lives only in this dev
- * tool; the server itself never reads or stores a credential.
+ * Picks the credential to send from the environment: `DIAL_USER_JWT`, sent as
+ * a bearer token. This env var lives only in this dev tool; the server itself
+ * never reads or stores a credential.
  */
 const readCredentialHeaders = (): Record<string, string> => {
   const jwt = process.env.DIAL_USER_JWT?.trim();
-  const apiKey = process.env.DIAL_API_KEY?.trim();
-  if (jwt && apiKey) {
-    console.log('Both DIAL_USER_JWT and DIAL_API_KEY are set; using the JWT.');
-  }
   if (jwt) return { Authorization: `Bearer ${jwt}` };
-  if (apiKey) return { 'Api-Key': apiKey };
   console.log(
-    'Neither DIAL_USER_JWT nor DIAL_API_KEY is set; the server will fail closed on show_entity_card.',
+    'DIAL_USER_JWT is not set; the server answers 401 to tools/list without it.',
   );
   return {};
 };

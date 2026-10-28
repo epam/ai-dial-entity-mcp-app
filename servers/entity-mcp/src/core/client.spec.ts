@@ -45,19 +45,6 @@ describe('reading a skill record', () => {
     expect(url).toBe('https://core.example.com/v2/metadata/skills/b/s');
     const headers = init!.headers as Record<string, string>;
     expect(headers['Authorization']).toBe('Bearer abc.def');
-    expect(headers['Api-Key']).toBeUndefined();
-  });
-
-  test('forwards an api-key credential as Api-Key, verbatim', async () => {
-    const spy = mockFetch(200, { name: 'x' });
-    await readSkill({
-      config,
-      credential: { header: 'Api-Key', value: 'raw-key-value' },
-      correlation: { correlationId: 'test-correlation-id' },
-    });
-    const headers = spy.mock.calls[0]![1]!.headers as Record<string, string>;
-    expect(headers['Api-Key']).toBe('raw-key-value');
-    expect(headers['Authorization']).toBeUndefined();
   });
 
   test('sends the given correlation id verbatim', async () => {
@@ -290,7 +277,7 @@ describe('coreGetJson', () => {
 describe('coreGetRecord', () => {
   const request = {
     config,
-    credential: { header: 'Api-Key' as const, value: 'k' },
+    credential: { header: 'Authorization' as const, value: 'Bearer k' },
     correlation: { correlationId: 'cid' },
   };
 
