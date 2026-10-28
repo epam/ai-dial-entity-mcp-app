@@ -1,5 +1,46 @@
 import { describe, expect, test } from 'vitest';
-import { readInboundCorrelation } from './http.ts';
+import type { ServerResponse } from 'node:http';
+import { readInboundCorrelation, rejectUnauthenticated } from './http.ts';
+
+const fakeResponse = () => {
+  const calls: {
+    status?: number;
+    headers?: Record<string, string>;
+    body?: string;
+  } = {};
+  const res = {
+    writeHead(status: number, headers: Record<string, string>) {
+      calls.status = status;
+      calls.headers = headers;
+      return res;
+    },
+    end(body: string) {
+      calls.body = body;
+      return res;
+    },
+  };
+  return { res: res as unknown as ServerResponse, calls };
+};
+
+describe('rejectUnauthenticated', () => {
+  test('answers 401 with a Bearer challenge when no credential was forwarded', () => {
+    const { res, calls } = fakeResponse();
+    expect(rejectUnauthenticated(undefined, res)).toBe(true);
+    expect(calls.status).toBe(401);
+    expect(calls.headers?.['www-authenticate']).toBe('Bearer');
+  });
+
+  test('lets a request with a credential through without writing a response', () => {
+    const { res, calls } = fakeResponse();
+    expect(
+      rejectUnauthenticated(
+        { header: 'Authorization', value: 'Bearer t' },
+        res,
+      ),
+    ).toBe(false);
+    expect(calls.status).toBeUndefined();
+  });
+});
 
 describe('readInboundCorrelation', () => {
   test('reuses an inbound x-correlation-id rather than replacing it', () => {

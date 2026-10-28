@@ -21,6 +21,29 @@ export const handleHealth = (
   return true;
 };
 
+/**
+ * Refuses a request that carries no forwarded credential with HTTP 401 and a
+ * `WWW-Authenticate` challenge. Hosts such as DIAL Chat's quick apps treat that
+ * transport-level 401 as the signal to prompt the user to sign in and retry;
+ * a tool-level error result would go unnoticed. Returns true when the request
+ * was refused and the caller should stop processing it.
+ * @param credential - the credential read off the request, if any
+ * @param res - response to write to
+ */
+export const rejectUnauthenticated = (
+  credential: InboundCredential | undefined,
+  res: ServerResponse<IncomingMessage>,
+): boolean => {
+  if (credential) return false;
+  res
+    .writeHead(401, {
+      'content-type': 'text/plain',
+      'www-authenticate': 'Bearer',
+    })
+    .end('Authentication required');
+  return true;
+};
+
 const firstValue = (
   value: string | string[] | undefined,
 ): string | undefined => (Array.isArray(value) ? value[0] : value);
