@@ -26,6 +26,16 @@ Outside the workspaces, `tools/` holds development-only tools that are never
 shipped, such as `tools/test-mcp-server`, a local MCP server for trying the card
 in real hosts (see [its README](tools/test-mcp-server/README.md)).
 
+## Documentation
+
+| To                                                      | Read                                                                                                                           |
+| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Deploy the chat, sandbox, server, toolset and quick app | [`docs/deployment.md`](docs/deployment.md)                                                                                     |
+| Choose an authentication mode and set its flags         | [Authentication modes](servers/entity-mcp/README.md#authentication-modes)                                                      |
+| Configure the server: variables, tools, logging         | [`servers/entity-mcp/README.md`](servers/entity-mcp/README.md)                                                                 |
+| Build or change the card UI                             | [`libs/mcp-app-kit/README.md`](libs/mcp-app-kit/README.md)                                                                     |
+| Check the server by hand                                | [`tools/mcp-probe/README.md`](tools/mcp-probe/README.md), [`tools/test-mcp-server/README.md`](tools/test-mcp-server/README.md) |
+
 ## How it works
 
 1. The model calls the entity tool (for a skill or an agent). The MCP server returns the card data as

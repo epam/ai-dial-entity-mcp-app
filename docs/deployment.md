@@ -50,7 +50,8 @@ Create a toolset with:
 - endpoint: the host of the deployment from step 4, ending in `/mcp`, e.g.
   `https://ai-dial-entity-mcp-app.example.com/mcp`; transport HTTP
 - allowed tool: `show_entity_card`
-- an authentication mode, one of:
+- an authentication mode, one of (details in
+  [Authentication modes](../servers/entity-mcp/README.md#authentication-modes)):
 
 |                           | `NONE` (recommended) | Custom OAuth                                                                          |
 | ------------------------- | -------------------- | ------------------------------------------------------------------------------------- |
