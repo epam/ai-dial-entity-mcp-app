@@ -153,6 +153,9 @@ make docker-build
 make docker-run DIAL_CORE_URL=https://core.example.com
 ```
 
+To deploy the whole setup (chat, sandbox, server, toolset, quick app), follow
+[`docs/deployment.md`](docs/deployment.md).
+
 See [`servers/entity-mcp/README.md`](servers/entity-mcp/README.md) for the
 server's required/optional environment variables, its `/mcp` and `/health`
 endpoints, and how to register it as a toolset in DIAL Admin. Override the
