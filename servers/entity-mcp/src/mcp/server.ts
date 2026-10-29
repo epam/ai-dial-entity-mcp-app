@@ -107,14 +107,30 @@ const clip = (value: string): string =>
     : value;
 
 /**
- * Builds the result for a name that matches several entities. The card shows
- * an error result's text to the user, so it reads for both the user and the
- * model. Names and ids are JSON-quoted so a decoded newline cannot add lines,
- * clipped to a short length, and the list is capped so a short query cannot
- * return hundreds of entries.
+ * Builds a successful result that shows a plain card with text in it, for
+ * outcomes that are not failures: nothing to show yet, or several candidates.
+ * @param entity - title, description and label of the card
+ * @param sections - text rows under the description
+ */
+const noticeResult = (
+  entity: { name: string; description: string; kindLabel: string },
+  sections: { type: 'text'; label: string; text: string }[] = [],
+): CallToolResult =>
+  cardResult(
+    buildRenderedPayload({ entity: { ...entity, initials: '?' }, sections }),
+  );
+
+/**
+ * Builds the card for a name that matches several entities, listing them with
+ * their ids so the user can say which one they mean and the model can ask
+ * again with the exact `id`. Names and ids are JSON-quoted so a decoded newline
+ * cannot add lines, clipped to a short length, and the list is capped so a
+ * short query cannot return hundreds of entries.
+ * @param query - the name that was searched
  * @param matches - the matching entities, with the ids to call again with
  */
 const ambiguousResult = (
+  query: string,
   matches: { kind: EntityKind; id: string; name: string }[],
 ): CallToolResult => {
   const shown = matches.slice(0, MAX_LISTED_MATCHES);
@@ -122,31 +138,48 @@ const ambiguousResult = (
   const more = hidden
     ? `\n...and ${hidden} more; use a more specific name to narrow it down.`
     : '';
-  return errorResult(
-    `Several entities match that name. Which one do you mean? Call show_entity_card again with the exact \`id\`:\n${shown
-      .map(
-        (match) =>
-          `- ${match.kind} ${JSON.stringify(clip(match.name))}: ${JSON.stringify(clip(match.id))}`,
-      )
-      .join('\n')}${more}`,
+  const lines = shown
+    .map(
+      (match) =>
+        `- ${match.kind} ${JSON.stringify(clip(match.name))}: ${JSON.stringify(clip(match.id))}`,
+    )
+    .join('\n');
+  return noticeResult(
+    {
+      name: `Several entities match \u201c${clip(query)}\u201d`,
+      description: 'Tell me which one you mean and I will show its card.',
+      kindLabel: 'Choose one',
+    },
+    [{ type: 'text', label: 'Matches', text: `${lines}${more}` }],
   );
 };
 
 /**
- * Builds the result for a name that matches nothing, noting any entity type
+ * Builds the card for a name that matches nothing, noting any entity type
  * whose list could not be read.
+ * @param query - the name that was searched
  * @param outcome - the search outcome with the searched and skipped types
  */
 const notFoundResult = (
+  query: string,
   outcome: Extract<SearchOutcome, { status: 'not_found' }>,
-): CallToolResult => {
-  const skipped = outcome.skipped.length
-    ? ` These types could not be searched: ${outcome.skipped.join(', ')}.`
-    : '';
-  return errorResult(
-    `No entity with that name was found among the ${outcome.searched.join(', ')} entities you can access.${skipped}`,
+): CallToolResult =>
+  noticeResult(
+    {
+      name: `Nothing found for \u201c${clip(query)}\u201d`,
+      description: `No entity with that name was found among the ${outcome.searched.join(', ')} entities you can access.`,
+      kindLabel: 'Not found',
+    },
+    outcome.skipped.length
+      ? [
+          {
+            type: 'text',
+            label: 'Not searched',
+            text: `These types could not be searched: ${outcome.skipped.join(', ')}.`,
+          },
+        ]
+      : [],
   );
-};
 
 /**
  * Creates an MCP server exposing the entity card tool and its UI resource.
@@ -203,13 +236,13 @@ export const createMcpServer = (
             console.log(
               `show_entity_card found ${outcome.matches.length} matches for ${subject} in ${Date.now() - startedAt}ms (correlation ${correlationLabel})`,
             );
-            return ambiguousResult(outcome.matches);
+            return ambiguousResult(trimmedName, outcome.matches);
           }
           if (outcome.status === 'not_found') {
             console.log(
               `show_entity_card found no match for ${subject} in ${Date.now() - startedAt}ms (correlation ${correlationLabel})`,
             );
-            return notFoundResult(outcome);
+            return notFoundResult(trimmedName, outcome);
           }
           resolved = outcome.resolved;
           if (outcome.skipped?.length) {
