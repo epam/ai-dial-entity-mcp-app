@@ -2,15 +2,15 @@ name: SCA Scan
 
 on:
   schedule:
-    - cron: "20 3 * * *"
+    - cron: '20 3 * * *'
   workflow_dispatch:
     inputs:
       scan-tag:
-        description: "Scan only this git tag; empty = default branch and latest releases"
+        description: 'Scan only this git tag; empty = default branch and latest releases'
         type: string
-        default: ""
+        default: ''
       force-image-scan:
-        description: "Run the OSV image scan on this run even if it is turned off"
+        description: 'Run the OSV image scan on this run even if it is turned off'
         type: boolean
         default: false
 
