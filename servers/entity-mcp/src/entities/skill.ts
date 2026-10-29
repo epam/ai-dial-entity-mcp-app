@@ -1,7 +1,7 @@
 import { coreGetRecord } from '../core/client.ts';
 import { decodeResourceUrl, parseBucketId } from './ids.ts';
 import { lastSegment } from './match.ts';
-import { fetchUserBucket, listAllPages, withToken } from './paging.ts';
+import { listOwnAndPublic, withToken } from './paging.ts';
 import { isRecord, nonEmptyText, requireText } from './shared.ts';
 import { EntityKind, type EntityType, type MappedEntity } from './types.ts';
 
@@ -29,10 +29,9 @@ export const skillType: EntityType = {
     return coreGetRecord(ctx, `/v2/metadata/${PREFIX}/${bucket}/${path}`);
   },
   list: async (ctx) => {
-    const bucket = encodeURIComponent(await fetchUserBucket(ctx));
-    const items = await listAllPages(
+    const items = await listOwnAndPublic(
       ctx,
-      (token) =>
+      (bucket, token) =>
         `/v2/metadata/${PREFIX}/${bucket}/?recursive=true&limit=1000${withToken(token)}`,
     );
     return items.flatMap((item) => {

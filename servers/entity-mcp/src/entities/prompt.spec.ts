@@ -82,4 +82,30 @@ describe('promptType', () => {
       },
     ]);
   });
+
+  test('list also returns public prompts and survives a failing public listing', async () => {
+    const own = {
+      nodeType: 'ITEM',
+      name: 'Greeter',
+      url: 'prompts/bkt/Greeter',
+    };
+    const save = { nodeType: 'ITEM', name: 'save', url: 'prompts/public/save' };
+    mockCore({
+      '/v1/bucket': { bucket: 'bkt' },
+      '/v1/metadata/prompts/bkt/?recursive=true&limit=1000': { items: [own] },
+      '/v1/metadata/prompts/public/?recursive=true&limit=1000': {
+        items: [save],
+      },
+    });
+    const ids = (await promptType.list(TEST_CTX)).map((c) => c.id);
+    expect(ids).toEqual(['prompts/bkt/Greeter', 'prompts/public/save']);
+
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    mockCore({
+      '/v1/bucket': { bucket: 'bkt' },
+      '/v1/metadata/prompts/bkt/?recursive=true&limit=1000': { items: [own] },
+      '/v1/metadata/prompts/public/?recursive=true&limit=1000': 403,
+    });
+    await expect(promptType.list(TEST_CTX)).resolves.toHaveLength(1);
+  });
 });

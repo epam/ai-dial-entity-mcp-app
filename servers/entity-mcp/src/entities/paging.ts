@@ -1,4 +1,5 @@
 import { CoreError, FALLBACK_MESSAGE, coreGetJson } from '../core/client.ts';
+import { PUBLIC_BUCKET } from './ownership.ts';
 import { isRecord } from './shared.ts';
 import type { EntityContext } from './types.ts';
 
@@ -47,4 +48,34 @@ export const listAllPages = async (
     if (token) seen.add(token);
   } while (token);
   return items;
+};
+
+/**
+ * Lists the caller's own bucket and the shared `public` one, which Core keeps
+ * apart for prompts and skills. A failure to read the public bucket is logged
+ * and skipped so it never hides the caller's own entities.
+ * @param ctx - config, credential and correlation context
+ * @param buildPath - builds the list path for a bucket and continuation token
+ */
+export const listOwnAndPublic = async (
+  ctx: EntityContext,
+  buildPath: (bucket: string, token?: string) => string,
+): Promise<Record<string, unknown>[]> => {
+  const own = await fetchUserBucket(ctx);
+  const listBucket = (bucket: string) =>
+    listAllPages(ctx, (token) => buildPath(encodeURIComponent(bucket), token));
+  if (own === PUBLIC_BUCKET) return listBucket(own);
+  const [ownItems, publicItems] = await Promise.allSettled([
+    listBucket(own),
+    listBucket(PUBLIC_BUCKET),
+  ]);
+  if (ownItems.status === 'rejected') throw ownItems.reason;
+  if (publicItems.status === 'rejected') {
+    const reason: unknown = publicItems.reason;
+    console.error(
+      `could not list the public bucket: ${reason instanceof Error ? reason.message : 'unexpected error'} (correlation ${JSON.stringify(ctx.correlation.correlationId)})`,
+    );
+    return ownItems.value;
+  }
+  return [...ownItems.value, ...publicItems.value];
 };

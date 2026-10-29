@@ -168,3 +168,17 @@ describe('skillType.fetch routing', () => {
     );
   });
 });
+
+describe('skillType.list public bucket', () => {
+  test('also lists public skills', async () => {
+    mockCore({
+      '/v1/bucket': { bucket: 'bkt' },
+      '/v2/metadata/skills/bkt/?recursive=true&limit=1000': { items: [] },
+      '/v2/metadata/skills/public/?recursive=true&limit=1000': {
+        items: [{ nodeType: 'ITEM', url: 'skills/public/email-drafter' }],
+      },
+    });
+    const ids = (await skillType.list(TEST_CTX)).map((c) => c.id);
+    expect(ids).toEqual(['skills/public/email-drafter']);
+  });
+});

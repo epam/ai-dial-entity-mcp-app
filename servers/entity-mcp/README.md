@@ -340,8 +340,8 @@ callers.
   go into the tool result unfiltered (the card shows them; the same text is in
   the result's JSON `content`). Prompt bodies make this a larger channel than
   before.
-- Skills and prompts are searched in the caller's own bucket only; shared and
-  published ones are not. Agents and toolsets come from Core's deployment
+- Skills and prompts are searched in the caller's own bucket and the `public`
+  one; ones shared with the caller but not published are not. Agents and toolsets come from Core's deployment
   lists, which include private, shared and public entries.
 - Custom (bucket-based) agents only appear in a name search when Core's
   `includeCustomApps` setting is on. An exact id fetch works either way.
