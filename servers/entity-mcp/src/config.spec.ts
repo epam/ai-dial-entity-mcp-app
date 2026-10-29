@@ -185,6 +185,15 @@ describe('findConfigWarnings', () => {
     ]);
   });
 
+  test('warns about a Try template still using isolated-model-id', () => {
+    expect(
+      warningsFor({
+        CHAT_BASE_URL: 'https://chat.example.com',
+        ENTITY_TRY_URL_AGENT: '/?isolated-model-id={id}',
+      }),
+    ).toEqual([expect.stringContaining('ENTITY_TRY_URL_AGENT')]);
+  });
+
   test('is silent when nothing is configured', () => {
     expect(warningsFor({})).toEqual([]);
   });
@@ -214,6 +223,8 @@ describe('findConfigWarnings', () => {
     expect(warnings[2]).toContain('CHAT_BASE_URL');
     expect(warnings[0]).toContain('ENTITY_EDIT_URL_TEMPLATE');
     expect(warnings[1]).toContain('ENTITY_TRY_URL_AGENT');
+    expect(warnings[1]).toContain('ENTITY_TRY_URL_SKILL');
+    expect(warnings[1]).toContain('ENTITY_TRY_URL_PROMPT');
   });
 });
 

@@ -174,11 +174,9 @@ Try is offered for agents, skills and prompts, never for toolsets, which cannot
 be used in a chat. `{id}` is the full entity id, percent-encoded once, so an id
 that already contains `%20` is sent as `%2520`.
 
-DIAL Chat 1.3+ reads `deployment-id`, `skill-id` and `prompt-id` on its
+DIAL Chat reads `deployment-id`, `skill-id` and `prompt-id` on its
 new-conversation route `/` and only preselects the entity: the user can still
-switch agent or start another chat. An older Chat ignores the parameters and
-opens a plain new chat, so upgrade Chat before, or together with, changing these
-values.
+switch agent or start another chat.
 
 - `deployment-id` selects the agent for the new conversation (not saved as the
   user's preference). An agent that is hidden or has no `chat` interface falls
@@ -193,9 +191,9 @@ values.
   parameters popup for a parameterized prompt. The text never travels in the
   URL.
 
-An installation whose value still contains the former `isolated-model-id`
-parameter keeps working only until Chat removes it: change the value to
-`/?deployment-id={id}`.
+The former `isolated-model-id` parameter is replaced by `deployment-id`. A value
+that still contains it must be changed to `/?deployment-id={id}`; at start the
+server warns about such a value.
 
 ### Deliberately absent
 

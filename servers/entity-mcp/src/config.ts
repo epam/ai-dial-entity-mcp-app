@@ -168,9 +168,12 @@ export const loadConfig = (env: NodeJS.ProcessEnv): ServerConfig => {
   };
 };
 
+const REPLACED_TRY_PARAM = 'isolated-model-id';
+
 const LEGACY_TEMPLATE_VARS: Record<string, string> = {
   ENTITY_EDIT_URL_TEMPLATE: 'ENTITY_EDIT_URL_<TYPE>',
-  ENTITY_TRY_URL_TEMPLATE: 'ENTITY_TRY_URL_AGENT',
+  ENTITY_TRY_URL_TEMPLATE:
+    'ENTITY_TRY_URL_AGENT, ENTITY_TRY_URL_SKILL or ENTITY_TRY_URL_PROMPT',
   DIAL_CHAT_URL: 'CHAT_BASE_URL',
 };
 
@@ -178,7 +181,8 @@ const LEGACY_TEMPLATE_VARS: Record<string, string> = {
  * Lists startup problems that silently remove a card button: a template that
  * cannot be resolved (a path without `CHAT_BASE_URL`, or neither an absolute
  * URL nor a path starting with `/`), a per-schema key missing its schema id or
- * its template, and the removed variables.
+ * its template, a template still using the replaced `isolated-model-id`
+ * parameter, and the removed variables.
  * @param config - loaded server configuration
  * @param env - process environment the configuration was read from
  */
@@ -189,10 +193,17 @@ export const findConfigWarnings = (
   const warnings = Object.entries(ACTION_TEMPLATE_VARS).flatMap(
     ([key, name]) => {
       const template = config.actionTemplates[key as SingleActionKey];
-      if (!template || resolveTemplate(template, config.chatBaseUrl)) return [];
-      return [
-        `${name} is ignored: it must be an absolute http(s) URL, or a path starting with "/" with CHAT_BASE_URL set`,
-      ];
+      if (!template) return [];
+      if (!resolveTemplate(template, config.chatBaseUrl)) {
+        return [
+          `${name} is ignored: it must be an absolute http(s) URL, or a path starting with "/" with CHAT_BASE_URL set`,
+        ];
+      }
+      return template.includes(REPLACED_TRY_PARAM)
+        ? [
+            `${name} uses ${REPLACED_TRY_PARAM}, which is replaced by deployment-id, skill-id and prompt-id: use "/?deployment-id={id}" for agents`,
+          ]
+        : [];
     },
   );
   const { entries, invalid } = readSchemaEntries(env);
