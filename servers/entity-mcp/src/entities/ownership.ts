@@ -1,7 +1,7 @@
 import { CoreError, coreGetRecord } from '../core/client.ts';
 import type { EntityContext } from './types.ts';
 
-const PUBLIC_BUCKET = 'public';
+export const PUBLIC_BUCKET = 'public';
 
 const RESOURCE_PREFIXES = new Set([
   'applications',
