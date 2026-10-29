@@ -91,6 +91,10 @@ tested like any other workspace, but not shipped.
 - Payload changes: update `src/contract.ts`, the fixtures and the README
   contract section in the same change.
 - Kit API changes: update `libs/mcp-app-kit/README.md` in the same change.
+- Button URL changes (a new `ENTITY_*_URL_*` variable, or a route or query
+  parameter DIAL Chat changed): update the "Example for DIAL Chat" block in
+  `servers/entity-mcp/README.md` in the same change. It must stay a complete,
+  copy-pasteable instance configuration for DIAL Chat.
 - UI: use `@epam/ai-dial-ui-kit` **2.0** components (`PrimaryButton`,
   `NeutralButton`, `CardShell`, `Avatar`, `Accordion`, `Badge`,
   `Notification`; not the 1.0 `Dial*` ones; `Skeleton` has no 2.0 version, so

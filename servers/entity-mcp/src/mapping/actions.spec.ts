@@ -56,21 +56,82 @@ describe('buildActions', () => {
     ).toBe('https://chat.example.com/skill-editor?id=skills%2Fb%2Fs');
   });
 
-  test('Try is built for agents only', () => {
+  describe('Try', () => {
     const config = withTemplates(
-      { tryAgent: '/?isolated-model-id={id}' },
+      {
+        tryAgent: '/?deployment-id={id}',
+        trySkill: '/?skill-id={id}',
+        tryPrompt: '/?prompt-id={id}',
+      },
       'https://chat.example.com',
     );
-    expect(
-      buildActions(config, EntityKind.Agent, 'applications/p/a').tryUrl,
-    ).toBe('https://chat.example.com/?isolated-model-id=applications%2Fp%2Fa');
-    for (const kind of [
-      EntityKind.Skill,
-      EntityKind.Prompt,
-      EntityKind.Toolset,
-    ]) {
-      expect(buildActions(config, kind, 'x/b/y').tryUrl).toBeUndefined();
-    }
+
+    test('builds deployment-id for an agent', () => {
+      expect(
+        buildActions(config, EntityKind.Agent, 'applications/p/a').tryUrl,
+      ).toBe('https://chat.example.com/?deployment-id=applications%2Fp%2Fa');
+    });
+
+    test('builds deployment-id for a plain model id', () => {
+      expect(buildActions(config, EntityKind.Agent, 'gpt-4o').tryUrl).toBe(
+        'https://chat.example.com/?deployment-id=gpt-4o',
+      );
+    });
+
+    test('encodes a percent sequence in a deployment id exactly once', () => {
+      expect(
+        buildActions(
+          config,
+          EntityKind.Agent,
+          'applications/b/Entity%20Creator__1.0.0',
+        ).tryUrl,
+      ).toBe(
+        'https://chat.example.com/?deployment-id=applications%2Fb%2FEntity%2520Creator__1.0.0',
+      );
+    });
+
+    test('builds skill-id for a skill with the full id', () => {
+      expect(
+        buildActions(config, EntityKind.Skill, 'skills/B/my-skill').tryUrl,
+      ).toBe('https://chat.example.com/?skill-id=skills%2FB%2Fmy-skill');
+    });
+
+    test('builds prompt-id for a prompt with the full id', () => {
+      expect(
+        buildActions(config, EntityKind.Prompt, 'prompts/B/my-prompt').tryUrl,
+      ).toBe('https://chat.example.com/?prompt-id=prompts%2FB%2Fmy-prompt');
+    });
+
+    test('a toolset never gets Try', () => {
+      expect(
+        buildActions(config, EntityKind.Toolset, 'toolsets/b/t').tryUrl,
+      ).toBeUndefined();
+    });
+
+    test.each([
+      [EntityKind.Agent, 'tryAgent'],
+      [EntityKind.Skill, 'trySkill'],
+      [EntityKind.Prompt, 'tryPrompt'],
+    ] as const)('a %s uses only its own Try template', (kind, key) => {
+      const single = withTemplates(
+        { [key]: '/?x={id}' },
+        'https://chat.example.com',
+      );
+      expect(buildActions(single, kind, 'a/b/c').tryUrl).toBe(
+        'https://chat.example.com/?x=a%2Fb%2Fc',
+      );
+      const others = Object.values(EntityKind).filter((k) => k !== kind);
+      for (const other of others) {
+        expect(buildActions(single, other, 'a/b/c').tryUrl).toBeUndefined();
+      }
+    });
+
+    test('an unset template gives no Try button', () => {
+      const unset = withTemplates({}, 'https://chat.example.com');
+      for (const kind of Object.values(EntityKind)) {
+        expect(buildActions(unset, kind, 'a/b/c').tryUrl).toBeUndefined();
+      }
+    });
   });
 
   describe('agent with an application type schema', () => {
@@ -298,6 +359,20 @@ describe('buildActions', () => {
           true,
         );
         expect(actions.tryUrl).toBeUndefined();
+        expect(
+          buildActions(
+            withTemplates({ trySkill: template, tryPrompt: template }),
+            EntityKind.Skill,
+            's',
+          ).tryUrl,
+        ).toBeUndefined();
+        expect(
+          buildActions(
+            withTemplates({ trySkill: template, tryPrompt: template }),
+            EntityKind.Prompt,
+            'p',
+          ).tryUrl,
+        ).toBeUndefined();
         expect(
           buildActions(
             withTemplates({ editSkill: template }),

@@ -106,7 +106,9 @@ There is nothing else to configure:
 | `ENTITY_EDIT_URL_AGENT_SCHEMA`       | no       | unset                              | Edit button for an agent with an application type schema (may use `{schemaId}`).                           |
 | `ENTITY_AGENT_SCHEMA_<KEY>`          | no       | unset                              | An application type schema id, paired by `<KEY>` with `ENTITY_EDIT_URL_AGENT_SCHEMA_<KEY>`.                |
 | `ENTITY_EDIT_URL_AGENT_SCHEMA_<KEY>` | no       | unset                              | Edit button for agents whose schema id is that of `ENTITY_AGENT_SCHEMA_<KEY>` (may use `{schemaId}`).      |
-| `ENTITY_TRY_URL_AGENT`               | no       | unset                              | Try button, for agents only.                                                                               |
+| `ENTITY_TRY_URL_AGENT`               | no       | unset                              | Try button for an agent.                                                                                   |
+| `ENTITY_TRY_URL_SKILL`               | no       | unset                              | Try button for a skill.                                                                                    |
+| `ENTITY_TRY_URL_PROMPT`              | no       | unset                              | Try button for a prompt.                                                                                   |
 | `PORT`                               | no       | `8080`                             | Matches the test server and the proven DIAL Admin registration.                                            |
 | `APP_HTML`                           | no       | `apps/entity-card/dist/index.html` | Path to the built card, for local runs.                                                                    |
 
@@ -138,16 +140,21 @@ configuration, not code.
 At start the server logs which variables are unset and warns about a key missing
 one of its two variables, an invalid key name or a template it cannot use.
 
-Example for DIAL Chat:
+Example for DIAL Chat. This block is a complete instance configuration: copy it
+into the service's environment, then replace the two hosts. Every route and
+query parameter is one DIAL Chat serves today; keep it in step with Chat.
 
 ```sh
+DIAL_CORE_URL=https://core.example.com
 CHAT_BASE_URL=https://chat.example.com
 ENTITY_EDIT_URL_SKILL='/skill-editor?id={id}'
 ENTITY_EDIT_URL_PROMPT='/prompt-editor?id={id}'
 ENTITY_EDIT_URL_TOOLSET='/toolset-editor?id={id}'
 ENTITY_EDIT_URL_AGENT='/custom-app-editor?id={id}'
 ENTITY_EDIT_URL_AGENT_SCHEMA='/apps-editor?schema={schemaId}&appId={id}'
-ENTITY_TRY_URL_AGENT='/?isolated-model-id={id}'
+ENTITY_TRY_URL_AGENT='/?deployment-id={id}'
+ENTITY_TRY_URL_SKILL='/?skill-id={id}'
+ENTITY_TRY_URL_PROMPT='/?prompt-id={id}'
 ```
 
 Example of keys, for a chat with its own editor for two schemas and none for
@@ -160,9 +167,34 @@ ENTITY_AGENT_SCHEMA_LOOP='https://dial.example.com/custom_application_schemas/di
 ENTITY_EDIT_URL_AGENT_SCHEMA_LOOP='/dial-loop-builder?id={id}'
 ```
 
-DIAL Chat's Try depends on its `?isolated-model-id` query parameter, which Chat
-marks for removal. A chat that lacks an editor route for a type leaves that
-variable unset.
+A chat that lacks an editor route for a type leaves that variable unset.
+
+#### Try
+
+Try is offered for agents, skills and prompts, never for toolsets, which cannot
+be used in a chat. `{id}` is the full entity id, percent-encoded once, so an id
+that already contains `%20` is sent as `%2520`.
+
+DIAL Chat reads `deployment-id`, `skill-id` and `prompt-id` on its
+new-conversation route `/` and only preselects the entity: the user can still
+switch agent or start another chat.
+
+- `deployment-id` selects the agent for the new conversation (not saved as the
+  user's preference). An agent that is hidden or has no `chat` interface falls
+  back to the default agent with a warning. The server does not read
+  `interfaces` from the Core record today, so it still offers Try for such an
+  agent.
+- `skill-id` adds the skill to the message input. If the user's current agent
+  does not support skills, Chat shows the mention in an error state and blocks
+  sending until a skill-capable agent is picked. The server names no agent for
+  this, since it has none to name by default.
+- `prompt-id` seeds the message input with the prompt text, or opens the
+  parameters popup for a parameterized prompt. The text never travels in the
+  URL.
+
+The former `isolated-model-id` parameter is replaced by `deployment-id`. A value
+that still contains it must be changed to `/?deployment-id={id}`; at start the
+server warns about such a value.
 
 ### Deliberately absent
 
