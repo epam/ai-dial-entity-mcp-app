@@ -32,6 +32,16 @@ const render = (
   }
 };
 
+/**
+ * Turns a plain entity id back into the form Core lists it in, with every
+ * path segment percent-encoded, which is the id DIAL Chat's routes and
+ * editors look an entity up by. `render` then encodes it once more for the
+ * url, so a space ends up as `%2520`.
+ * @param id - plain entity id, as shown to a person
+ */
+const toCoreId = (id: string): string =>
+  id.split('/').map(encodeURIComponent).join('/');
+
 const SCHEME = /^[a-z][a-z0-9+.-]*:/i;
 
 /**
@@ -113,7 +123,7 @@ const editTemplate = (
  * chat. Edit is only offered when the caller owns the entity.
  * @param config - server configuration holding the base URL and templates
  * @param kind - entity kind
- * @param id - entity id, url-encoded and substituted for `{id}`
+ * @param id - plain entity id, in Core's encoded form substituted for `{id}`
  * @param raw - the Core record, read for the agent's application type schema
  * @param canEdit - whether the caller owns the entity; without it there is no Edit url
  */
@@ -125,7 +135,7 @@ export const buildActions = (
   canEdit = false,
 ): CardActions => {
   const schemaId = kind === EntityKind.Agent ? readSchemaId(raw) : undefined;
-  const values = { id, schemaId };
+  const values = { id: toCoreId(id), schemaId };
   const { chatBaseUrl, actionTemplates } = config;
   const tryKey = TRY_TEMPLATE[kind];
   const tryUrl = tryKey

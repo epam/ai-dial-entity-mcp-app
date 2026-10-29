@@ -119,8 +119,10 @@ so an instance never links to a page its chat does not have. Run one instance
 per chat, each with its own `CHAT_BASE_URL` and the routes of that chat.
 
 A value is a path that starts with `/`, appended to `CHAT_BASE_URL`, or an
-absolute `http(s)` URL used as given. Placeholders: `{id}`, the url-encoded
-entity id, and `{schemaId}`, the url-encoded application type schema id of an
+absolute `http(s)` URL used as given. Placeholders: `{id}`, the entity id in
+the form Core lists it in (each path segment percent-encoded, as DIAL Chat
+looks entities up) and then url-encoded, so a space in a name is sent as
+`%2520`, and `{schemaId}`, the url-encoded application type schema id of an
 agent. An agent with a schema never uses `ENTITY_EDIT_URL_AGENT`, and a
 template with `{schemaId}` gives no button for an agent without a schema.
 
@@ -172,8 +174,7 @@ A chat that lacks an editor route for a type leaves that variable unset.
 #### Try
 
 Try is offered for agents, skills and prompts, never for toolsets, which cannot
-be used in a chat. `{id}` is the full entity id, percent-encoded once, so an id
-that already contains `%20` is sent as `%2520`.
+be used in a chat. `{id}` is the full entity id, built the same way as for Edit.
 
 DIAL Chat reads `deployment-id`, `skill-id` and `prompt-id` on its
 new-conversation route `/` and only preselects the entity: the user can still

@@ -33,7 +33,7 @@ describe('buildActions', () => {
       'https://chat.example.com',
     );
     expect(buildActions(config, kind, 'a/b c', {}, true).editUrl).toBe(
-      'https://chat.example.com/edit/a%2Fb%20c',
+      'https://chat.example.com/edit/a%2Fb%2520c',
     );
     const others = Object.values(EntityKind).filter((k) => k !== kind);
     for (const other of others) {
@@ -41,6 +41,78 @@ describe('buildActions', () => {
         buildActions(config, other, 'x', {}, true).editUrl,
       ).toBeUndefined();
     }
+  });
+
+  describe('ids with characters that Core lists percent-encoded', () => {
+    const config = withTemplates(
+      {
+        editAgent: '/agent-builder?id={id}',
+        tryAgent: '/?deployment-id={id}',
+        editSkill: '/skill-editor?id={id}',
+        trySkill: '/?skill-id={id}',
+      },
+      'https://chat.example.com',
+    );
+
+    test('an agent id with a space is encoded in two layers', () => {
+      expect(
+        buildActions(
+          config,
+          EntityKind.Agent,
+          'applications/bucket/Entity Creator__1.0.0',
+          {},
+          true,
+        ),
+      ).toEqual({
+        editUrl:
+          'https://chat.example.com/agent-builder?id=applications%2Fbucket%2FEntity%2520Creator__1.0.0',
+        tryUrl:
+          'https://chat.example.com/?deployment-id=applications%2Fbucket%2FEntity%2520Creator__1.0.0',
+      });
+    });
+
+    test('a skill id with a space is encoded in two layers', () => {
+      expect(
+        buildActions(
+          config,
+          EntityKind.Skill,
+          'skills/bucket/My Skill/',
+          {},
+          true,
+        ),
+      ).toMatchObject({
+        editUrl: expect.stringContaining(
+          'id=skills%2Fbucket%2FMy%2520Skill%2F',
+        ),
+      });
+    });
+
+    test('decoding the id parameter gives the Core form of the id', () => {
+      const { editUrl } = buildActions(
+        config,
+        EntityKind.Agent,
+        'applications/bucket/Entity Creator__1.0.0',
+        {},
+        true,
+      );
+      expect(new URL(editUrl ?? '').searchParams.get('id')).toBe(
+        'applications/bucket/Entity%20Creator__1.0.0',
+      );
+    });
+
+    test('an id without special characters is unchanged', () => {
+      expect(
+        buildActions(
+          config,
+          EntityKind.Agent,
+          'applications/b/my-app',
+          {},
+          true,
+        ).editUrl,
+      ).toBe(
+        'https://chat.example.com/agent-builder?id=applications%2Fb%2Fmy-app',
+      );
+    });
   });
 
   test('an unset template for one type leaves the others working', () => {
@@ -78,7 +150,7 @@ describe('buildActions', () => {
       );
     });
 
-    test('encodes a percent sequence in a deployment id exactly once', () => {
+    test('keeps a literal percent sign of a plain deployment id', () => {
       expect(
         buildActions(
           config,
@@ -86,7 +158,7 @@ describe('buildActions', () => {
           'applications/b/Entity%20Creator__1.0.0',
         ).tryUrl,
       ).toBe(
-        'https://chat.example.com/?deployment-id=applications%2Fb%2FEntity%2520Creator__1.0.0',
+        'https://chat.example.com/?deployment-id=applications%2Fb%2FEntity%252520Creator__1.0.0',
       );
     });
 
@@ -399,11 +471,11 @@ describe('buildActions', () => {
     const config = withTemplates({ tryAgent: 'https://host/agents/{id}/try' });
 
     test.each([
-      ['skills/b/s?x=1', 'skills%2Fb%2Fs%3Fx%3D1'],
-      ['skills/b/s#frag', 'skills%2Fb%2Fs%23frag'],
+      ['skills/b/s?x=1', 'skills%2Fb%2Fs%253Fx%253D1'],
+      ['skills/b/s#frag', 'skills%2Fb%2Fs%2523frag'],
       ['skills/bucket/my-skill', 'skills%2Fbucket%2Fmy-skill'],
-      ['skills/b/s@evil', 'skills%2Fb%2Fs%40evil'],
-      ['{id}', '%7Bid%7D'],
+      ['skills/b/s@evil', 'skills%2Fb%2Fs%2540evil'],
+      ['{id}', '%257Bid%257D'],
     ])('an id %s stays in its slot', (id, encoded) => {
       expect(buildActions(config, EntityKind.Agent, id).tryUrl).toBe(
         `https://host/agents/${encoded}/try`,
