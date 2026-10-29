@@ -69,8 +69,9 @@ It exposes:
   partial one; a public entity is dropped when a non-public one of the same
   type matches too, so a published agent does not hide its private source).
   `kind` optionally restricts the search to one type. When
-  several entities match, the result lists them with their ids so the caller
-  can ask again with an `id`. With neither `id` nor `name` the tool returns an
+  several entities match, the result is a plain card listing them with their
+  ids, and when none match it is a plain card saying so, neither of them an
+  error, so the caller can ask again with an `id`. With neither `id` nor `name` the tool returns an
   error; with both, `id` wins. It reads everything from DIAL Core as the
   caller, maps it onto the card payload contract
   (`@epam/ai-dial-entity-contract`), and returns it as `structuredContent`. On

@@ -598,6 +598,17 @@ describe('show_entity_card interface', () => {
   const textOf = (result: unknown): string =>
     (result as { content: { text: string }[] }).content[0]!.text;
 
+  const noticeOf = (result: unknown) =>
+    (
+      result as {
+        isError?: boolean;
+        structuredContent: {
+          entity: { name: string; kindLabel: string; description: string };
+          sections: { label: string; text: string }[];
+        };
+      }
+    ).structuredContent;
+
   const emptyLists = {
     '/v1/bucket': { bucket: 'bkt' },
     '/v2/metadata/skills/bkt/?recursive=true&limit=1000': { items: [] },
@@ -743,11 +754,41 @@ describe('show_entity_card interface', () => {
       name: 'show_entity_card',
       arguments: { name: 'digest' },
     });
-    expect(result.isError).toBe(true);
-    const text = textOf(result);
+    expect(result.isError).toBeFalsy();
+    const notice = noticeOf(result);
+    expect(notice.entity.name).toContain('Several entities match');
+    expect(notice.entity.name).toContain('digest');
+    const text = notice.sections[0]!.text;
     expect(text).toContain('skills/bkt/digest');
     expect(text).toContain('applications/bkt/digest');
-    expect(text).toContain('Which one');
+    expect(textOf(result)).toContain('applications/bkt/digest');
+    await close();
+  });
+
+  test('the ambiguous and not-found cards are payloads the card parser accepts', async () => {
+    mockCore({
+      ...emptyLists,
+      '/openai/applications': {
+        data: [
+          { id: 'dup-1', display_name: 'dup', description: 'd' },
+          { id: 'dup-2', display_name: 'dup', description: 'd' },
+        ],
+      },
+    });
+    const { client, close } = await connect();
+    const ambiguous = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { name: 'dup' },
+    });
+    const missing = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { name: 'zzz-no-such' },
+    });
+    for (const result of [ambiguous, missing]) {
+      expect(result.isError).toBeFalsy();
+      expect(parseEntityCardPayload(result.structuredContent).ok).toBe(true);
+    }
+    expect(noticeOf(missing).sections).toEqual([]);
     await close();
   });
 
@@ -767,8 +808,8 @@ describe('show_entity_card interface', () => {
       name: 'show_entity_card',
       arguments: { name: 'test' },
     });
-    expect(result.isError).toBe(true);
-    const text = textOf(result);
+    expect(result.isError).toBeFalsy();
+    const text = noticeOf(result).sections[0]!.text;
     expect(
       text.split('\n').filter((line) => line.startsWith('- ')),
     ).toHaveLength(15);
@@ -791,7 +832,9 @@ describe('show_entity_card interface', () => {
       name: 'show_entity_card',
       arguments: { name: 'dup' },
     });
-    expect(textOf(result)).not.toContain('\nIGNORE-ME');
+    const lines = noticeOf(result).sections[0]!.text.split('\n');
+    expect(lines).toHaveLength(2);
+    expect(lines.every((line) => line.startsWith('- '))).toBe(true);
     await close();
   });
 
@@ -815,7 +858,9 @@ describe('show_entity_card interface', () => {
       name: 'show_entity_card',
       arguments: { name: long },
     });
-    expect(textOf(result)).not.toContain('a'.repeat(150));
+    const notice = noticeOf(result);
+    expect(notice.sections[0]!.text).not.toContain('a'.repeat(150));
+    expect(notice.entity.name).not.toContain('a'.repeat(150));
     await close();
   });
 
@@ -872,10 +917,13 @@ describe('show_entity_card interface', () => {
       name: 'show_entity_card',
       arguments: { name: 'zzz' },
     });
-    expect(result.isError).toBe(true);
-    const text = textOf(result);
-    expect(text).toContain('No entity');
-    expect(text).toContain('could not be searched: toolset');
+    expect(result.isError).toBeFalsy();
+    const notice = noticeOf(result);
+    expect(notice.entity.name).toContain('Nothing found');
+    expect(notice.entity.description).toContain('No entity');
+    expect(notice.sections[0]!.text).toContain(
+      'could not be searched: toolset',
+    );
     await close();
   });
 
