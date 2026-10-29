@@ -65,6 +65,14 @@ const readSchemaId = (raw: Record<string, unknown>): string | undefined => {
   return typeof value === 'string' && value.trim() ? value.trim() : undefined;
 };
 
+const TRY_TEMPLATE: Partial<
+  Record<EntityKind, 'trySkill' | 'tryPrompt' | 'tryAgent'>
+> = {
+  [EntityKind.Skill]: 'trySkill',
+  [EntityKind.Prompt]: 'tryPrompt',
+  [EntityKind.Agent]: 'tryAgent',
+};
+
 const EDIT_TEMPLATE: Record<
   EntityKind,
   'editSkill' | 'editPrompt' | 'editToolset' | 'editAgent'
@@ -100,8 +108,9 @@ const editTemplate = (
  * Builds the card's action URLs from the templates configured per action and
  * entity type. A template is an absolute URL or a path appended to
  * `CHAT_BASE_URL`. An unset or unusable template yields no URL, which the card
- * renders as no button; there are no built-in routes. Edit is only offered when
- * the caller owns the entity.
+ * renders as no button; there are no built-in routes. Try is offered for
+ * agents, skills and prompts, never for toolsets, which cannot be used in a
+ * chat. Edit is only offered when the caller owns the entity.
  * @param config - server configuration holding the base URL and templates
  * @param kind - entity kind
  * @param id - entity id, url-encoded and substituted for `{id}`
@@ -118,10 +127,10 @@ export const buildActions = (
   const schemaId = kind === EntityKind.Agent ? readSchemaId(raw) : undefined;
   const values = { id, schemaId };
   const { chatBaseUrl, actionTemplates } = config;
-  const tryUrl =
-    kind === EntityKind.Agent
-      ? render(resolveTemplate(actionTemplates.tryAgent, chatBaseUrl), values)
-      : undefined;
+  const tryKey = TRY_TEMPLATE[kind];
+  const tryUrl = tryKey
+    ? render(resolveTemplate(actionTemplates[tryKey], chatBaseUrl), values)
+    : undefined;
   const editUrl = canEdit
     ? render(
         resolveTemplate(

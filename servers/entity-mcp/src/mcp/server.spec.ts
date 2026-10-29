@@ -67,6 +67,39 @@ describe('buildCardPayload', () => {
     );
   });
 
+  test.each([
+    [
+      EntityKind.Skill,
+      'skills/b/my-skill',
+      { attributes: { name: 'my-skill', description: 'Does a thing.' } },
+      'skill-id=skills%2Fb%2Fmy-skill',
+    ],
+    [
+      EntityKind.Prompt,
+      'prompts/b/my-prompt',
+      { name: 'my-prompt', content: 'Say hi.' },
+      'prompt-id=prompts%2Fb%2Fmy-prompt',
+    ],
+  ] as const)('offers Try on a %s card', (kind, id, raw, query) => {
+    const payload = buildCardPayload({
+      config: {
+        ...config,
+        chatBaseUrl: 'https://chat.example.com',
+        actionTemplates: {
+          trySkill: '/?skill-id={id}',
+          tryPrompt: '/?prompt-id={id}',
+        },
+      },
+      kind,
+      id,
+      raw,
+      activeLocale: 'en',
+      canEdit: false,
+    });
+    expect(payload.actions.tryUrl).toBe(`https://chat.example.com/?${query}`);
+    expect(parseEntityCardPayload(payload).ok).toBe(true);
+  });
+
   test('omits initials so the card derives them', () => {
     const payload = buildCardPayload({
       config,

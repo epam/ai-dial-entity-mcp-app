@@ -15,6 +15,8 @@ export type ActionTemplates = {
   editAgentSchema?: string;
   editAgentBySchema?: Record<string, string>;
   tryAgent?: string;
+  trySkill?: string;
+  tryPrompt?: string;
 };
 
 type SingleActionKey = Exclude<keyof ActionTemplates, 'editAgentBySchema'>;
@@ -39,6 +41,8 @@ export const ACTION_TEMPLATE_VARS: Record<SingleActionKey, string> = {
   editAgent: 'ENTITY_EDIT_URL_AGENT',
   editAgentSchema: 'ENTITY_EDIT_URL_AGENT_SCHEMA',
   tryAgent: 'ENTITY_TRY_URL_AGENT',
+  trySkill: 'ENTITY_TRY_URL_SKILL',
+  tryPrompt: 'ENTITY_TRY_URL_PROMPT',
 };
 
 const SCHEMA_ID_PREFIX = 'ENTITY_AGENT_SCHEMA_';

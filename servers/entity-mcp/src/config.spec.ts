@@ -22,7 +22,9 @@ describe('loadConfig', () => {
       ENTITY_EDIT_URL_TOOLSET: '/toolset-editor?id={id}',
       ENTITY_EDIT_URL_AGENT: '/custom-app-editor?id={id}',
       ENTITY_EDIT_URL_AGENT_SCHEMA: '/apps-editor?schema={schemaId}&appId={id}',
-      ENTITY_TRY_URL_AGENT: '/?isolated-model-id={id}',
+      ENTITY_TRY_URL_AGENT: '/?deployment-id={id}',
+      ENTITY_TRY_URL_SKILL: ' /?skill-id={id} ',
+      ENTITY_TRY_URL_PROMPT: '/?prompt-id={id}',
     });
     expect(config.actionTemplates).toEqual({
       editSkill: '/skill-editor?id={id}',
@@ -30,7 +32,9 @@ describe('loadConfig', () => {
       editToolset: '/toolset-editor?id={id}',
       editAgent: '/custom-app-editor?id={id}',
       editAgentSchema: '/apps-editor?schema={schemaId}&appId={id}',
-      tryAgent: '/?isolated-model-id={id}',
+      tryAgent: '/?deployment-id={id}',
+      trySkill: '/?skill-id={id}',
+      tryPrompt: '/?prompt-id={id}',
     });
   });
 
@@ -167,6 +171,18 @@ describe('findConfigWarnings', () => {
         ENTITY_TRY_URL_AGENT: 'https://other.example.com/{id}',
       }),
     ).toEqual([]);
+  });
+
+  test('warns about a Try path template without CHAT_BASE_URL', () => {
+    expect(
+      warningsFor({
+        ENTITY_TRY_URL_SKILL: '/?skill-id={id}',
+        ENTITY_TRY_URL_PROMPT: '/?prompt-id={id}',
+      }),
+    ).toEqual([
+      expect.stringContaining('ENTITY_TRY_URL_SKILL'),
+      expect.stringContaining('ENTITY_TRY_URL_PROMPT'),
+    ]);
   });
 
   test('is silent when nothing is configured', () => {
