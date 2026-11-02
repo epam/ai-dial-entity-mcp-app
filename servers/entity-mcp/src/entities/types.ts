@@ -42,7 +42,8 @@ export type EntityType = {
   list: (ctx: EntityContext) => Promise<Candidate[]>;
   /**
    * Optional cheap listing that returns ids and names only, no record. A name
-   * search tries it first and runs the full `list` only when nothing matched.
+   * search runs it next to the full `list`, and falls back to it for a type
+   * whose full list failed or ran out of time.
    */
   listNames?: (ctx: EntityContext) => Promise<Candidate[]>;
   map: (raw: Record<string, unknown>, activeLocale: string) => MappedEntity;

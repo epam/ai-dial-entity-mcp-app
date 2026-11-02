@@ -7,8 +7,8 @@ throwaway script. It is not part of the root workspaces, CI or the release
 image.
 
 It connects to an MCP endpoint, lists tools and resources, and — given
-`--id` or `--name` (optionally with `--kind`) — calls `show_entity_card` and
-prints the result.
+`--name` (calls `find_entities`) or `--id` (calls `show_entity_card`), both
+optionally with `--kind` — prints the result.
 
 ## Credential
 
@@ -31,7 +31,7 @@ npm ci
 # against the entity-mcp server
 DIAL_USER_JWT=... npm start -- --url http://localhost:8080/mcp --kind skill --id skills/my-bucket/my-skill
 
-# find an entity by name instead of by exact id
+# search by name (find_entities) instead of showing by exact id
 DIAL_USER_JWT=... npm start -- --name hhm-joke-skill
 
 # an agent by id

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
 import { CoreError } from '../core/client.ts';
 import { ENTITY_TYPES, entityTypeFor } from './registry.ts';
-import { resolveById, searchByName } from './resolver.ts';
+import { EntityVisibility, findCandidates, resolveById } from './resolver.ts';
 import { TEST_CTX } from './test-utils.ts';
 import {
   EntityKind,
@@ -137,32 +137,47 @@ const withNames = (
   }),
 });
 
-describe('searchByName fast path', () => {
-  test('matches on the cheap names first and never runs the full list when something matched', async () => {
+const match = (
+  kind: EntityKind,
+  id: string,
+  name: string,
+  visibility: EntityVisibility | undefined = EntityVisibility.Private,
+) => ({
+  kind,
+  id,
+  name,
+  ...(visibility ? { visibility } : {}),
+});
+
+describe('findCandidates with both listings', () => {
+  test('runs the full list next to the cheap names, so a display name is matched even when the names call matched too', async () => {
     const agent = withNames(
-      stubType(
-        EntityKind.Agent,
-        'applications/',
-        [cand(EntityKind.Agent, 'applications/b/other', ['other'], {})],
-        { display_name: 'Inbox Digest', description: 'd' },
-      ),
+      stubType(EntityKind.Agent, 'applications/', [
+        cand(
+          EntityKind.Agent,
+          'applications/b/other',
+          ['Inbox Digest', 'other'],
+          {},
+        ),
+      ]),
       [cand(EntityKind.Agent, 'applications/b/inbox-digest', ['inbox-digest'])],
     );
-    const outcome = await searchByName(TEST_CTX, 'inbox digest', undefined, [
+    const outcome = await findCandidates(TEST_CTX, 'inbox digest', undefined, [
       agent,
     ]);
-    expect(outcome).toMatchObject({
+    expect(outcome).toEqual({
       status: 'found',
-      resolved: { id: 'applications/b/inbox-digest' },
+      matches: [
+        match(EntityKind.Agent, 'applications/b/other', 'Inbox Digest'),
+      ],
+      exact: true,
     });
-    expect(agent.list).not.toHaveBeenCalled();
-    expect(agent.fetch).toHaveBeenCalledWith(
-      expect.objectContaining({ credential: TEST_CTX.credential }),
-      'applications/b/inbox-digest',
-    );
+    expect(agent.list).toHaveBeenCalledTimes(1);
+    expect(agent.listNames).toHaveBeenCalledTimes(1);
+    expect(agent.fetch).not.toHaveBeenCalled();
   });
 
-  test('falls back to the full list, and its display names, only when no name matched', async () => {
+  test('matches a display name that differs from the id, which only the full list carries', async () => {
     const agent = withNames(
       stubType(EntityKind.Agent, 'applications/', [
         cand(
@@ -174,7 +189,7 @@ describe('searchByName fast path', () => {
       ]),
       [cand(EntityKind.Agent, 'echo', ['echo'])],
     );
-    const outcome = await searchByName(
+    const outcome = await findCandidates(
       TEST_CTX,
       'contract manager',
       undefined,
@@ -182,13 +197,14 @@ describe('searchByName fast path', () => {
     );
     expect(outcome).toMatchObject({
       status: 'found',
-      resolved: { id: 'SmartContractManager_shn' },
+      matches: [{ id: 'SmartContractManager_shn' }],
+      exact: false,
     });
     expect(agent.listNames).toHaveBeenCalledTimes(1);
     expect(agent.list).toHaveBeenCalledTimes(1);
   });
 
-  test('a partial id match does not stop the fallback and is not offered on its own', async () => {
+  test('an exact display-name match from the full list beats a partial id match from the names call', async () => {
     const agent = withNames(
       stubType(EntityKind.Agent, 'applications/', [
         cand(EntityKind.Agent, 'x-123', ['Digest', 'x-123'], {}),
@@ -199,10 +215,13 @@ describe('searchByName fast path', () => {
         ]),
       ],
     );
-    const outcome = await searchByName(TEST_CTX, 'digest', undefined, [agent]);
-    expect(outcome).toMatchObject({
+    const outcome = await findCandidates(TEST_CTX, 'digest', undefined, [
+      agent,
+    ]);
+    expect(outcome).toEqual({
       status: 'found',
-      resolved: { id: 'x-123' },
+      matches: [{ kind: EntityKind.Agent, id: 'x-123', name: 'Digest' }],
+      exact: true,
     });
     expect(agent.list).toHaveBeenCalledTimes(1);
   });
@@ -217,33 +236,40 @@ describe('searchByName fast path', () => {
       ]),
       [],
     );
-    const outcome = await searchByName(TEST_CTX, 'digest', undefined, [
+    const outcome = await findCandidates(TEST_CTX, 'digest', undefined, [
       skill,
       agent,
     ]);
     expect(outcome).toMatchObject({
       status: 'found',
-      resolved: { kind: EntityKind.Agent, id: 'x-123' },
+      matches: [{ kind: EntityKind.Agent, id: 'x-123' }],
     });
   });
 
-  test('an exact match in any type is decisive, so the slow agent list does not run', async () => {
+  test('an exact match in one type does not hide an agent matched by display name', async () => {
     const skill = stubType(EntityKind.Skill, 'skills/', [
       cand(EntityKind.Skill, 'skills/b/hhm-joke-skill', ['hhm-joke-skill'], {}),
     ]);
     const agent = withNames(
-      stubType(EntityKind.Agent, 'applications/', []),
+      stubType(EntityKind.Agent, 'applications/', [
+        cand(EntityKind.Agent, 'x-123', ['HHM Joke Skill', 'x-123'], {}),
+      ]),
       [],
     );
-    const outcome = await searchByName(TEST_CTX, 'hhm-joke-skill', undefined, [
-      skill,
-      agent,
-    ]);
-    expect(outcome.status).toBe('found');
-    expect(agent.list).not.toHaveBeenCalled();
+    const outcome = await findCandidates(
+      TEST_CTX,
+      'hhm-joke-skill',
+      undefined,
+      [skill, agent],
+    );
+    expect(outcome).toMatchObject({ status: 'found', exact: true });
+    expect(
+      outcome.status === 'found' && outcome.matches.map((m) => m.id),
+    ).toEqual(['skills/b/hhm-joke-skill', 'x-123']);
+    expect(agent.list).toHaveBeenCalledTimes(1);
   });
 
-  test('stops the slow fallback at the deadline and reports the type as skipped', async () => {
+  test('stops a slow full list at the deadline and still matches that type by id', async () => {
     const hangingAgent = withNames(
       {
         ...stubType(EntityKind.Agent, 'applications/', []),
@@ -256,16 +282,36 @@ describe('searchByName fast path', () => {
             }),
         ),
       },
-      [],
+      [cand(EntityKind.Agent, 'applications/b/zzz-helper', ['zzz-helper'])],
     );
     const skill = stubType(EntityKind.Skill, 'skills/', []);
-    const outcome = await searchByName(
+    const outcome = await findCandidates(
       TEST_CTX,
       'zzz',
       undefined,
       [skill, hangingAgent],
       25,
     );
+    expect(outcome).toEqual({
+      status: 'found',
+      matches: [
+        match(EntityKind.Agent, 'applications/b/zzz-helper', 'zzz-helper'),
+      ],
+      exact: false,
+      idOnly: [EntityKind.Agent],
+    });
+  });
+
+  test('a type whose full list and names both fail is skipped', async () => {
+    const agent = withNames(
+      stubType(EntityKind.Agent, 'applications/', new CoreError(504, 'slow')),
+      new CoreError(504, 'slow'),
+    );
+    const skill = stubType(EntityKind.Skill, 'skills/', []);
+    const outcome = await findCandidates(TEST_CTX, 'zzz', undefined, [
+      skill,
+      agent,
+    ]);
     expect(outcome).toEqual({
       status: 'not_found',
       searched: [EntityKind.Skill, EntityKind.Agent],
@@ -278,8 +324,11 @@ describe('searchByName fast path', () => {
       cand(EntityKind.Skill, 'skills/b/a', ['a'], {}),
       cand(EntityKind.Skill, 'skills/b/a', ['a'], {}),
     ]);
-    const outcome = await searchByName(TEST_CTX, 'a', undefined, [skill]);
-    expect(outcome.status).toBe('found');
+    const outcome = await findCandidates(TEST_CTX, 'a', undefined, [skill]);
+    expect(outcome).toMatchObject({
+      status: 'found',
+      matches: [{ id: 'skills/b/a' }],
+    });
   });
 
   test('a found match still reports the types that could not be searched', async () => {
@@ -291,7 +340,7 @@ describe('searchByName fast path', () => {
     const agent = stubType(EntityKind.Agent, 'applications/', [
       cand(EntityKind.Agent, 'echo', ['echo'], {}),
     ]);
-    const outcome = await searchByName(TEST_CTX, 'echo', undefined, [
+    const outcome = await findCandidates(TEST_CTX, 'echo', undefined, [
       skill,
       agent,
     ]);
@@ -301,42 +350,30 @@ describe('searchByName fast path', () => {
     });
   });
 
-  test('does not retry the full list after an auth failure on the names call', async () => {
+  test('a failing names call does not matter while the full list works', async () => {
     const agent = withNames(
-      stubType(EntityKind.Agent, 'applications/', []),
+      stubType(EntityKind.Agent, 'applications/', [
+        cand(EntityKind.Agent, 'echo', ['echo'], {}),
+      ]),
       new CoreError(401, 'expired'),
     );
-    await expect(
-      searchByName(TEST_CTX, 'x', undefined, [agent]),
-    ).rejects.toMatchObject({ status: 401 });
-    expect(agent.list).not.toHaveBeenCalled();
+    const outcome = await findCandidates(TEST_CTX, 'echo', undefined, [agent]);
+    expect(outcome).toMatchObject({ status: 'found' });
+    expect(outcome).not.toHaveProperty('idOnly');
   });
 
-  test('the final detail fetch is bounded by its own signal', async () => {
-    const prompt = stubType(
-      EntityKind.Prompt,
-      'prompts/',
-      [cand(EntityKind.Prompt, 'prompts/b/Greeter', ['Greeter'])],
-      { name: 'Greeter', content: 'c' },
-    );
-    await searchByName(TEST_CTX, 'greeter', undefined, [prompt]);
-    const fetchCtx = (prompt.fetch as ReturnType<typeof vi.fn>).mock
-      .calls[0]![0] as EntityContext;
-    expect(fetchCtx.signal).toBeInstanceOf(AbortSignal);
-  });
-
-  test('a failing names call also falls back to the full list', async () => {
+  test('a failing names call does not stop the full list from matching', async () => {
     const agent = withNames(
       stubType(EntityKind.Agent, 'applications/', [
         cand(EntityKind.Agent, 'echo', ['echo'], {}),
       ]),
       new CoreError(500, 'x'),
     );
-    const outcome = await searchByName(TEST_CTX, 'echo', undefined, [agent]);
+    const outcome = await findCandidates(TEST_CTX, 'echo', undefined, [agent]);
     expect(outcome).toMatchObject({ status: 'found' });
   });
 
-  test('a failing names call triggers the full list even when another type matched', async () => {
+  test('a failing names call does not hide a type matched through its full list', async () => {
     const skill = stubType(EntityKind.Skill, 'skills/', [
       cand(EntityKind.Skill, 'skills/b/digest', ['digest'], {}),
     ]);
@@ -346,27 +383,29 @@ describe('searchByName fast path', () => {
       ]),
       new CoreError(500, 'x'),
     );
-    const outcome = await searchByName(TEST_CTX, 'digest', undefined, [
+    const outcome = await findCandidates(TEST_CTX, 'digest', undefined, [
       skill,
       agent,
     ]);
-    expect(outcome.status).toBe('ambiguous');
+    expect(outcome).toMatchObject({ status: 'found' });
+    expect(outcome.status === 'found' && outcome.matches).toHaveLength(2);
   });
 
-  test('reports the type as skipped when the full fallback fails too', async () => {
+  test('reports the type as matched by id only when the full list fails and the names work', async () => {
     const agent = withNames(
       stubType(EntityKind.Agent, 'applications/', new CoreError(504, 'slow')),
       [],
     );
     const skill = stubType(EntityKind.Skill, 'skills/', []);
-    const outcome = await searchByName(TEST_CTX, 'zzz', undefined, [
+    const outcome = await findCandidates(TEST_CTX, 'zzz', undefined, [
       skill,
       agent,
     ]);
     expect(outcome).toEqual({
       status: 'not_found',
       searched: [EntityKind.Skill, EntityKind.Agent],
-      skipped: [EntityKind.Agent],
+      skipped: [],
+      idOnly: [EntityKind.Agent],
     });
   });
 
@@ -376,64 +415,42 @@ describe('searchByName fast path', () => {
       new CoreError(504, 'slow'),
     );
     await expect(
-      searchByName(TEST_CTX, 'a', undefined, [agent]),
+      findCandidates(TEST_CTX, 'a', undefined, [agent]),
     ).rejects.toMatchObject({ status: 504 });
   });
 });
 
-describe('searchByName', () => {
-  test('one exact match with an inline record needs no fetch', async () => {
+describe('findCandidates', () => {
+  test('one exact match is reported as exact and nothing is fetched', async () => {
     const skill = stubType(EntityKind.Skill, 'skills/', [
       cand(EntityKind.Skill, 'skills/b/hhm-joke-skill', ['hhm-joke-skill'], {
         attributes: {},
       }),
     ]);
-    const outcome = await searchByName(TEST_CTX, 'HHM Joke Skill', undefined, [
-      skill,
-    ]);
+    const outcome = await findCandidates(
+      TEST_CTX,
+      'HHM Joke Skill',
+      undefined,
+      [skill],
+    );
     expect(outcome).toEqual({
       status: 'found',
-      resolved: {
-        kind: EntityKind.Skill,
-        id: 'skills/b/hhm-joke-skill',
-        raw: { attributes: {} },
-      },
+      matches: [
+        match(EntityKind.Skill, 'skills/b/hhm-joke-skill', 'hhm-joke-skill'),
+      ],
+      exact: true,
     });
     expect(skill.fetch).not.toHaveBeenCalled();
   });
 
-  test('a match without an inline record is fetched', async () => {
-    const prompt = stubType(
-      EntityKind.Prompt,
-      'prompts/',
-      [cand(EntityKind.Prompt, 'prompts/b/Greeter', ['Greeter'])],
-      { name: 'Greeter', content: 'c' },
-    );
-    const outcome = await searchByName(TEST_CTX, 'greeter', undefined, [
-      prompt,
+  test('a single partial match is reported as not exact', async () => {
+    const skill = stubType(EntityKind.Skill, 'skills/', [
+      cand(EntityKind.Skill, 'skills/b/inbox-digest', ['inbox-digest'], {}),
     ]);
-    expect(outcome).toMatchObject({
-      status: 'found',
-      resolved: { raw: { name: 'Greeter' } },
-    });
-    expect(prompt.fetch).toHaveBeenCalledWith(
-      expect.objectContaining({ credential: TEST_CTX.credential }),
-      'prompts/b/Greeter',
-    );
-  });
-
-  test('a skill listed without attributes is fetched, not rendered from nothing', async () => {
-    const skill = stubType(
-      EntityKind.Skill,
-      'skills/',
-      [cand(EntityKind.Skill, 'skills/b/a', ['a'])],
-      { attributes: { name: 'a', description: 'd' } },
-    );
-    const outcome = await searchByName(TEST_CTX, 'a', undefined, [skill]);
-    expect(outcome).toMatchObject({
-      status: 'found',
-      resolved: { raw: { attributes: { name: 'a' } } },
-    });
+    const outcome = await findCandidates(TEST_CTX, 'digest', undefined, [
+      skill,
+    ]);
+    expect(outcome).toMatchObject({ status: 'found', exact: false });
   });
 
   test('an exact match beats partial matches', async () => {
@@ -441,38 +458,35 @@ describe('searchByName', () => {
       cand(EntityKind.Skill, 'skills/b/joke', ['joke'], {}),
       cand(EntityKind.Skill, 'skills/b/joke-writer', ['joke-writer'], {}),
     ]);
-    const outcome = await searchByName(TEST_CTX, 'joke', undefined, [skill]);
+    const outcome = await findCandidates(TEST_CTX, 'joke', undefined, [skill]);
     expect(outcome).toMatchObject({
-      status: 'found',
-      resolved: { id: 'skills/b/joke' },
+      matches: [{ id: 'skills/b/joke' }],
+      exact: true,
     });
   });
 
-  test('the same name as two types is ambiguous, never picked silently', async () => {
+  test('the same name as two types lists both', async () => {
     const skill = stubType(EntityKind.Skill, 'skills/', [
       cand(EntityKind.Skill, 'skills/b/digest', ['digest'], {}),
     ]);
     const agent = stubType(EntityKind.Agent, 'applications/', [
       cand(EntityKind.Agent, 'applications/b/digest', ['digest'], {}),
     ]);
-    const outcome = await searchByName(TEST_CTX, 'digest', undefined, [
+    const outcome = await findCandidates(TEST_CTX, 'digest', undefined, [
       skill,
       agent,
     ]);
     expect(outcome).toEqual({
-      status: 'ambiguous',
+      status: 'found',
       matches: [
-        { kind: EntityKind.Skill, id: 'skills/b/digest', name: 'digest' },
-        {
-          kind: EntityKind.Agent,
-          id: 'applications/b/digest',
-          name: 'digest',
-        },
+        match(EntityKind.Skill, 'skills/b/digest', 'digest'),
+        match(EntityKind.Agent, 'applications/b/digest', 'digest'),
       ],
+      exact: true,
     });
   });
 
-  test('a non-public match wins over its public copy of the same kind', async () => {
+  test('a non-public match and its public copy are both listed and marked', async () => {
     const agent = stubType(EntityKind.Agent, 'applications/', [
       cand(EntityKind.Agent, 'applications/abc/my-agent', ['my-agent'], {}),
       cand(
@@ -482,51 +496,44 @@ describe('searchByName', () => {
         {},
       ),
     ]);
-    const outcome = await searchByName(TEST_CTX, 'my-agent', undefined, [
+    const outcome = await findCandidates(TEST_CTX, 'my-agent', undefined, [
       agent,
     ]);
     expect(outcome).toMatchObject({
       status: 'found',
-      resolved: { id: 'applications/abc/my-agent' },
+      matches: [
+        { id: 'applications/abc/my-agent', visibility: 'private' },
+        { id: 'applications/public/hhm/my-agent__1.0.0', visibility: 'public' },
+      ],
     });
   });
 
-  test('public matches stay ambiguous when nothing non-public matched', async () => {
+  test('an id without a bucket gets no visibility, since it is neither owned nor published', async () => {
     const agent = stubType(EntityKind.Agent, 'applications/', [
-      cand(EntityKind.Agent, 'applications/public/a/x__1.0.0', ['x'], {}),
-      cand(EntityKind.Agent, 'applications/public/b/x__1.0.0', ['x'], {}),
+      cand(EntityKind.Agent, 'echo', ['Echo', 'echo'], {}),
     ]);
-    const outcome = await searchByName(TEST_CTX, 'x', undefined, [agent]);
-    expect(outcome.status).toBe('ambiguous');
+    const outcome = await findCandidates(TEST_CTX, 'echo', undefined, [agent]);
+    expect(outcome).toEqual({
+      status: 'found',
+      matches: [{ kind: EntityKind.Agent, id: 'echo', name: 'Echo' }],
+      exact: true,
+    });
   });
 
-  test('a public match of another kind is not dropped for a non-public one', async () => {
-    const skill = stubType(EntityKind.Skill, 'skills/', [
-      cand(EntityKind.Skill, 'skills/public/digest', ['digest'], {}),
-    ]);
-    const agent = stubType(EntityKind.Agent, 'applications/', [
-      cand(EntityKind.Agent, 'applications/abc/digest', ['digest'], {}),
-    ]);
-    const outcome = await searchByName(TEST_CTX, 'digest', undefined, [
-      skill,
-      agent,
-    ]);
-    expect(outcome.status).toBe('ambiguous');
-  });
-
-  test('several partial matches are ambiguous', async () => {
+  test('several partial matches are all listed', async () => {
     const skill = stubType(EntityKind.Skill, 'skills/', [
       cand(EntityKind.Skill, 'skills/b/joke-a', ['joke-a'], {}),
       cand(EntityKind.Skill, 'skills/b/joke-b', ['joke-b'], {}),
     ]);
-    const outcome = await searchByName(TEST_CTX, 'joke', undefined, [skill]);
-    expect(outcome.status).toBe('ambiguous');
+    const outcome = await findCandidates(TEST_CTX, 'joke', undefined, [skill]);
+    expect(outcome).toMatchObject({ exact: false });
+    expect(outcome.status === 'found' && outcome.matches).toHaveLength(2);
   });
 
   test('kind narrows the search to one type', async () => {
     const skill = stubType(EntityKind.Skill, 'skills/', []);
     const agent = stubType(EntityKind.Agent, 'applications/', []);
-    await searchByName(TEST_CTX, 'x', EntityKind.Agent, [skill, agent]);
+    await findCandidates(TEST_CTX, 'x', EntityKind.Agent, [skill, agent]);
     expect(skill.list).not.toHaveBeenCalled();
     expect(agent.list).toHaveBeenCalledTimes(1);
   });
@@ -535,7 +542,7 @@ describe('searchByName', () => {
     const skill = stubType(EntityKind.Skill, 'skills/', [
       cand(EntityKind.Skill, 'skills/b/a', ['a'], {}),
     ]);
-    const outcome = await searchByName(TEST_CTX, 'zzz', undefined, [skill]);
+    const outcome = await findCandidates(TEST_CTX, 'zzz', undefined, [skill]);
     expect(outcome).toEqual({
       status: 'not_found',
       searched: [EntityKind.Skill],
@@ -552,13 +559,13 @@ describe('searchByName', () => {
     const agent = stubType(EntityKind.Agent, 'applications/', [
       cand(EntityKind.Agent, 'applications/b/a', ['a'], {}),
     ]);
-    const outcome = await searchByName(TEST_CTX, 'a', undefined, [
+    const outcome = await findCandidates(TEST_CTX, 'a', undefined, [
       skill,
       agent,
     ]);
     expect(outcome).toMatchObject({
       status: 'found',
-      resolved: { kind: EntityKind.Agent },
+      matches: [{ kind: EntityKind.Agent }],
     });
   });
 
@@ -572,7 +579,7 @@ describe('searchByName', () => {
       new CoreError(504, 'slow'),
     );
     const agent = stubType(EntityKind.Agent, 'applications/', []);
-    await searchByName(TEST_CTX, 'a', undefined, [skill, agent]);
+    await findCandidates(TEST_CTX, 'a', undefined, [skill, agent]);
     const lines = logError.mock.calls.map((call) => String(call[0]));
     expect(lines).toHaveLength(1);
     expect(lines[0]).toContain('skill');
@@ -589,7 +596,7 @@ describe('searchByName', () => {
       new CoreError(500, 'x'),
     );
     const agent = stubType(EntityKind.Agent, 'applications/', []);
-    const outcome = await searchByName(TEST_CTX, 'a', undefined, [
+    const outcome = await findCandidates(TEST_CTX, 'a', undefined, [
       skill,
       agent,
     ]);
@@ -612,7 +619,7 @@ describe('searchByName', () => {
       new CoreError(500, 'x'),
     );
     await expect(
-      searchByName(TEST_CTX, 'a', undefined, [skill, agent]),
+      findCandidates(TEST_CTX, 'a', undefined, [skill, agent]),
     ).rejects.toMatchObject({ status: 401 });
   });
 });
