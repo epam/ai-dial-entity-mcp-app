@@ -66,14 +66,24 @@ const main = async (): Promise<void> => {
   const resources = await client.listResources();
   console.log('resources/list:', JSON.stringify(resources, null, 2));
 
-  if (args.id || args.name) {
+  if (args.name && !args.id) {
     const result = await client.callTool({
-      name: 'show_entity_card',
+      name: 'find_entities',
       arguments: {
-        ...(args.id && { id: args.id }),
-        ...(args.name && { name: args.name }),
+        name: args.name,
         ...(args.kind && { kind: args.kind }),
       },
+    });
+    console.log(
+      result.isError ? 'find_entities error:' : 'find_entities result:',
+      JSON.stringify(result.content, null, 2),
+    );
+  }
+
+  if (args.id) {
+    const result = await client.callTool({
+      name: 'show_entity_card',
+      arguments: { id: args.id, ...(args.kind && { kind: args.kind }) },
     });
     if (result.isError) {
       console.log(

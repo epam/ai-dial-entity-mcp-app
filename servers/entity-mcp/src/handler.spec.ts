@@ -32,7 +32,7 @@ const callTool = {
   jsonrpc: '2.0',
   id: 4,
   method: 'tools/call',
-  params: { name: 'render_entity_card', arguments: {} },
+  params: { name: 'find_entities', arguments: { name: 'x' } },
 };
 
 describe('the MCP request handler', () => {

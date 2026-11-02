@@ -58,34 +58,30 @@ reminder.
 
 It exposes:
 
-- **Tool** `show_entity_card({ id?, name?, kind? })` — shows a card for a
-  skill, agent, toolset or prompt. Always prefer `id` (from another tool,
-  agent or link), the exact entity id
+- **Tool** `find_entities({ name, kind? })` — finds skills, agents, toolsets
+  and prompts by name and answers in plain text; it never shows a card (no UI is
+  bound to it). The server lists the caller's entities and matches the name
+  (case-insensitive, hyphens, underscores and spaces are interchangeable; an
+  exact match wins over a partial one). `kind` optionally restricts the search
+  to one type. The text lists each match with its kind, name, id and whether it
+  is public or private, then ends with one static next step for the model: one
+  exact match, call `show_entity_card` with that id and kind; one partial
+  match, call it only if it is clearly the one meant, else ask the user; several
+  matches, ask the user which one and call it with the chosen id; no match, say
+  so and ask for another name or an id. Names and ids are quoted and clipped,
+  the list is capped at 15, and descriptions are never included. A Core error,
+  a missing credential or an empty name is an `isError` result.
+- **Tool** `show_entity_card({ id, kind? })` — shows the card of one skill,
+  agent, toolset or prompt, read by its exact id
   (`skills/{bucket}/{path}`, `prompts/{bucket}/{path}`,
-  `toolsets/{bucket}/{path}`, or a deployment id for an agent): it is fetched
-  directly. Otherwise pass `name`: the server lists the caller's skills,
-  agents, toolsets and prompts and matches the name (case-insensitive, hyphens,
-  underscores and spaces are interchangeable; an exact match wins over a
-  partial one; a public entity is dropped when a non-public one of the same
-  type matches too, so a published agent does not hide its private source).
-  `kind` optionally restricts the search to one type. When
-  several entities match, the result is a plain card listing them with their
-  ids, and when none match it is a plain card saying so, neither of them an
-  error, so the caller can ask again with an `id`. With neither `id` nor `name` the tool returns an
-  error; with both, `id` wins. It reads everything from DIAL Core as the
-  caller, maps it onto the card payload contract
-  (`@epam/ai-dial-entity-contract`), and returns it as `structuredContent`. On
-  a Core error, a malformed id, or an entity without a usable name, it
-  returns an `isError` result instead of an invalid payload. An agent or
-  toolset with no description gets the card text `No description provided.`
-- **Tool** `render_entity_card({ entity, actions?, sections? })` — draws the
-  same card from data the caller already has, with no Core lookup and no
-  credential. `entity` needs `name` and `description` (optional `kindLabel`,
-  `initials`); `actions` holds optional http(s) `tryUrl` / `editUrl`;
-  `sections` is a list of `chips` or `text` rows. Invalid input (a non-http(s)
-  URL, an empty chips list, an oversized field) returns a tool error. Use it
-  when another toolset created or described the entity and the model passes
-  the details on.
+  `toolsets/{bucket}/{path}`, or a deployment id for an agent). It does not
+  search and takes no name: with only a name, the model calls `find_entities`
+  first. It reads everything from DIAL Core as the caller, maps it onto the
+  card payload contract (`@epam/ai-dial-entity-contract`), and returns it as
+  `structuredContent`. On a Core error, a malformed id, or an entity without a
+  usable name, it returns an `isError` result instead of an invalid payload. An
+  agent or toolset with no description gets the card text
+  `No description provided.`
 - **Resource** `ui://entity-card/index.html` — the built entity card, served
   as `text/html` (DIAL Core rejects `text/html;profile=mcp-app`).
 
@@ -223,7 +219,7 @@ registered today.
 
 ## Logging
 
-Every `show_entity_card` call logs one completion line to `console`
+Every `find_entities` and `show_entity_card` call logs one completion line to `console`
 — `console.log` on success, `console.error` on failure — carrying the
 outcome, the entity kind, the (sanitised) entity id, the call's duration in
 milliseconds, and a correlation id.
@@ -281,7 +277,7 @@ tagging, Trivy scanning and both registries handled by the shared
 Register the deployed container as an MCP toolset with:
 
 - `transport: HTTP`
-- `allowedTools: ["show_entity_card", "render_entity_card"]`
+- `allowedTools: ["find_entities", "show_entity_card"]`
 - the authentication fields of one of the two modes in
   [Authentication modes](#authentication-modes).
 
@@ -320,23 +316,20 @@ callers.
 
 ## Known gaps
 
-- A name search has a 50 s overall deadline. Calls still running at that point
-  are aborted and their types are reported as "could not be searched", so an
-  unknown name costs at most that long. A single Core call has its own 30 s
-  timeout (60 s for the full agent and toolset lists). The detail fetch of the
-  one matched entity comes after the deadline, bounded to the rest of a 60 s
-  budget (at least 5 s), so a search ends within about a minute. The search is
+- A name search has a 25 s overall deadline. Calls still running at that point
+  are aborted. A type whose full list was aborted or failed is still matched by
+  id through its cheap names call and reported as "matched by id only, display
+  names not checked"; a type with no usable list is reported as "not
+  searched". A single Core call has its own 30 s timeout (60 s for the full
+  agent and toolset lists), which the search deadline cuts short. The search is
   not tied to the MCP host cancelling the request.
 - No page cap on list calls: a list follows its pages to the end.
-- An exact match anywhere makes the slow agent list unnecessary, so an agent
-  found only by a display name that differs from its id is not considered when
-  another type already matched exactly. Use `kind: "agent"` to search agents
-  on their own.
 - `/v1/deployment-names` can list entries the caller cannot read (394 names
   against 385 agents in the full list in one measurement). An exact match on
   such an entry ends in "no longer exists" or "no access" on the detail fetch.
-- When a name search finds a match but some type could not be searched, the
-  card is shown and the skipped types are only written to the log.
+- When a type was not searched in full, `find_entities` says so under the match
+  list and softens its next step, so the model checks with the user before
+  showing a card.
 - Entity names, descriptions and prompt content are written by other users and
   go into the tool result unfiltered (the card shows them; the same text is in
   the result's JSON `content`). Prompt bodies make this a larger channel than
@@ -347,16 +340,13 @@ callers.
 - Custom (bucket-based) agents only appear in a name search when Core's
   `includeCustomApps` setting is on. An exact id fetch works either way.
 - Cost per search: `/openai/applications` reads every accessible agent in
-  full and can take tens of seconds on a large Core (43 s for 385 agents in
-  one measurement). Agents are therefore searched through the cheap
-  `/v1/deployment-names?type=application` call first (about a second), where
-  only an exact match on the id's name counts, so a loose id match never stands
-  in for the right entity. The full agent list, which can also match display
-  names that differ from the id, runs when no exact match was found in any
-  type, or when the names call failed. Searching a partial name such as
-  `digest` therefore takes the slow path unless something matches exactly.
-  Toolset, skill and prompt listing is fast enough to stay on the full list.
-  The `kind` hint narrows a search further.
+  full. It took 9 to 10 s for 1438 agents in one measurement (with a service
+  key) and 43 s for 385 in an earlier one, so the time does not follow the
+  count. It always runs, next to the cheap `/v1/deployment-names?type=application`
+  call (about 2 s), because only the full list carries display names, which
+  often differ from the id. `/v1/deployments` was measured slower (14 to 23 s)
+  and also lists models, so it is not used. The `kind` hint narrows a search to
+  one type.
 
 ## v1 limitations
 
