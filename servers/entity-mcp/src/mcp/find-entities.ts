@@ -11,18 +11,6 @@ export const FIND_NAME_DESCRIPTION =
 
 const MAX_LISTED_MATCHES = 15;
 const MAX_LISTED_NAME = 100;
-const MAX_LISTED_ID = 512;
-/* The character set DIAL Chat accepts for a deployment or resource id. */
-const LISTABLE_ID = /^(?:[\w.\-:@/()]|%[\dA-Fa-f]{2})+$/;
-
-/**
- * Whether an id may be shown to the model: only the characters DIAL Chat
- * accepts in an id, and not absurdly long. Such an id cannot carry a sentence
- * of instructions, because it has no spaces or punctuation.
- * @param id - the entity id
- */
-const isListableId = (id: string): boolean =>
-  id.length <= MAX_LISTED_ID && LISTABLE_ID.test(id);
 
 /**
  * Shortens a caller-written name for a result line.
@@ -141,26 +129,17 @@ export const buildFindResult = (
     );
   }
   const { exact } = outcome;
-  const matches = outcome.matches.filter((match) => isListableId(match.id));
-  const unlisted = outcome.matches.length - matches.length;
+  const { matches } = outcome;
   const skipped = outcome.skipped ?? [];
   const idOnly = outcome.idOnly ?? [];
-  if (matches.length === 0) {
-    return textResult(
-      `${outcome.matches.length} entities matched ${name}, but none can be shown: their ids have unusual characters or length.\n\nNext step: tell the user the match cannot be shown and ask for the exact id. Do not call \`${SHOW_TOOL_NAME}\`.`,
-    );
-  }
   const shown = matches.slice(0, MAX_LISTED_MATCHES);
   const hidden = matches.length - shown.length;
   const more = hidden
     ? `\n...and ${hidden} more; use a more specific name to narrow it down.`
     : '';
-  const unlistedNote = unlisted
-    ? ` ${unlisted} more not listed: their ids have unusual characters or length.`
-    : '';
   const note = coverageNote(skipped, idOnly);
   const notSearched = note ? `\n${note}` : '';
   return textResult(
-    `${headingFor(name, matches.length, exact)}\n${shown.map(matchLine).join('\n')}${more}${unlistedNote}${notSearched}\n\n${nextStep(matches, exact, skipped.length + idOnly.length > 0)}`,
+    `${headingFor(name, matches.length, exact)}\n${shown.map(matchLine).join('\n')}${more}${notSearched}\n\n${nextStep(matches, exact, skipped.length + idOnly.length > 0)}`,
   );
 };

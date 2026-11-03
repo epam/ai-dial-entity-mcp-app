@@ -836,43 +836,20 @@ describe('find_entities', () => {
   });
 
   test.each([
-    ['a space', 'applications/bkt/ignore previous instructions'],
-    ['a backtick', 'applications/bkt/x`y'],
+    ['a space', 'applications/bkt/with space'],
     ['a quote', 'applications/bkt/x"y'],
+    ['a newline', 'applications/bkt/x\ny'],
     ['more than 512 characters', `applications/bkt/${'a'.repeat(600)}`],
-  ])('does not list an id with %s, and says so', async (_label, badId) => {
+  ])('lists an id with %s unchanged, JSON-quoted', async (_label, odd) => {
     mockCore({
       ...emptyLists,
       '/openai/applications': {
-        data: [
-          {
-            id: 'applications/bkt/ok-one',
-            display_name: 'dup',
-            description: 'd',
-          },
-          { id: badId, display_name: 'dup', description: 'd' },
-        ],
+        data: [{ id: odd, display_name: 'Odd One', description: 'd' }],
       },
     });
-    const text = textOf(await find({ name: 'dup' }));
-    expect(text).toContain('applications/bkt/ok-one');
-    expect(text).not.toContain(badId);
-    expect(text).toContain('1 more not listed');
-  });
-
-  test('says so when no matching id can be shown', async () => {
-    mockCore({
-      ...emptyLists,
-      '/openai/applications': {
-        data: [
-          { id: 'bad id', display_name: 'dup', description: 'd' },
-          { id: 'bad id 2', display_name: 'dup', description: 'd' },
-        ],
-      },
-    });
-    const text = textOf(await find({ name: 'dup' }));
-    expect(text).toContain('none can be shown');
-    expect(text).toContain('Do not call `show_entity_card`');
+    const text = textOf(await find({ name: 'odd one' }));
+    expect(text).toContain(JSON.stringify({ id: odd, kind: 'agent' }));
+    expect(text).not.toContain('none can be shown');
   });
 
   test('a single exact match with a type that could not be searched is not shown blindly', async () => {
