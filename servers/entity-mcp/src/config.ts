@@ -23,6 +23,14 @@ type SingleActionKey = Exclude<keyof ActionTemplates, 'editAgentBySchema'>;
 
 export type ServerConfig = {
   coreBaseUrl: string;
+  /**
+   * Whether the toolset uses its own OAuth client. Then a request without a
+   * bearer token gets an HTTP 401 challenge on `tools/list` and `tools/call`,
+   * which makes DIAL ask the user to sign in. Otherwise (the toolset forwards
+   * the user's own token) `tools/list` is open and a `tools/call` without a
+   * token is answered with a tool error that names the missing setting.
+   */
+  customOAuthClient?: boolean;
   chatBaseUrl?: string;
   actionTemplates: ActionTemplates;
   port: number;
@@ -135,6 +143,19 @@ const parseHttpBaseUrl = (name: string, value: string): string => {
 };
 
 /**
+ * Reads a boolean flag: unset or empty is false, `true` and `false` are
+ * accepted in any case, anything else is a startup error.
+ * @param name - variable name, used in the error message
+ * @param value - the raw value, if set
+ */
+const parseFlag = (name: string, value: string | undefined): boolean => {
+  const text = value?.trim().toLowerCase();
+  if (!text || text === 'false') return false;
+  if (text === 'true') return true;
+  throw new Error(`${name} must be true or false, got: ${value}`);
+};
+
+/**
  * Reads the server configuration from the environment. Credentials are
  * deliberately absent: the server forwards the caller's identity and never
  * holds one of its own.
@@ -162,6 +183,10 @@ export const loadConfig = (env: NodeJS.ProcessEnv): ServerConfig => {
     chatBaseUrl: chatBaseUrl
       ? parseHttpBaseUrl('CHAT_BASE_URL', chatBaseUrl)
       : undefined,
+    customOAuthClient: parseFlag(
+      'CUSTOM_OAUTH_CLIENT',
+      env.CUSTOM_OAUTH_CLIENT,
+    ),
     actionTemplates: loadActionTemplates(env),
     port,
     appHtmlPath: env.APP_HTML?.trim() || DEFAULT_APP_HTML,

@@ -27,15 +27,15 @@ const JSON_RPC_PARSE_ERROR = -32700;
 const JSON_RPC_INVALID_REQUEST = -32600;
 
 /**
- * JSON-RPC methods that need the caller's credential; every other method is
- * left to the transport. `tools/call` reads from Core as the caller.
- * `tools/list` lists nothing secret and is here for another reason: DIAL Chat
- * quick apps open a session with `initialize` and then `tools/list`, and read
- * a 401 on that `tools/list` as the signal to prompt the user to sign in,
- * while a 401 on `tools/call` leaves them waiting for a timeout. Core reads
- * the card for a `NONE` toolset with `initialize` and `resources/read` and no
- * credential, so those must stay open. Drop `tools/list` once quick apps
- * detect a missing sign-in some other way.
+ * JSON-RPC methods that get a 401 challenge when `CUSTOM_OAUTH_CLIENT` is on
+ * and the request carries no bearer token. `tools/call` reads from Core as the
+ * caller. `tools/list` lists nothing secret: it is here only so DIAL, which
+ * opens a session with `initialize` and then `tools/list`, reads the 401 as the
+ * signal to prompt the user to sign in with the toolset's own OAuth client.
+ * Core reads the card with `initialize` and `resources/read` and no
+ * credential, so those stay open. Without the flag nothing is challenged here:
+ * the tools themselves refuse to call Core without a credential, so a new tool
+ * must make the same check.
  *
  * This is a deny-list: a method added later is open until it is listed here.
  * The server serves only tools and resources, so no other method reaches user

@@ -319,7 +319,7 @@ describe('createMcpServer', () => {
 
     expect(result.isError).toBe(true);
     expect(JSON.stringify(result.content)).toContain(
-      'This tool needs your DIAL identity, which was not forwarded with the request.',
+      'This tool needs your DIAL identity, which was not forwarded with the request. An admin must enable forward_auth_token on the toolset and on the quick app that uses it.',
     );
     expect(spy).not.toHaveBeenCalled();
 
@@ -1109,7 +1109,7 @@ describe('show_entity_card Edit ownership', () => {
 });
 
 describe('server capabilities', () => {
-  test('are only tools and resources, which the credential gate in src/http.ts covers', async () => {
+  test('are only tools and resources, so the per-tool credential checks and the optional gate in src/http.ts cover every method', async () => {
     const server = createMcpServer(
       config,
       '<html></html>',

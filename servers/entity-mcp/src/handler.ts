@@ -15,8 +15,10 @@ import { createMcpServer } from './mcp/server.ts';
 
 /**
  * Builds the HTTP request handler: `/health`, and `/mcp` as a stateless
- * Streamable HTTP MCP endpoint that refuses a credential-less call to any
- * method outside the open set with a 401.
+ * Streamable HTTP MCP endpoint. For a toolset with its own OAuth client
+ * (`customOAuthClient`) it refuses a credential-less `tools/list` or
+ * `tools/call` with a 401 challenge. Otherwise every method reaches the
+ * server, and a tool called without a credential answers with a tool error.
  * @param config - server configuration
  * @param appHtml - the built entity card, served as the `ui://` resource
  */
@@ -45,7 +47,11 @@ export const createRequestHandler =
     }
 
     const credential = readInboundCredential(req.headers);
-    if (requiresCredential(body) && rejectUnauthenticated(credential, res)) {
+    if (
+      config.customOAuthClient &&
+      requiresCredential(body) &&
+      rejectUnauthenticated(credential, res)
+    ) {
       const { correlationId } = readInboundCorrelation(req.headers);
       console.warn(
         `refused unauthenticated ${req.method} /mcp correlationId=${JSON.stringify(correlationId)}`,

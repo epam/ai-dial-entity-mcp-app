@@ -35,8 +35,10 @@ const callTool = {
   params: { name: 'find_entities', arguments: { name: 'x' } },
 };
 
-describe('the MCP request handler', () => {
-  const server = createServer(createRequestHandler(config, CARD_HTML));
+describe('the MCP request handler with a custom OAuth client', () => {
+  const server = createServer(
+    createRequestHandler({ ...config, customOAuthClient: true }, CARD_HTML),
+  );
   let baseUrl = '';
 
   beforeAll(async () => {
@@ -129,5 +131,82 @@ describe('the MCP request handler', () => {
   test('answers /health and unknown paths', async () => {
     expect((await fetch(`${baseUrl}/health`)).status).toBe(200);
     expect((await fetch(`${baseUrl}/other`)).status).toBe(404);
+  });
+});
+
+describe('the MCP request handler by default, with the caller token forwarded', () => {
+  const server = createServer(createRequestHandler(config, CARD_HTML));
+  let baseUrl = '';
+
+  beforeAll(async () => {
+    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    await new Promise<void>((done) => server.listen(0, done));
+    baseUrl = `http://localhost:${(server.address() as AddressInfo).port}`;
+  });
+
+  afterAll(async () => {
+    vi.restoreAllMocks();
+    server.closeAllConnections();
+    await new Promise((done) => server.close(done));
+  });
+
+  const post = (body: unknown, headers: Record<string, string> = {}) =>
+    fetch(`${baseUrl}/mcp`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        accept: 'application/json, text/event-stream',
+        ...headers,
+      },
+      body: JSON.stringify(body),
+    });
+
+  const showCard = {
+    jsonrpc: '2.0',
+    id: 5,
+    method: 'tools/call',
+    params: { name: 'show_entity_card', arguments: { id: 'skills/b/s' } },
+  };
+
+  test('lists the tools without a credential, so a toolset can be set up before forwarding is on', async () => {
+    const response = await post(listTools);
+    expect(response.status).toBe(200);
+    const text = await response.text();
+    expect(text).toContain('find_entities');
+    expect(text).toContain('show_entity_card');
+  });
+
+  test('answers a tool call without a credential with a tool error that names the missing setting, not a 401', async () => {
+    const response = await post(showCard);
+    expect(response.status).toBe(200);
+    expect(response.headers.get('www-authenticate')).toBeNull();
+    const text = await response.text();
+    expect(text).toContain('"isError":true');
+    expect(text).toContain('forward_auth_token');
+  });
+
+  test('lets a tool call with a bearer token through to Core, with that token', async () => {
+    const realFetch = globalThis.fetch;
+    const coreCalls: { url: string; authorization: string | null }[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.startsWith(baseUrl)) return realFetch(input, init);
+      coreCalls.push({
+        url,
+        authorization: new Headers(init?.headers).get('authorization'),
+      });
+      return new Response('{}', { status: 404 });
+    });
+    const response = await post(showCard, { authorization: 'Bearer abc.def' });
+    expect(response.status).toBe(200);
+    expect(await response.text()).not.toContain('forward_auth_token');
+    expect(coreCalls.length).toBeGreaterThan(0);
+    expect(
+      coreCalls.every((call) => call.url.startsWith(config.coreBaseUrl)),
+    ).toBe(true);
+    expect(
+      coreCalls.every((call) => call.authorization === 'Bearer abc.def'),
+    ).toBe(true);
+    vi.mocked(globalThis.fetch).mockRestore();
   });
 });
