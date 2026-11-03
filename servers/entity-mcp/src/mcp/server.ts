@@ -34,7 +34,7 @@ const NO_CREDENTIAL_MESSAGE =
   'This tool needs your DIAL identity, which was not forwarded with the request. An admin must enable forward_auth_token on the toolset and on the quick app that uses it.';
 
 const SHOW_TOOL_DESCRIPTION =
-  'Shows the card of one DIAL entity (skill, agent, toolset or prompt), read by its exact id. Use it when you have the id: from the user, a link, another tool, or `find_entities`. It does not search and does not accept a name: if you only have a name, call `find_entities` first, and never make up an id. Pass `kind` when you know the entity type.';
+  'Shows the card of one DIAL entity (skill, agent, toolset or prompt), read by its exact id. Use it when you have the id: from the user, a link, another tool, or `find_entities`. It does not search and does not accept a name: if you only have a name, call `find_entities` first, and never make up an id. Pass `kind` when you know the entity type. The card is already shown to the user when this tool returns, so do not repeat its contents (name, description, sections, links) in your reply; at most add one short sentence.';
 const ID_DESCRIPTION =
   "The exact entity id, for example `skills/{bucket}/{path}`, `prompts/{bucket}/{path}`, `toolsets/{bucket}/{path}` or an agent's deployment id. Copy it unchanged from its source; never construct one.";
 const KIND_DESCRIPTION =

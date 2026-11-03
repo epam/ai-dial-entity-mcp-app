@@ -640,6 +640,15 @@ describe('show_entity_card interface', () => {
     await close();
   });
 
+  test('tells the model the card is already shown, so it does not repeat the card in text', async () => {
+    const { client, close } = await connect();
+    const { tools } = await client.listTools();
+    const tool = tools.find((t) => t.name === 'show_entity_card')!;
+    expect(tool.description).toContain('already shown to the user');
+    expect(tool.description).toContain('do not repeat');
+    await close();
+  });
+
   test.each([[{ id: '' }], [{ id: '   ' }]])(
     'rejects %j with the usage message and no Core request',
     async (args) => {
