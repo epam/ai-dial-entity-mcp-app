@@ -31,7 +31,7 @@ const RESOURCE_URI = 'ui://entity-card/index.html';
 const RESOURCE_MIME_TYPE = 'text/html';
 const DEFAULT_LOCALE = 'en';
 const NO_CREDENTIAL_MESSAGE =
-  'This tool needs your DIAL identity, which was not forwarded with the request.';
+  'This tool needs your DIAL identity, which was not forwarded with the request. An admin must enable forward_auth_token on the toolset and on the quick app that uses it.';
 
 const SHOW_TOOL_DESCRIPTION =
   'Shows the card of one DIAL entity (skill, agent, toolset or prompt), read by its exact id. Use it when you have the id: from the user, a link, another tool, or `find_entities`. It does not search and does not accept a name: if you only have a name, call `find_entities` first, and never make up an id. Pass `kind` when you know the entity type.';

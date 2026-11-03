@@ -14,6 +14,29 @@ describe('loadConfig', () => {
     expect(config.actionTemplates).toEqual({});
   });
 
+  test.each([
+    [undefined, false],
+    ['', false],
+    ['false', false],
+    ['true', true],
+    [' TRUE ', true],
+  ])('reads CUSTOM_OAUTH_CLIENT=%j as %s', (value, expected) => {
+    const config = loadConfig({
+      DIAL_CORE_URL: 'https://core.example.com',
+      CUSTOM_OAUTH_CLIENT: value,
+    });
+    expect(config.customOAuthClient).toBe(expected);
+  });
+
+  test('rejects a CUSTOM_OAUTH_CLIENT value that is not true or false', () => {
+    expect(() =>
+      loadConfig({
+        DIAL_CORE_URL: 'https://core.example.com',
+        CUSTOM_OAUTH_CLIENT: 'yes',
+      }),
+    ).toThrow(/CUSTOM_OAUTH_CLIENT/);
+  });
+
   test('reads each action template from its own variable', () => {
     const config = loadConfig({
       DIAL_CORE_URL: 'https://core.example.com',

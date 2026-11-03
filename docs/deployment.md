@@ -43,6 +43,7 @@ Run the image built from the root `Dockerfile`. It listens on `/mcp`, with
 | `CHAT_BASE_URL`                         | for buttons | the chat's base URL; the button paths below are appended to it                                                                                                                                                                                                    |
 | `ENTITY_EDIT_URL_*`, `ENTITY_TRY_URL_*` | no          | the card's Edit and Try buttons, one variable per entity type (Try: agent, skill, prompt). A button appears only when its variable is set. An agent Edit button chosen by schema needs both `ENTITY_AGENT_SCHEMA_<KEY>` and `ENTITY_EDIT_URL_AGENT_SCHEMA_<KEY>`. |
 | `PORT`                                  | no          | default `8080`                                                                                                                                                                                                                                                    |
+| `CUSTOM_OAUTH_CLIENT`                   | no          | default `false`. Set `true` only when the toolset has its own OAuth client: then `tools/list` and `tools/call` without a token get a 401 so DIAL prompts for sign-in. Leave unset for the recommended `NONE` mode with a forwarded token.                         |
 
 Run one instance per chat, each with its own `CHAT_BASE_URL` and routes.
 Variable names, placeholders and a DIAL Chat example are in the
@@ -80,8 +81,9 @@ extra is needed; each user signs in to the toolset once.
 Ask the chat or the quick app about any DIAL entity (e.g. "give me info about
 <agent name>"). The answer should be followed by an entity card.
 
-| Symptom                                            | Cause                                                                                                                          |
-| -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| "Sign-in required … No credentials required" popup | `NONE` mode, but the token is not forwarded: a missing flag on the toolset or the quick app, or the quick app is not published |
-| "Failed to load MCP App"                           | `MCP_APP_SANDBOX_URL` unset or wrong, or the sandbox's allowed origin does not match the chat                                  |
-| 401 in the server log (`refused unauthenticated`)  | the request carried no bearer token                                                                                            |
+| Symptom                                                    | Cause                                                                                                                          |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| "Sign-in required … No credentials required" popup         | `NONE` mode with `CUSTOM_OAUTH_CLIENT=true` set by mistake, so the server answers 401; unset it                                |
+| "Failed to load MCP App"                                   | `MCP_APP_SANDBOX_URL` unset or wrong, or the sandbox's allowed origin does not match the chat                                  |
+| 401 in the server log (`refused unauthenticated`)          | `CUSTOM_OAUTH_CLIENT=true` and the request carried no bearer token                                                             |
+| Tool error "needs your DIAL identity … forward_auth_token" | `NONE` mode, but the token is not forwarded: a missing flag on the toolset or the quick app, or the quick app is not published |
