@@ -1,6 +1,14 @@
 import { createServer, request } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { afterAll, beforeAll, describe, expect, test, vi } from 'vitest';
+import {
+  afterAll,
+  beforeAll,
+  describe,
+  expect,
+  test,
+  vi,
+  type MockInstance,
+} from 'vitest';
 import { createRequestHandler } from './handler.ts';
 
 const config = {
@@ -38,9 +46,10 @@ const callTool = {
 describe('the MCP request handler with a custom OAuth client (the default)', () => {
   const server = createServer(createRequestHandler(config, CARD_HTML));
   let baseUrl = '';
+  let warn: MockInstance<typeof console.warn>;
 
   beforeAll(async () => {
-    vi.spyOn(console, 'warn').mockImplementation(() => {});
+    warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     await new Promise<void>((done) => server.listen(0, done));
     baseUrl = `http://localhost:${(server.address() as AddressInfo).port}`;
   });
@@ -72,8 +81,13 @@ describe('the MCP request handler with a custom OAuth client (the default)', () 
     expect(await response.text()).toContain('card');
   });
 
+  test('lists the tools without a credential, so a toolset can be set up before sign-in', async () => {
+    const response = await post(listTools);
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('show_entity_card');
+  });
+
   test.each([
-    ['tools/list', listTools],
     ['tools/call', callTool],
     ['a batch with tools/call', [{ ...readCard }, callTool]],
   ])(
@@ -88,8 +102,17 @@ describe('the MCP request handler with a custom OAuth client (the default)', () 
   test.each([
     ['an Api-Key', { 'api-key': 'raw-key' }],
     ['a non-bearer Authorization', { authorization: 'Basic dXNlcjpwYXNz' }],
-  ])('refuses tools/list with %s', async (_, headers) => {
-    expect((await post(listTools, headers)).status).toBe(401);
+  ])('refuses tools/call with %s', async (_, headers) => {
+    expect((await post(callTool, headers)).status).toBe(401);
+  });
+
+  test('logs the refused method and tool name, not the arguments', async () => {
+    warn.mockClear();
+    await post(callTool, { 'x-request-id': 'r-1' });
+    const line = String(warn.mock.calls.at(-1)?.[0]);
+    expect(line).toContain('refused unauthenticated POST /mcp');
+    expect(line).toContain('tools/call "find_entities"');
+    expect(line).not.toContain('"x"');
   });
 
   test('lists tools for a caller with a bearer token', async () => {

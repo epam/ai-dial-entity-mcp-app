@@ -3,6 +3,7 @@ import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/
 import type { ServerConfig } from './config.ts';
 import {
   handleHealth,
+  describeCredentialCalls,
   readInboundCorrelation,
   readInboundCredential,
   readJsonBody,
@@ -17,7 +18,7 @@ import { createMcpServer } from './mcp/server.ts';
  * Builds the HTTP request handler: `/health`, and `/mcp` as a stateless
  * Streamable HTTP MCP endpoint. Unless `customOAuthClient` is explicitly
  * false (the toolset forwards the user's session token) it refuses a
- * credential-less `tools/list` or `tools/call` with a 401 challenge. When it is
+ * credential-less `tools/call` with a 401 challenge. When it is
  * false every method reaches the server, and a tool called without a
  * credential answers with a tool error.
  * @param config - server configuration
@@ -55,7 +56,7 @@ export const createRequestHandler =
     ) {
       const { correlationId } = readInboundCorrelation(req.headers);
       console.warn(
-        `refused unauthenticated ${req.method} /mcp correlationId=${JSON.stringify(correlationId)}`,
+        `refused unauthenticated ${req.method} /mcp ${describeCredentialCalls(body)} correlationId=${JSON.stringify(correlationId)}`,
       );
       return;
     }
