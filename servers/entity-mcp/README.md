@@ -10,50 +10,61 @@ The Edit button is offered only for an entity in the caller's own bucket
 
 ## Authentication modes
 
-Two registrations are supported. Both end the same way: DIAL Core delivers the
-user's token in `Authorization`.
+Two registrations are supported. Both end the same way: DIAL Core delivers a
+user token in `Authorization`. They differ in which token that is.
 
-|                                   | Custom OAuth on the toolset                                                           | `NONE` (recommended)                                |
-| --------------------------------- | ------------------------------------------------------------------------------------- | --------------------------------------------------- |
-| Toolset `authentication_type`     | `OAUTH`, with your own client                                                         | `NONE`                                              |
-| Toolset `forward_auth_token`      | `false`                                                                               | `true`                                              |
-| Toolset `forward_per_request_key` | `false`                                                                               | `false`                                             |
-| Quick app `forward_auth_token`    | not needed                                                                            | `true`, on every quick app that uses the toolset    |
-| Where the token comes from        | the user signs in to the toolset once; Core sends the OAuth token                     | Core forwards the token of the user's own session   |
-| Constraint                        | the OAuth client must belong to the same identity provider as the user's DIAL session | none; works with any provider the platform supports |
+|                                   | Custom OAuth on the toolset (default, recommended)                                    | `NONE`, token forwarded (opt-in)                                              |
+| --------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Server `CUSTOM_OAUTH_CLIENT`      | unset or `true`                                                                       | `false`                                                                       |
+| Toolset `authentication_type`     | `OAUTH`, with your own client                                                         | `NONE`                                                                        |
+| Toolset `forward_auth_token`      | `false`                                                                               | `true`                                                                        |
+| Toolset `forward_per_request_key` | `false`                                                                               | `false`                                                                       |
+| Quick app `forward_auth_token`    | not needed                                                                            | `true`, on every quick app that uses the toolset                              |
+| Where the token comes from        | the user signs in to the toolset once; Core sends a token of the toolset's own client | Core forwards the token of the user's own DIAL session                        |
+| What the server can do with it    | only what the OAuth client's scope allows                                             | everything the DIAL session token allows                                      |
+| Constraint                        | the OAuth client must belong to the same identity provider as the user's DIAL session | an agent that also holds other MCP servers can leak the session token to them |
+
+Prefer custom OAuth: the toolset gets a token with a scope you control, so a
+leaked token does far less harm than the user's whole DIAL session token.
+Forwarding is kept for setups that cannot register an OAuth client; set
+`CUSTOM_OAUTH_CLIENT=false` explicitly to use it.
 
 `forward_auth_token` can only be set by an admin, on the toolset and on each
 quick app. With `NONE`, a quick app that lacks the flag sends no token, and a
 tool call answers with an error that names `forward_auth_token`. Fix it by
-setting the flag, not by signing in. (`CUSTOM_OAUTH_CLIENT=true` on a `NONE`
-toolset is a misconfiguration: the server then answers 401, and the user is
+setting the flag, not by signing in. (Leaving `CUSTOM_OAUTH_CLIENT` unset on a
+`NONE` toolset is a misconfiguration: the server answers 401, and the user is
 shown a sign-in prompt for a toolset that has nothing to sign in to.)
 
 ### What requires a credential
 
 Which requests need the caller's token depends on `CUSTOM_OAUTH_CLIENT`.
 
-| JSON-RPC method                                                                 | Default (token forwarded, `NONE`)                                               | `CUSTOM_OAUTH_CLIENT=true`           |
-| ------------------------------------------------------------------------------- | ------------------------------------------------------------------------------- | ------------------------------------ |
-| `tools/list`                                                                    | open: nothing in it is user data, so a toolset can be set up before any sign-in | HTTP 401, `WWW-Authenticate: Bearer` |
-| `tools/call`                                                                    | the tool answers with an error that names the missing `forward_auth_token`      | HTTP 401, `WWW-Authenticate: Bearer` |
-| every other method, e.g. `initialize`, `notifications/*`, `ping`, `resources/*` | open                                                                            | open                                 |
+| JSON-RPC method                                                                 | Default / `true` (custom OAuth)      | `false` (token forwarded, `NONE`)                                               |
+| ------------------------------------------------------------------------------- | ------------------------------------ | ------------------------------------------------------------------------------- |
+| `tools/list`                                                                    | HTTP 401, `WWW-Authenticate: Bearer` | open: nothing in it is user data, so a toolset can be set up before any sign-in |
+| `tools/call`                                                                    | HTTP 401, `WWW-Authenticate: Bearer` | the tool answers with an error that names the missing `forward_auth_token`      |
+| every other method, e.g. `initialize`, `notifications/*`, `ping`, `resources/*` | open                                 | open                                                                            |
 
 Only a bearer `Authorization` counts; an `Api-Key` or another scheme is treated
 as no credential. In both modes a tool never calls Core without a credential.
 
-By default a missing token is not something the user can fix by signing in: an
-admin must set `forward_auth_token` on the toolset and on the quick app. So the
-server does not challenge; the tool's error text reaches the chat and says what
-to enable.
+Why `tools/list` is challenged in the default mode: DIAL quick apps connect to a
+toolset at the start of a request (`initialize`, then `tools/list`). A 401 there
+is the signal they turn into a sign-in prompt, and they retry once after the
+user signs in. A 401 that first appears on `tools/call`, after the session is
+open, was not recovered when tried with MCP SDK 1.30: the call hung until its
+timeout. The quick apps documentation describes a retry for that case, so this
+may change. `tools/list` lists nothing secret; the challenge is only the
+sign-in trigger. The gated set is in `src/http.ts`
+(`CREDENTIAL_METHODS`). Core reads the card with `initialize` and
+`resources/read` and sends no credential for a `NONE` toolset, so those stay
+open in both modes; the card is a static page with no user data.
 
-Set `CUSTOM_OAUTH_CLIENT=true` for a toolset registered with its own OAuth
-client. DIAL then needs the 401 challenge on `tools/list` to prompt the user to
-sign in, and the 401 on `tools/call` keeps a call without a token from reaching
-Core. Core reads the card with `initialize` and `resources/read` and sends no
-credential for a `NONE` toolset, so those stay open in both modes; the card is
-a static page with no user data. The gated set is in `src/http.ts`
-(`CREDENTIAL_METHODS`).
+With `CUSTOM_OAUTH_CLIENT=false` a missing token is not something the user can
+fix by signing in: an admin must set `forward_auth_token` on the toolset and on
+the quick app. So the server does not challenge; the tool's error text reaches
+the chat and says what to enable.
 
 It exposes:
 
@@ -90,23 +101,23 @@ It exposes:
 
 There is nothing else to configure:
 
-| Var                                  | Required | Default                            | Purpose                                                                                                                                                                               |
-| ------------------------------------ | -------- | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `DIAL_CORE_URL`                      | **yes**  | —                                  | Where to call Core back. Not a credential; the server fails to start without it.                                                                                                      |
-| `CUSTOM_OAUTH_CLIENT`                | no       | `false`                            | Set `true` for a toolset with its own OAuth client: `tools/list` and `tools/call` without a token get a 401 challenge. See [What requires a credential](#what-requires-a-credential). |
-| `CHAT_BASE_URL`                      | no       | unset                              | Base URL of the chat this instance serves (no query or fragment). Path templates below are appended to it.                                                                            |
-| `ENTITY_EDIT_URL_SKILL`              | no       | unset                              | Edit button for a skill.                                                                                                                                                              |
-| `ENTITY_EDIT_URL_PROMPT`             | no       | unset                              | Edit button for a prompt.                                                                                                                                                             |
-| `ENTITY_EDIT_URL_TOOLSET`            | no       | unset                              | Edit button for a toolset.                                                                                                                                                            |
-| `ENTITY_EDIT_URL_AGENT`              | no       | unset                              | Edit button for an agent without an application type schema.                                                                                                                          |
-| `ENTITY_EDIT_URL_AGENT_SCHEMA`       | no       | unset                              | Edit button for an agent with an application type schema (may use `{schemaId}`).                                                                                                      |
-| `ENTITY_AGENT_SCHEMA_<KEY>`          | no       | unset                              | An application type schema id, paired by `<KEY>` with `ENTITY_EDIT_URL_AGENT_SCHEMA_<KEY>`.                                                                                           |
-| `ENTITY_EDIT_URL_AGENT_SCHEMA_<KEY>` | no       | unset                              | Edit button for agents whose schema id is that of `ENTITY_AGENT_SCHEMA_<KEY>` (may use `{schemaId}`).                                                                                 |
-| `ENTITY_TRY_URL_AGENT`               | no       | unset                              | Try button for an agent.                                                                                                                                                              |
-| `ENTITY_TRY_URL_SKILL`               | no       | unset                              | Try button for a skill.                                                                                                                                                               |
-| `ENTITY_TRY_URL_PROMPT`              | no       | unset                              | Try button for a prompt.                                                                                                                                                              |
-| `PORT`                               | no       | `8080`                             | Matches the test server and the proven DIAL Admin registration.                                                                                                                       |
-| `APP_HTML`                           | no       | `apps/entity-card/dist/index.html` | Path to the built card, for local runs.                                                                                                                                               |
+| Var                                  | Required | Default                            | Purpose                                                                                                                                                                                                                                                              |
+| ------------------------------------ | -------- | ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `DIAL_CORE_URL`                      | **yes**  | —                                  | Where to call Core back. Not a credential; the server fails to start without it.                                                                                                                                                                                     |
+| `CUSTOM_OAUTH_CLIENT`                | no       | `true`                             | Default: the toolset has its own OAuth client, and `tools/list` and `tools/call` without a token get a 401 challenge. Set `false` only for a toolset that forwards the user's session token (`NONE`). See [What requires a credential](#what-requires-a-credential). |
+| `CHAT_BASE_URL`                      | no       | unset                              | Base URL of the chat this instance serves (no query or fragment). Path templates below are appended to it.                                                                                                                                                           |
+| `ENTITY_EDIT_URL_SKILL`              | no       | unset                              | Edit button for a skill.                                                                                                                                                                                                                                             |
+| `ENTITY_EDIT_URL_PROMPT`             | no       | unset                              | Edit button for a prompt.                                                                                                                                                                                                                                            |
+| `ENTITY_EDIT_URL_TOOLSET`            | no       | unset                              | Edit button for a toolset.                                                                                                                                                                                                                                           |
+| `ENTITY_EDIT_URL_AGENT`              | no       | unset                              | Edit button for an agent without an application type schema.                                                                                                                                                                                                         |
+| `ENTITY_EDIT_URL_AGENT_SCHEMA`       | no       | unset                              | Edit button for an agent with an application type schema (may use `{schemaId}`).                                                                                                                                                                                     |
+| `ENTITY_AGENT_SCHEMA_<KEY>`          | no       | unset                              | An application type schema id, paired by `<KEY>` with `ENTITY_EDIT_URL_AGENT_SCHEMA_<KEY>`.                                                                                                                                                                          |
+| `ENTITY_EDIT_URL_AGENT_SCHEMA_<KEY>` | no       | unset                              | Edit button for agents whose schema id is that of `ENTITY_AGENT_SCHEMA_<KEY>` (may use `{schemaId}`).                                                                                                                                                                |
+| `ENTITY_TRY_URL_AGENT`               | no       | unset                              | Try button for an agent.                                                                                                                                                                                                                                             |
+| `ENTITY_TRY_URL_SKILL`               | no       | unset                              | Try button for a skill.                                                                                                                                                                                                                                              |
+| `ENTITY_TRY_URL_PROMPT`              | no       | unset                              | Try button for a prompt.                                                                                                                                                                                                                                             |
+| `PORT`                               | no       | `8080`                             | Matches the test server and the proven DIAL Admin registration.                                                                                                                                                                                                      |
+| `APP_HTML`                           | no       | `apps/entity-card/dist/index.html` | Path to the built card, for local runs.                                                                                                                                                                                                                              |
 
 ### Card buttons
 

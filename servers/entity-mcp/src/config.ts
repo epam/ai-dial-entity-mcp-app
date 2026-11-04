@@ -26,9 +26,10 @@ export type ServerConfig = {
   /**
    * Whether the toolset uses its own OAuth client. Then a request without a
    * bearer token gets an HTTP 401 challenge on `tools/list` and `tools/call`,
-   * which makes DIAL ask the user to sign in. Otherwise (the toolset forwards
-   * the user's own token) `tools/list` is open and a `tools/call` without a
-   * token is answered with a tool error that names the missing setting.
+   * which makes DIAL ask the user to sign in. Only an explicit `false` (the
+   * toolset forwards the user's own session token) leaves `tools/list` open and
+   * answers a `tools/call` without a token with a tool error that names the
+   * missing setting.
    */
   customOAuthClient?: boolean;
   chatBaseUrl?: string;
@@ -143,14 +144,20 @@ const parseHttpBaseUrl = (name: string, value: string): string => {
 };
 
 /**
- * Reads a boolean flag: unset or empty is false, `true` and `false` are
- * accepted in any case, anything else is a startup error.
+ * Reads a boolean flag: unset or empty gives the default, `true` and `false`
+ * are accepted in any case, anything else is a startup error.
  * @param name - variable name, used in the error message
  * @param value - the raw value, if set
+ * @param fallback - the result when the value is unset or empty
  */
-const parseFlag = (name: string, value: string | undefined): boolean => {
+const parseFlag = (
+  name: string,
+  value: string | undefined,
+  fallback: boolean,
+): boolean => {
   const text = value?.trim().toLowerCase();
-  if (!text || text === 'false') return false;
+  if (!text) return fallback;
+  if (text === 'false') return false;
   if (text === 'true') return true;
   throw new Error(`${name} must be true or false, got: ${value}`);
 };
@@ -186,6 +193,7 @@ export const loadConfig = (env: NodeJS.ProcessEnv): ServerConfig => {
     customOAuthClient: parseFlag(
       'CUSTOM_OAUTH_CLIENT',
       env.CUSTOM_OAUTH_CLIENT,
+      true,
     ),
     actionTemplates: loadActionTemplates(env),
     port,

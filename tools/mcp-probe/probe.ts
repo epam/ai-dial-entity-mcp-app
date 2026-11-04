@@ -45,7 +45,7 @@ const readCredentialHeaders = (): Record<string, string> => {
   const jwt = process.env.DIAL_USER_JWT?.trim();
   if (jwt) return { Authorization: `Bearer ${jwt}` };
   console.log(
-    'DIAL_USER_JWT is not set; a server with CUSTOM_OAUTH_CLIENT=true answers 401, any other answers tool calls with an error.',
+    'DIAL_USER_JWT is not set; a default server answers 401, one with CUSTOM_OAUTH_CLIENT=false answers tool calls with an error.',
   );
   return {};
 };

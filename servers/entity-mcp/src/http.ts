@@ -27,14 +27,14 @@ const JSON_RPC_PARSE_ERROR = -32700;
 const JSON_RPC_INVALID_REQUEST = -32600;
 
 /**
- * JSON-RPC methods that get a 401 challenge when `CUSTOM_OAUTH_CLIENT` is on
+ * JSON-RPC methods that get a 401 challenge unless `CUSTOM_OAUTH_CLIENT=false`
  * and the request carries no bearer token. `tools/call` reads from Core as the
  * caller. `tools/list` lists nothing secret: it is here only so DIAL, which
  * opens a session with `initialize` and then `tools/list`, reads the 401 as the
  * signal to prompt the user to sign in with the toolset's own OAuth client.
  * Core reads the card with `initialize` and `resources/read` and no
- * credential, so those stay open. Without the flag nothing is challenged here:
- * the tools themselves refuse to call Core without a credential, so a new tool
+ * credential, so those stay open. With `CUSTOM_OAUTH_CLIENT=false` nothing is
+ * challenged here: the tools themselves refuse to call Core without a credential, so a new tool
  * must make the same check.
  *
  * This is a deny-list: a method added later is open until it is listed here.

@@ -15,9 +15,10 @@ describe('loadConfig', () => {
   });
 
   test.each([
-    [undefined, false],
-    ['', false],
+    [undefined, true],
+    ['', true],
     ['false', false],
+    [' FALSE ', false],
     ['true', true],
     [' TRUE ', true],
   ])('reads CUSTOM_OAUTH_CLIENT=%j as %s', (value, expected) => {
