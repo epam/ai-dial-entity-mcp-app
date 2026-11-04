@@ -25,11 +25,10 @@ export type ServerConfig = {
   coreBaseUrl: string;
   /**
    * Whether the toolset uses its own OAuth client. Then a request without a
-   * bearer token gets an HTTP 401 challenge on `tools/list` and `tools/call`,
+   * bearer token gets an HTTP 401 challenge on `tools/call`,
    * which makes DIAL ask the user to sign in. Only an explicit `false` (the
-   * toolset forwards the user's own session token) leaves `tools/list` open and
-   * answers a `tools/call` without a token with a tool error that names the
-   * missing setting.
+   * toolset forwards the user's own session token) answers a `tools/call`
+   * without a token with a tool error that names the missing setting.
    */
   customOAuthClient?: boolean;
   chatBaseUrl?: string;

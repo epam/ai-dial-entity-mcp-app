@@ -1,6 +1,8 @@
 import { describe, expect, test } from 'vitest';
 import type { ServerResponse } from 'node:http';
 import {
+  describeCredentialCalls,
+  hasClientChannel,
   readInboundCorrelation,
   readInboundCredential,
   rejectUnauthenticated,
@@ -113,12 +115,13 @@ describe('readInboundCredential', () => {
 describe('requiresCredential', () => {
   const call = (method: string) => ({ jsonrpc: '2.0', id: 1, method });
 
-  test.each(['tools/list', 'tools/call'])('%s needs a credential', (method) => {
-    expect(requiresCredential(call(method))).toBe(true);
+  test('tools/call needs a credential', () => {
+    expect(requiresCredential(call('tools/call'))).toBe(true);
   });
 
   test.each([
     'initialize',
+    'tools/list',
     'notifications/initialized',
     'ping',
     'resources/read',
@@ -140,5 +143,59 @@ describe('requiresCredential', () => {
     expect(requiresCredential(null)).toBe(false);
     expect(requiresCredential('tools/call')).toBe(false);
     expect(requiresCredential({ method: 42 })).toBe(false);
+  });
+});
+
+describe('describeCredentialCalls', () => {
+  const toolCall = (name: unknown) => ({
+    jsonrpc: '2.0',
+    id: 1,
+    method: 'tools/call',
+    params: { name, arguments: { secret: 'value' } },
+  });
+
+  test('names the method and the quoted tool, never the arguments', () => {
+    const text = describeCredentialCalls(toolCall('find_entities'));
+    expect(text).toBe('tools/call "find_entities"');
+    expect(text).not.toContain('secret');
+  });
+
+  test('names every credential call of a batch and skips the open ones', () => {
+    const ping = { jsonrpc: '2.0', id: 2, method: 'ping' };
+    expect(describeCredentialCalls([ping, toolCall('a'), toolCall('b')])).toBe(
+      'tools/call "a", tools/call "b"',
+    );
+  });
+
+  test('clips a long tool name and escapes quotes and line breaks', () => {
+    expect(describeCredentialCalls(toolCall('x'.repeat(200)))).toBe(
+      `tools/call "${'x'.repeat(64)}"`,
+    );
+    expect(describeCredentialCalls(toolCall('a"\nb'))).toBe(
+      'tools/call "a\\"\\nb"',
+    );
+  });
+
+  test('names only the method when there is no usable tool name', () => {
+    expect(describeCredentialCalls(toolCall(42))).toBe('tools/call');
+    expect(
+      describeCredentialCalls({ jsonrpc: '2.0', id: 1, method: 'tools/call' }),
+    ).toBe('tools/call');
+  });
+
+  test('is empty when nothing needs a credential', () => {
+    expect(describeCredentialCalls({ method: 'ping' })).toBe('');
+    expect(describeCredentialCalls(undefined)).toBe('');
+  });
+});
+
+describe('hasClientChannel', () => {
+  test('is true when the header is present, whatever its value', () => {
+    expect(hasClientChannel({ 'x-dial-client-channel-id': 'abc' })).toBe(true);
+  });
+
+  test('is false when the header is missing or empty', () => {
+    expect(hasClientChannel({})).toBe(false);
+    expect(hasClientChannel({ 'x-dial-client-channel-id': '' })).toBe(false);
   });
 });

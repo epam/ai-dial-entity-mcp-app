@@ -28,21 +28,21 @@ const JSON_RPC_INVALID_REQUEST = -32600;
 
 /**
  * JSON-RPC methods that get a 401 challenge unless `CUSTOM_OAUTH_CLIENT=false`
- * and the request carries no bearer token. `tools/call` reads from Core as the
- * caller. `tools/list` lists nothing secret: it is here only so DIAL, which
- * opens a session with `initialize` and then `tools/list`, reads the 401 as the
- * signal to prompt the user to sign in with the toolset's own OAuth client.
- * Core reads the card with `initialize` and `resources/read` and no
- * credential, so those stay open. With `CUSTOM_OAUTH_CLIENT=false` nothing is
- * challenged here: the tools themselves refuse to call Core without a credential, so a new tool
- * must make the same check.
+ * and the request carries no bearer token. Only `tools/call` is here: it reads
+ * from Core as the caller. DIAL quick apps answer that 401 by asking the user
+ * to sign in and retrying the call. `tools/list` lists nothing secret and stays
+ * open, so a toolset can be set up before any sign-in. Core reads the card with
+ * `initialize` and `resources/read` and no credential, so those stay open too.
+ * With `CUSTOM_OAUTH_CLIENT=false` nothing is challenged here: the tools
+ * themselves refuse to call Core without a credential, so a new tool must make
+ * the same check.
  *
  * This is a deny-list: a method added later is open until it is listed here.
  * The server serves only tools and resources, so no other method reaches user
  * data. A test pins the server's capabilities; when it fails because a new
  * one was added, decide which of its methods belong here.
  */
-const CREDENTIAL_METHODS = new Set(['tools/list', 'tools/call']);
+const CREDENTIAL_METHODS = new Set(['tools/call']);
 
 /** A request body that cannot be accepted, with the status to answer. */
 export class RequestBodyError extends Error {
@@ -112,23 +112,66 @@ export const writeBodyError = (
     );
 };
 
+const MAX_LOGGED_TOOL_NAME = 64;
+
+type CredentialCall = { method: string; tool?: string };
+
 /**
- * Tells whether a JSON-RPC message, or any message of a batch, calls a method
- * that needs the caller's credential. A message with no method (a reply, or not
- * a JSON-RPC message at all) is left to the transport to reject.
+ * Collects the messages of a JSON-RPC body, or of a batch, that call a method
+ * needing the caller's credential, with the tool name of a `tools/call`. A
+ * message with no method (a reply, or not a JSON-RPC message at all) is left
+ * to the transport to reject.
  * @param body - the parsed request body
  */
-export const requiresCredential = (body: unknown): boolean => {
+const readCredentialCalls = (body: unknown): CredentialCall[] => {
   const messages: unknown[] = Array.isArray(body) ? body : [body];
-  return messages.some(
-    (message) =>
-      typeof message === 'object' &&
-      message !== null &&
-      'method' in message &&
-      typeof message.method === 'string' &&
-      CREDENTIAL_METHODS.has(message.method),
-  );
+  return messages.flatMap((message) => {
+    if (
+      typeof message !== 'object' ||
+      message === null ||
+      !('method' in message) ||
+      typeof message.method !== 'string' ||
+      !CREDENTIAL_METHODS.has(message.method)
+    ) {
+      return [];
+    }
+    const params = 'params' in message ? message.params : undefined;
+    const name =
+      typeof params === 'object' && params !== null && 'name' in params
+        ? params.name
+        : undefined;
+    return [
+      {
+        method: message.method,
+        tool:
+          typeof name === 'string'
+            ? name.slice(0, MAX_LOGGED_TOOL_NAME)
+            : undefined,
+      },
+    ];
+  });
 };
+
+/**
+ * Tells whether a JSON-RPC message, or any message of a batch, calls a method
+ * that needs the caller's credential.
+ * @param body - the parsed request body
+ */
+export const requiresCredential = (body: unknown): boolean =>
+  readCredentialCalls(body).length > 0;
+
+/**
+ * Names the credential-needing calls of a request body for a log line: the
+ * method and, for a `tools/call`, the quoted tool name (clipped). Arguments are
+ * never included.
+ * @param body - the parsed request body
+ */
+export const describeCredentialCalls = (body: unknown): string =>
+  readCredentialCalls(body)
+    .map(({ method, tool }) =>
+      tool === undefined ? method : `${method} ${JSON.stringify(tool)}`,
+    )
+    .join(', ');
 
 /**
  * Refuses a request that carries no forwarded credential with HTTP 401 and a
@@ -154,6 +197,17 @@ export const rejectUnauthenticated = (
 const firstValue = (
   value: string | string[] | undefined,
 ): string | undefined => (Array.isArray(value) ? value[0] : value);
+
+const CLIENT_CHANNEL_HEADER = 'x-dial-client-channel-id';
+
+/**
+ * Tells whether the request carries the header DIAL Chat uses to offer the
+ * user a sign-in prompt. Only its presence is read, never its value, so a log
+ * line can say whether a refused call had a channel to prompt on.
+ * @param headers - inbound request headers
+ */
+export const hasClientChannel = (headers: IncomingHttpHeaders): boolean =>
+  Boolean(firstValue(headers[CLIENT_CHANNEL_HEADER]));
 
 /**
  * Picks the caller's forwarded credential off the inbound request headers:

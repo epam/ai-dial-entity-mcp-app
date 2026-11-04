@@ -14,9 +14,9 @@ optionally with `--kind` — prints the result.
 
 The probe reads a user JWT from `DIAL_USER_JWT` and sends it as
 `Authorization: Bearer <value>`, the way DIAL Core would deliver it to the real
-server. Without it, a default server answers 401 to both `tools/list` and a tool
-call; a server started with `CUSTOM_OAUTH_CLIENT=false` lists its tools and
-answers a tool call with an error naming `forward_auth_token`. The probe prints a note when the
+server. Without it, a default server lists its tools and answers 401 to a tool call; a
+server started with `CUSTOM_OAUTH_CLIENT=false` lists its tools and answers a
+tool call with an error naming `forward_auth_token`. The probe prints a note when the
 variable is not set and still connects, which is how to check either path.
 
 **This env var lives only here, in the dev tool.** The entity MCP server
