@@ -198,6 +198,17 @@ const firstValue = (
   value: string | string[] | undefined,
 ): string | undefined => (Array.isArray(value) ? value[0] : value);
 
+const CLIENT_CHANNEL_HEADER = 'x-dial-client-channel-id';
+
+/**
+ * Tells whether the request carries the header DIAL Chat uses to offer the
+ * user a sign-in prompt. Only its presence is read, never its value, so a log
+ * line can say whether a refused call had a channel to prompt on.
+ * @param headers - inbound request headers
+ */
+export const hasClientChannel = (headers: IncomingHttpHeaders): boolean =>
+  Boolean(firstValue(headers[CLIENT_CHANNEL_HEADER]));
+
 /**
  * Picks the caller's forwarded credential off the inbound request headers:
  * the `Authorization` header when it carries a bearer token, nothing else.

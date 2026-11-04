@@ -4,6 +4,7 @@ import type { ServerConfig } from './config.ts';
 import {
   handleHealth,
   describeCredentialCalls,
+  hasClientChannel,
   readInboundCorrelation,
   readInboundCredential,
   readJsonBody,
@@ -56,7 +57,7 @@ export const createRequestHandler =
     ) {
       const { correlationId } = readInboundCorrelation(req.headers);
       console.warn(
-        `refused unauthenticated ${req.method} /mcp ${describeCredentialCalls(body)} correlationId=${JSON.stringify(correlationId)}`,
+        `refused unauthenticated ${req.method} /mcp ${describeCredentialCalls(body)} clientChannel=${hasClientChannel(req.headers) ? 'present' : 'absent'} correlationId=${JSON.stringify(correlationId)}`,
       );
       return;
     }

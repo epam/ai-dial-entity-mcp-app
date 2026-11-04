@@ -2,6 +2,7 @@ import { describe, expect, test } from 'vitest';
 import type { ServerResponse } from 'node:http';
 import {
   describeCredentialCalls,
+  hasClientChannel,
   readInboundCorrelation,
   readInboundCredential,
   rejectUnauthenticated,
@@ -185,5 +186,16 @@ describe('describeCredentialCalls', () => {
   test('is empty when nothing needs a credential', () => {
     expect(describeCredentialCalls({ method: 'ping' })).toBe('');
     expect(describeCredentialCalls(undefined)).toBe('');
+  });
+});
+
+describe('hasClientChannel', () => {
+  test('is true when the header is present, whatever its value', () => {
+    expect(hasClientChannel({ 'x-dial-client-channel-id': 'abc' })).toBe(true);
+  });
+
+  test('is false when the header is missing or empty', () => {
+    expect(hasClientChannel({})).toBe(false);
+    expect(hasClientChannel({ 'x-dial-client-channel-id': '' })).toBe(false);
   });
 });

@@ -115,6 +115,18 @@ describe('the MCP request handler with a custom OAuth client (the default)', () 
     expect(line).not.toContain('"x"');
   });
 
+  test('logs whether the refused call carried a client channel, not its value', async () => {
+    warn.mockClear();
+    await post(callTool);
+    expect(String(warn.mock.calls.at(-1)?.[0])).toContain(
+      'clientChannel=absent',
+    );
+    await post(callTool, { 'x-dial-client-channel-id': 'channel-value-1' });
+    const line = String(warn.mock.calls.at(-1)?.[0]);
+    expect(line).toContain('clientChannel=present');
+    expect(line).not.toContain('channel-value-1');
+  });
+
   test('lists tools for a caller with a bearer token', async () => {
     const response = await post(listTools, { authorization: 'Bearer abc.def' });
     expect(response.status).toBe(200);

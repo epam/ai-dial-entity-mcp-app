@@ -56,8 +56,10 @@ on `tools/call` by asking the user to sign in and retrying the call. The
 challenged set is in `src/http.ts` (`CREDENTIAL_METHODS`). Core reads the card
 with `initialize` and `resources/read` and sends no credential for a `NONE`
 toolset, so those stay open in both modes; the card is a static page with no
-user data. A refused call is logged with its JSON-RPC method and tool name,
-never its arguments.
+user data. A refused call is logged with its JSON-RPC method, tool name and
+whether the request carried the `X-DIAL-CLIENT-CHANNEL-ID` header that lets DIAL
+prompt for sign-in (`clientChannel=present` or `absent`), never its arguments or
+the header value.
 
 With `CUSTOM_OAUTH_CLIENT=false` a missing token is not something the user can
 fix by signing in: an admin must set `forward_auth_token` on the toolset and on
