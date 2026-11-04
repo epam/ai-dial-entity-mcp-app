@@ -25,10 +25,10 @@ All other variables are described in the sandbox's own README.
 
 ## 3. The chat
 
-| Variable                        | Value                                                                                                                               |
-| ------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `MCP_APP_SANDBOX_URL`           | base URL of the sandbox from step 2. Without it, no card renders.                                                                   |
-| `LIVE_CHAT_INTERACTION_ENABLED` | `true`, **only if you use custom OAuth** (step 5). It makes the chat show a sign-in prompt mid-conversation. Not needed for `NONE`. |
+| Variable                        | Value                                                                                                                            |
+| ------------------------------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| `MCP_APP_SANDBOX_URL`           | base URL of the sandbox from step 2. Without it, no card renders.                                                                |
+| `LIVE_CHAT_INTERACTION_ENABLED` | `true`, for custom OAuth (step 5, the default). It makes the chat show a sign-in prompt mid-conversation. Not needed for `NONE`. |
 
 If `ENABLED_UI_FEATURES` is set, it must include `live-chat-interaction` for the above.
 
@@ -43,7 +43,7 @@ Run the image built from the root `Dockerfile`. It listens on `/mcp`, with
 | `CHAT_BASE_URL`                         | for buttons | the chat's base URL; the button paths below are appended to it                                                                                                                                                                                                    |
 | `ENTITY_EDIT_URL_*`, `ENTITY_TRY_URL_*` | no          | the card's Edit and Try buttons, one variable per entity type (Try: agent, skill, prompt). A button appears only when its variable is set. An agent Edit button chosen by schema needs both `ENTITY_AGENT_SCHEMA_<KEY>` and `ENTITY_EDIT_URL_AGENT_SCHEMA_<KEY>`. |
 | `PORT`                                  | no          | default `8080`                                                                                                                                                                                                                                                    |
-| `CUSTOM_OAUTH_CLIENT`                   | no          | default `false`. Set `true` only when the toolset has its own OAuth client: then `tools/list` and `tools/call` without a token get a 401 so DIAL prompts for sign-in. Leave unset for the recommended `NONE` mode with a forwarded token.                         |
+| `CUSTOM_OAUTH_CLIENT`                   | no          | default `true`: the toolset has its own OAuth client, so `tools/list` and `tools/call` without a token get a 401 and DIAL prompts for sign-in. Set `false` only for a toolset that forwards the user's session token (`NONE`), which is not recommended.          |
 
 Run one instance per chat, each with its own `CHAT_BASE_URL` and routes.
 Variable names, placeholders and a DIAL Chat example are in the
@@ -59,31 +59,36 @@ Create a toolset with:
 - an authentication mode, one of (details in
   [Authentication modes](../servers/entity-mcp/README.md#authentication-modes)):
 
-|                           | `NONE` (recommended) | Custom OAuth                                                                          |
-| ------------------------- | -------------------- | ------------------------------------------------------------------------------------- |
-| Authentication type       | `NONE`               | `OAUTH`: client ID, secret, endpoints, redirect URI                                   |
-| `forward_auth_token`      | `true`               | `false`                                                                               |
-| `forward_per_request_key` | `false`, always      | `false`                                                                               |
-| Constraint                | none                 | the OAuth client must belong to the same identity provider as the user's chat session |
+|                              | Custom OAuth (recommended)                                                            | `NONE` (opt-in)                                       |
+| ---------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------- |
+| Server `CUSTOM_OAUTH_CLIENT` | unset or `true`                                                                       | `false`                                               |
+| Authentication type          | `OAUTH`: client ID, secret, endpoints, redirect URI                                   | `NONE`                                                |
+| `forward_auth_token`         | `false`                                                                               | `true`                                                |
+| `forward_per_request_key`    | `false`                                                                               | `false`, always                                       |
+| Constraint                   | the OAuth client must belong to the same identity provider as the user's chat session | the user's whole session token reaches the MCP server |
+
+Prefer custom OAuth: the toolset gets a token with a scope you control. With
+`NONE` the user's session token is forwarded, and an agent that also holds
+other MCP servers can leak it to them.
 
 `forward_auth_token` can only be set by an admin (DIAL Admin or the Core config
 API); the chat's toolset editor has no field for it.
 
 ## 6. The quick app (optional)
 
-Create a quick app and select the toolset. With `NONE`, an admin must also set
-`forward_auth_token: true` on the quick app, and the quick app must be
-published: a personal one cannot carry the flag. With custom OAuth nothing
-extra is needed; each user signs in to the toolset once.
+Create a quick app and select the toolset. With custom OAuth nothing extra is
+needed; each user signs in to the toolset once. With `NONE`, an admin must also
+set `forward_auth_token: true` on the quick app, and the quick app must be
+published: a personal one cannot carry the flag.
 
 ## 7. Check it works
 
 Ask the chat or the quick app about any DIAL entity (e.g. "give me info about
 <agent name>"). The answer should be followed by an entity card.
 
-| Symptom                                                    | Cause                                                                                                                          |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
-| "Sign-in required … No credentials required" popup         | `NONE` mode with `CUSTOM_OAUTH_CLIENT=true` set by mistake, so the server answers 401; unset it                                |
-| "Failed to load MCP App"                                   | `MCP_APP_SANDBOX_URL` unset or wrong, or the sandbox's allowed origin does not match the chat                                  |
-| 401 in the server log (`refused unauthenticated`)          | `CUSTOM_OAUTH_CLIENT=true` and the request carried no bearer token                                                             |
-| Tool error "needs your DIAL identity … forward_auth_token" | `NONE` mode, but the token is not forwarded: a missing flag on the toolset or the quick app, or the quick app is not published |
+| Symptom                                                    | Cause                                                                                                                                                                    |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| "Sign-in required … No credentials required" popup         | `NONE` toolset, but the server runs with the default `CUSTOM_OAUTH_CLIENT=true`, so it answers 401; set `CUSTOM_OAUTH_CLIENT=false`, or move the toolset to custom OAuth |
+| "Failed to load MCP App"                                   | `MCP_APP_SANDBOX_URL` unset or wrong, or the sandbox's allowed origin does not match the chat                                                                            |
+| 401 in the server log (`refused unauthenticated`)          | custom OAuth mode (the default) and the request carried no bearer token                                                                                                  |
+| Tool error "needs your DIAL identity … forward_auth_token" | `NONE` mode, but the token is not forwarded: a missing flag on the toolset or the quick app, or the quick app is not published                                           |

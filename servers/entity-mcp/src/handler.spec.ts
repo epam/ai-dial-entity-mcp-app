@@ -35,10 +35,8 @@ const callTool = {
   params: { name: 'find_entities', arguments: { name: 'x' } },
 };
 
-describe('the MCP request handler with a custom OAuth client', () => {
-  const server = createServer(
-    createRequestHandler({ ...config, customOAuthClient: true }, CARD_HTML),
-  );
+describe('the MCP request handler with a custom OAuth client (the default)', () => {
+  const server = createServer(createRequestHandler(config, CARD_HTML));
   let baseUrl = '';
 
   beforeAll(async () => {
@@ -134,8 +132,10 @@ describe('the MCP request handler with a custom OAuth client', () => {
   });
 });
 
-describe('the MCP request handler by default, with the caller token forwarded', () => {
-  const server = createServer(createRequestHandler(config, CARD_HTML));
+describe('the MCP request handler with CUSTOM_OAUTH_CLIENT=false, the caller token forwarded', () => {
+  const server = createServer(
+    createRequestHandler({ ...config, customOAuthClient: false }, CARD_HTML),
+  );
   let baseUrl = '';
 
   beforeAll(async () => {
