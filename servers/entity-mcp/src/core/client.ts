@@ -1,4 +1,5 @@
 import type { ServerConfig } from '../config.ts';
+import { recordCoreCall } from '../telemetry/mcp-metrics.ts';
 
 const TIMEOUT_MS = 30_000;
 
@@ -86,6 +87,8 @@ export const coreGetJson = async (
   options: CoreGetOptions = {},
 ): Promise<unknown> => {
   const { config, credential, correlation } = request;
+  const startedAt = performance.now();
+  const elapsed = () => (performance.now() - startedAt) / 1000;
   let response: Response;
   try {
     response = await fetch(`${config.coreBaseUrl}${path}`, {
@@ -106,12 +109,15 @@ export const coreGetJson = async (
     });
   } catch (error) {
     if (isTimeoutError(error)) {
+      recordCoreCall(elapsed(), 'timeout');
       throw new CoreError(504, TIMEOUT_MESSAGE);
     }
+    recordCoreCall(elapsed(), 'error');
     throw new CoreError(502, FALLBACK_MESSAGE);
   }
 
   if (!response.ok) {
+    recordCoreCall(elapsed(), 'http_error', response.status);
     throw new CoreError(
       response.status,
       MESSAGES[response.status] ?? FALLBACK_MESSAGE,
@@ -119,8 +125,11 @@ export const coreGetJson = async (
   }
 
   try {
-    return (await response.json()) as unknown;
+    const json = (await response.json()) as unknown;
+    recordCoreCall(elapsed(), 'ok');
+    return json;
   } catch {
+    recordCoreCall(elapsed(), 'error');
     throw new CoreError(502, FALLBACK_MESSAGE);
   }
 };

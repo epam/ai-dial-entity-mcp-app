@@ -7,6 +7,8 @@ import {
   loadConfig,
 } from './config.ts';
 import { createRequestHandler } from './handler.ts';
+import { logger } from './telemetry/logger.ts';
+import { shutdownOpenTelemetry } from './telemetry/shutdown.ts';
 
 const config = loadConfig(process.env);
 const appHtml = readFileSync(
@@ -15,7 +17,7 @@ const appHtml = readFileSync(
 );
 
 for (const warning of findConfigWarnings(config, process.env)) {
-  console.warn(`entity-mcp: ${warning}`);
+  logger.warn(`entity-mcp: ${warning}`);
 }
 
 const missingButtons = Object.entries(ACTION_TEMPLATE_VARS)
@@ -25,7 +27,7 @@ const missingButtons = Object.entries(ACTION_TEMPLATE_VARS)
   )
   .map(([, name]) => name);
 if (missingButtons.length > 0) {
-  console.log(
+  logger.info(
     `entity-mcp: no card button for unset ${missingButtons.join(', ')}`,
   );
 }
@@ -33,11 +35,13 @@ if (missingButtons.length > 0) {
 const httpServer = createServer(createRequestHandler(config, appHtml));
 
 httpServer.listen(config.port, () => {
-  console.log(`entity-mcp listening on :${config.port}/mcp`);
+  logger.info(`entity-mcp listening on :${config.port}/mcp`);
 });
 
 process.on('SIGTERM', () => {
-  console.log('entity-mcp received SIGTERM, shutting down');
-  httpServer.close(() => process.exit(0));
+  logger.info('entity-mcp received SIGTERM, shutting down');
+  httpServer.close(() => {
+    void shutdownOpenTelemetry().then(() => process.exit(0));
+  });
   httpServer.closeIdleConnections();
 });

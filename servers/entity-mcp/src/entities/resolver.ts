@@ -1,3 +1,4 @@
+import { logger } from '../telemetry/logger.ts';
 import { CoreError } from '../core/client.ts';
 import { MatchRank, rankMatch } from './match.ts';
 import { ownerBucket, PUBLIC_BUCKET } from './ownership.ts';
@@ -198,7 +199,7 @@ export const findCandidates = async (
     const type = searched[index]!;
     if (full.status === 'fulfilled') return full.value;
     const reason = full.reason as unknown;
-    console.error(
+    logger.error(
       `find_entities could not list ${type.kind}: ${reason instanceof Error ? reason.message : 'unexpected error'} (correlation ${JSON.stringify(ctx.correlation.correlationId)})`,
     );
     if (names?.status === 'fulfilled') {

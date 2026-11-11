@@ -1,3 +1,4 @@
+import { logger } from '../telemetry/logger.ts';
 import { CoreError, FALLBACK_MESSAGE, coreGetJson } from '../core/client.ts';
 import { PUBLIC_BUCKET } from './ownership.ts';
 import { isRecord } from './shared.ts';
@@ -72,7 +73,7 @@ export const listOwnAndPublic = async (
   if (ownItems.status === 'rejected') throw ownItems.reason;
   if (publicItems.status === 'rejected') {
     const reason: unknown = publicItems.reason;
-    console.error(
+    logger.error(
       `could not list the public bucket: ${reason instanceof Error ? reason.message : 'unexpected error'} (correlation ${JSON.stringify(ctx.correlation.correlationId)})`,
     );
     return ownItems.value;

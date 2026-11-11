@@ -230,8 +230,9 @@ registered today.
 
 ## Logging
 
-Every `find_entities` and `show_entity_card` call logs one completion line to `console`
-— `console.log` on success, `console.error` on failure — carrying the
+Every `find_entities` and `show_entity_card` call logs one completion line to
+stdout/stderr (through `src/telemetry/logger.ts`, which writes exactly what
+`console` would) — `log` on success, `error` on failure — carrying the
 outcome, the entity kind, the (sanitised) entity id, the call's duration in
 milliseconds, and a correlation id.
 
@@ -247,6 +248,89 @@ failure path. The entity id and the correlation id are always rendered
 through the same sanitiser used for the existing failure logs, so a
 caller-controlled value (for example one containing a newline) cannot forge
 an extra log entry.
+
+## Observability
+
+OpenTelemetry (metrics, traces, logs) is opt-in and **off by default**: with no
+`OTEL_*` variable the server starts no exporter, opens no extra port and makes
+no outbound call besides its own. The SDK is preloaded by
+`node --import ./src/telemetry/otel.ts src/main.ts` (the `start` script and the
+image `CMD`), which registers the `import-in-the-middle` hook and starts the SDK
+before `node:http` and `fetch` are used, so `HttpInstrumentation` and
+`UndiciInstrumentation` patch the ESM imports. Run the server any other way and
+telemetry is simply off.
+
+| Variable                        | Default                     | Description                                                                                                       |
+| ------------------------------- | --------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `OTEL_SDK_DISABLED`             | `true`                      | Set to `false` to start the SDK.                                                                                  |
+| `OTEL_METRICS_EXPORTER`         | `prometheus`                | Comma-separated `prometheus`, `otlp`; `none` disables metrics.                                                    |
+| `OTEL_TRACES_EXPORTER`          | `otlp`                      | `otlp` or `none`.                                                                                                 |
+| `OTEL_LOGS_EXPORTER`            | `otlp`                      | `otlp` or `none`.                                                                                                 |
+| `OTEL_EXPORTER_PROMETHEUS_HOST` | `127.0.0.1`                 | Bind address of the scrape listener. Unauthenticated: set `0.0.0.0` only when a scraper outside the pod needs it. |
+| `OTEL_EXPORTER_PROMETHEUS_PORT` | `9464`                      | Scrape listener port, path `/metrics`.                                                                            |
+| `OTEL_EXPORTER_OTLP_ENDPOINT`   | —                           | OTLP collector base URL (HTTP/JSON, e.g. `http://otel-collector:4318`).                                           |
+| `OTEL_SERVICE_NAME`             | `ai-dial-entity-mcp-server` | `service.name`; the default is the package name.                                                                  |
+
+`service.version` is read from the `package.json` next to `src/`. The image
+carries the root `package.json`, whose version the release workflow stamps
+(`npm version … --no-git-tag-version`) before the Docker build; without a
+readable version the attribute is left out and `OTEL_RESOURCE_ATTRIBUTES` can
+supply it.
+
+What is reported:
+
+- **MCP metrics.** The HTTP route is always `/mcp`, so the server records its
+  own: `mcp_server_requests_total` and the histogram
+  `mcp_server_request_duration`, labelled `mcp_method_name` (the JSON-RPC
+  method: `initialize`, `tools/list`, `tools/call`, …), `mcp_tool_name` and
+  `mcp_outcome`. The same three attributes are set on the server span.
+  - Labels are bounded. A method outside the MCP set becomes `unknown`, a batch
+    `batch`. `mcp_tool_name` is one of the registered tools (`find_entities`,
+    `show_entity_card`), `unknown` for any other name, and `none` when the
+    method is not a `tools/call`. Raw client strings never become labels.
+  - `mcp_outcome`: `ok`; `tool_error` (the tool returned an error result);
+    `unauthorized` (the HTTP 401 challenge); `error` (HTTP 4xx/5xx other than
+    401, a dropped connection, an unknown method or tool, or a `tools/call` that
+    never reached its tool, such as one with invalid arguments).
+- **DIAL Core calls.** `dial_core_client_duration` by `dial_core_outcome`
+  (`ok`, `http_error` with the status code, `timeout`, `error`). No path, query
+  or entity id is attached. `UndiciInstrumentation` also traces the call and
+  sends `traceparent` to Core; the query string is stripped from the span URL.
+- **HTTP.** Generic `http_server_request_duration` from `HttpInstrumentation`.
+- **Logs.** With a logs exporter on, every log line is also emitted as an
+  OpenTelemetry log record with `trace_id`/`span_id` when a span is active.
+  Stdout/stderr output is unchanged. SDK-internal diagnostics are not routed
+  through the logger.
+- **Excluded.** `/health` (and `/metrics`) produce no span and no metric.
+
+Request headers, bearer tokens, cookies, request/response bodies and user
+identifiers are never put into span, metric or log attributes; no header
+capture is configured, and a test asserts it.
+
+On `SIGTERM` the server stops accepting connections, flushes the exporters for
+at most 5 seconds (an unreachable collector cannot hold the pod), then exits 0.
+
+### UAT: scrape with Prometheus
+
+UAT has no OTLP collector, only Prometheus and Grafana. Run in scrape mode and
+let the deployment chart expose port `9464` through a Kubernetes Service and a
+ServiceMonitor:
+
+```dotenv
+OTEL_SDK_DISABLED=false
+OTEL_METRICS_EXPORTER=prometheus
+OTEL_EXPORTER_PROMETHEUS_HOST=0.0.0.0
+OTEL_TRACES_EXPORTER=none
+OTEL_LOGS_EXPORTER=none
+OTEL_SERVICE_NAME=<service name>
+```
+
+Dev and test environments with an OTLP collector (HTTP/JSON on port 4318) can
+add `OTEL_TRACES_EXPORTER=otlp`, `OTEL_LOGS_EXPORTER=otlp`, optionally
+`OTEL_METRICS_EXPORTER=otlp` and `OTEL_EXPORTER_OTLP_ENDPOINT`.
+
+Locally: start the server with the variables above (but leave the host at its
+default), call `/mcp`, then `curl http://127.0.0.1:9464/metrics`.
 
 ## Run locally
 

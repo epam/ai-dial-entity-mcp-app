@@ -13,7 +13,12 @@ import {
   requiresCredential,
   writeBodyError,
 } from './http.ts';
-import { createMcpServer } from './mcp/server.ts';
+import { REGISTERED_TOOL_NAMES, createMcpServer } from './mcp/server.ts';
+import { logger } from './telemetry/logger.ts';
+import {
+  finishWithResponse,
+  observeMcpRequest,
+} from './telemetry/mcp-metrics.ts';
 
 /**
  * Builds the HTTP request handler: `/health`, and `/mcp` as a stateless
@@ -38,6 +43,9 @@ export const createRequestHandler =
       return;
     }
 
+    const observation = observeMcpRequest(REGISTERED_TOOL_NAMES);
+    finishWithResponse(observation, res);
+
     let body: unknown;
     if (req.method === 'POST') {
       try {
@@ -49,6 +57,8 @@ export const createRequestHandler =
       }
     }
 
+    observation.setBody(body);
+
     const credential = readInboundCredential(req.headers);
     if (
       config.customOAuthClient !== false &&
@@ -56,7 +66,7 @@ export const createRequestHandler =
       rejectUnauthenticated(credential, res)
     ) {
       const { correlationId } = readInboundCorrelation(req.headers);
-      console.warn(
+      logger.warn(
         `refused unauthenticated ${req.method} /mcp ${describeCredentialCalls(body)} clientChannel=${hasClientChannel(req.headers) ? 'present' : 'absent'} correlationId=${JSON.stringify(correlationId)}`,
       );
       return;
@@ -67,6 +77,7 @@ export const createRequestHandler =
       appHtml,
       credential,
       readInboundCorrelation(req.headers),
+      observation.probe,
     );
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
@@ -79,7 +90,7 @@ export const createRequestHandler =
       await server.connect(transport);
       await transport.handleRequest(req, res, body);
     } catch (error) {
-      console.error(error);
+      logger.error(error);
       if (!res.headersSent) res.writeHead(500).end();
     }
   };

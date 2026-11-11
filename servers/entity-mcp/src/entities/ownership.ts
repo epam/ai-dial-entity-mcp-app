@@ -1,3 +1,4 @@
+import { logger } from '../telemetry/logger.ts';
 import { CoreError, coreGetRecord } from '../core/client.ts';
 import type { EntityContext } from './types.ts';
 
@@ -50,7 +51,7 @@ const fetchOwnBucket = async (
   } catch (error) {
     const reason =
       error instanceof CoreError ? error.message : 'unexpected error';
-    console.error(
+    logger.error(
       `could not read the caller's bucket: ${reason} (correlation ${JSON.stringify(ctx.correlation.correlationId)})`,
     );
     return undefined;
