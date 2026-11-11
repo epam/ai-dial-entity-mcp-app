@@ -18,11 +18,11 @@ describe('startTelemetry', () => {
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
     await expect(
       startTelemetry(async () => {
-        throw new Error('port 9464 in use');
+        throw new Error('invalid exporter configuration');
       }),
     ).resolves.toBeUndefined();
     expect(warn).toHaveBeenCalledExactlyOnceWith(
-      'entity-mcp: telemetry disabled: port 9464 in use',
+      'entity-mcp: telemetry disabled: invalid exporter configuration',
     );
   });
 });

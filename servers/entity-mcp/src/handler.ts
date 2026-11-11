@@ -43,8 +43,11 @@ export const createRequestHandler =
       return;
     }
 
-    const observation = observeMcpRequest(REGISTERED_TOOL_NAMES);
-    finishWithResponse(observation, res);
+    const observation =
+      req.method === 'POST'
+        ? observeMcpRequest(REGISTERED_TOOL_NAMES)
+        : undefined;
+    if (observation) finishWithResponse(observation, res);
 
     let body: unknown;
     if (req.method === 'POST') {
@@ -57,7 +60,7 @@ export const createRequestHandler =
       }
     }
 
-    observation.setBody(body);
+    observation?.setBody(body);
 
     const credential = readInboundCredential(req.headers);
     if (
@@ -77,7 +80,7 @@ export const createRequestHandler =
       appHtml,
       credential,
       readInboundCorrelation(req.headers),
-      observation.probe,
+      observation?.probe,
     );
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,

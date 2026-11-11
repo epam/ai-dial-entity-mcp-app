@@ -151,6 +151,16 @@ describe('MCP telemetry through the real request handler', () => {
     });
   });
 
+  test.each(['GET', 'DELETE', 'PATCH'])(
+    'records no MCP metric for a %s to /mcp',
+    async (method) => {
+      const response = await fetch(`${baseUrl}/mcp`, { method });
+      await response.text();
+      expect(await readPoints('mcp.server.requests')).toEqual([]);
+      expect(await readPoints('mcp.server.request.duration')).toEqual([]);
+    },
+  );
+
   test('produces no span and no MCP metric for /health', async () => {
     const response = await fetch(`${baseUrl}/health`, {
       headers: { authorization: SECRET },

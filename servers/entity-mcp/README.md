@@ -309,17 +309,26 @@ What is reported:
   through the logger.
 - **Excluded.** `/health` (and `/metrics`) produce no span and no metric.
 
-No request header (so no bearer token or cookie) and no request or response
-body is put into a span, metric or log attribute: no header capture is
-configured, and a test asserts it. The standard attributes
-`HttpInstrumentation` and `UndiciInstrumentation` set are kept as in
-`ai-dial-chat`: the peer address and user agent on the server span, and the
-Core request URL (path and query) on the outbound span when traces are
-exported.
+Privacy. No request header is captured by configuration (no
+`headersToSpanAttributes` or request hooks), and the `Authorization` header,
+cookies and request or response bodies never reach a span, metric or log
+attribute; a test covers it. What is recorded, as in `ai-dial-chat`:
 
-If telemetry fails to start (for example the scrape port is taken), the server
-writes one `entity-mcp: telemetry disabled: <reason>` warning to `console` and
-starts normally without telemetry.
+- Server spans carry the standard HTTP instrumentation attributes, including
+  `user_agent.original`, the client and peer address, and the server address
+  taken from `Host`.
+- The client-supplied correlation id (from `X-Correlation-ID`, `X-Request-ID`
+  or `X-Trace-ID`) appears in log text, the same text as stdout, and in exported
+  log bodies when logs export is on.
+- Outbound DIAL Core spans carry the request URL (path and query).
+- The default W3C propagators apply: a client `traceparent` becomes the parent
+  of the server span, and a client `baggage` header is forwarded to Core.
+
+If the SDK throws while starting (for example an invalid exporter
+configuration), the server writes one `entity-mcp: telemetry disabled: <reason>`
+warning to `console` and runs without telemetry. A Prometheus port that is
+already taken is not detected, because the exporter reports a listen failure
+only to the OpenTelemetry diagnostics channel; check that `/metrics` answers.
 
 On `SIGTERM` the server stops accepting connections, flushes the exporters for
 at most 5 seconds (an unreachable collector cannot hold the pod), then exits 0.
