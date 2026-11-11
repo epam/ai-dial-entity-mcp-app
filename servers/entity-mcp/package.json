@@ -8,16 +8,32 @@
     "node": ">=24"
   },
   "scripts": {
-    "start": "node src/main.ts",
+    "start": "node --import ./src/telemetry/otel.ts src/main.ts",
     "typecheck": "tsc -p tsconfig.json && tsc -p tsconfig.spec.json"
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "1.7.5",
     "@modelcontextprotocol/sdk": "1.32.1",
+    "@opentelemetry/api": "1.9.1",
+    "@opentelemetry/api-logs": "0.223.0",
+    "@opentelemetry/exporter-logs-otlp-http": "0.223.0",
+    "@opentelemetry/exporter-metrics-otlp-http": "0.223.0",
+    "@opentelemetry/exporter-prometheus": "0.223.0",
+    "@opentelemetry/exporter-trace-otlp-http": "0.223.0",
+    "@opentelemetry/instrumentation-http": "0.223.0",
+    "@opentelemetry/instrumentation-undici": "0.33.0",
+    "@opentelemetry/resources": "2.12.0",
+    "@opentelemetry/sdk-logs": "0.223.0",
+    "@opentelemetry/sdk-metrics": "2.12.0",
+    "@opentelemetry/sdk-node": "0.223.0",
+    "@opentelemetry/sdk-trace-base": "2.12.0",
+    "@opentelemetry/semantic-conventions": "1.44.0",
+    "import-in-the-middle": "3.6.0",
     "zod": "4.6.7"
   },
   "devDependencies": {
     "@epam/ai-dial-entity-contract": "*",
+    "@opentelemetry/context-async-hooks": "2.12.0",
     "@types/node": "^24.19.1"
   }
 }

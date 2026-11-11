@@ -31,7 +31,9 @@ tested like any other workspace, but not shipped.
   in text, no UI), `show_entity_card` (draws the card of one entity read by its
   exact id; one module per entity type in `src/entities/`) and the
   `ui://entity-card/index.html` resource against real DIAL Core data. Node, no
-  build step, no stored credentials.
+  build step, no stored credentials. OpenTelemetry (off by default, preloaded
+  with `--import ./src/telemetry/otel.ts`) lives in `src/telemetry/`; log through
+  `src/telemetry/logger.ts`, not `console`. See its README, "Observability".
 - `tools/test-mcp-server/` — local test MCP server that serves the built card
   and the fixtures, for trying the card in real hosts. Not shipped.
 - `tools/mcp-probe/` — CLI that calls an MCP endpoint as a Streamable-HTTP

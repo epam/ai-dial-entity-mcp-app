@@ -28,6 +28,9 @@ RUN apk upgrade --no-cache \
     && rm -rf /usr/local/lib/node_modules/npm \
     && rm -f /usr/local/bin/npm /usr/local/bin/npx
 WORKDIR /app
+# The root manifest gives Node the explicit "type": "module" and gives telemetry
+# the release version, which the release workflow stamps before the build.
+COPY --from=build /app/package.json ./package.json
 COPY --from=deps /app/node_modules ./node_modules
 COPY --from=build /app/servers/entity-mcp/src ./src
 RUN find ./src -name '*.spec.ts' -delete
@@ -35,4 +38,4 @@ COPY --from=build /app/apps/entity-card/dist/index.html ./card/index.html
 ENV PORT=8080 APP_HTML=/app/card/index.html
 USER node
 EXPOSE 8080
-CMD ["node", "src/main.ts"]
+CMD ["node", "--import", "./src/telemetry/otel.ts", "src/main.ts"]

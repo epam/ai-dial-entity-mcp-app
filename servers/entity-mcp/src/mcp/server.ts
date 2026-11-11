@@ -19,12 +19,22 @@ import { findCandidates, resolveById } from '../entities/resolver.ts';
 import { IncompleteEntity } from '../entities/shared.ts';
 import { EntityKind } from '../entities/types.ts';
 import { buildActions } from '../mapping/actions.ts';
+import { logger } from '../telemetry/logger.ts';
+import { createProbe, type McpProbe } from '../telemetry/mcp-metrics.ts';
 import {
   FIND_NAME_DESCRIPTION,
   FIND_TOOL_DESCRIPTION,
   SHOW_TOOL_NAME,
   buildFindResult,
 } from './find-entities.ts';
+
+const FIND_TOOL_NAME = 'find_entities';
+
+/** The tools this server registers; telemetry labels any other name `unknown`. */
+export const REGISTERED_TOOL_NAMES: ReadonlySet<string> = new Set([
+  FIND_TOOL_NAME,
+  SHOW_TOOL_NAME,
+]);
 
 const RESOURCE_URI = 'ui://entity-card/index.html';
 // DIAL Core rejects the spec's `text/html;profile=mcp-app` resource MIME type.
@@ -118,14 +128,14 @@ const failureResult = (
   const durationMs = Date.now() - startedAt;
   const prefix = `${tool} failed for ${subject} in ${durationMs}ms (correlation ${correlationLabel})`;
   if (error instanceof CoreError || error instanceof IncompleteEntity) {
-    console.error(`${prefix}: ${error.message}`);
+    logger.error(`${prefix}: ${error.message}`);
     return errorResult(error.userMessage);
   }
   if (error instanceof InvalidEntityId) {
-    console.error(`${prefix}: ${sanitizeForLog(error.message)}`);
+    logger.error(`${prefix}: ${sanitizeForLog(error.message)}`);
     return errorResult(error.userMessage);
   }
-  console.error(`${prefix} with an unexpected error:`, error);
+  logger.error(`${prefix} with an unexpected error:`, error);
   return errorResult(FALLBACK_MESSAGE);
 };
 
@@ -137,14 +147,26 @@ const failureResult = (
  * @param appHtml - the built card, inlined as the resource body
  * @param credential - the caller's forwarded credential, if any
  * @param correlation - the correlation id established for this request
+ * @param probe - records whether a tool ran and failed, for request metrics
  */
 export const createMcpServer = (
   config: ServerConfig,
   appHtml: string,
   credential: InboundCredential | undefined,
   correlation: CorrelationContext,
+  probe: McpProbe = createProbe(),
 ): McpServer => {
   const server = new McpServer({ name: 'entity-mcp', version: '0.0.0' });
+
+  const tracked =
+    <Args>(handler: (args: Args) => Promise<CallToolResult>) =>
+    async (args: Args): Promise<CallToolResult> => {
+      probe.toolCalled = true;
+      probe.toolFailed = true;
+      const result = await handler(args);
+      probe.toolFailed = result.isError === true;
+      return result;
+    };
 
   const ctxFor = (forwarded: InboundCredential) => ({
     config,
@@ -154,7 +176,7 @@ export const createMcpServer = (
   const correlationLabel = sanitizeForLog(correlation.correlationId);
 
   server.registerTool(
-    'find_entities',
+    FIND_TOOL_NAME,
     {
       title: 'Find entities',
       description: FIND_TOOL_DESCRIPTION,
@@ -163,7 +185,7 @@ export const createMcpServer = (
         kind: z.enum(EntityKind).optional().describe(FIND_KIND_DESCRIPTION),
       },
     },
-    async ({ name, kind }) => {
+    tracked(async ({ name, kind }) => {
       const trimmedName = name.trim();
       const startedAt = Date.now();
       if (!credential) return errorResult(NO_CREDENTIAL_MESSAGE);
@@ -179,7 +201,7 @@ export const createMcpServer = (
           outcome.status === 'found'
             ? `${outcome.matches.length} matches (${outcome.exact ? 'exact' : 'partial'})`
             : 'no match';
-        console.log(
+        logger.info(
           `find_entities found ${found} for ${subject} in ${Date.now() - startedAt}ms (correlation ${correlationLabel})`,
         );
         return buildFindResult(trimmedName, outcome);
@@ -192,7 +214,7 @@ export const createMcpServer = (
           correlationLabel,
         );
       }
-    },
+    }),
   );
 
   registerAppTool(
@@ -207,7 +229,7 @@ export const createMcpServer = (
       },
       _meta: { ui: { resourceUri: RESOURCE_URI } },
     },
-    async ({ id, kind }) => {
+    tracked(async ({ id, kind }) => {
       const trimmedId = id.trim();
       const startedAt = Date.now();
       if (!credential) return errorResult(NO_CREDENTIAL_MESSAGE);
@@ -224,7 +246,7 @@ export const createMcpServer = (
           activeLocale: DEFAULT_LOCALE,
           canEdit: await isOwnEntity(ctx, resolved.id),
         });
-        console.log(
+        logger.info(
           `show_entity_card succeeded for ${resolved.kind} ${sanitizeForLog(resolved.id)} in ${Date.now() - startedAt}ms (correlation ${correlationLabel})`,
         );
         return cardResult(payload);
@@ -237,7 +259,7 @@ export const createMcpServer = (
           correlationLabel,
         );
       }
-    },
+    }),
   );
 
   registerAppResource(
