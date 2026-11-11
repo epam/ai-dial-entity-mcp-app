@@ -27,8 +27,6 @@ import {
 import {
   ATTR_SERVICE_NAME,
   ATTR_SERVICE_VERSION,
-  ATTR_URL_FULL,
-  ATTR_URL_QUERY,
 } from '@opentelemetry/semantic-conventions';
 import {
   MetricsExporter,
@@ -84,21 +82,6 @@ export const buildResource = (
   });
 
 /**
- * Strips the query string from an outbound URL, because Core query strings can
- * carry what a user searched for.
- */
-const redactedUrlAttributes = (request: {
-  origin?: string | URL;
-  path: string;
-}) => {
-  const url = new URL(request.path, request.origin);
-  return {
-    [ATTR_URL_FULL]: `${url.origin}${url.pathname}`,
-    [ATTR_URL_QUERY]: '',
-  };
-};
-
-/**
  * Builds the instrumentations: inbound `node:http` (no header capture, probe
  * and scrape paths ignored) and outbound `fetch`, which propagates
  * `traceparent` to DIAL Core.
@@ -107,7 +90,7 @@ export const buildInstrumentations = (): Instrumentation[] => [
   new HttpInstrumentation({
     ignoreIncomingRequestHook: (req) => isExcludedFromTelemetry(req.url),
   }),
-  new UndiciInstrumentation({ startSpanHook: redactedUrlAttributes }),
+  new UndiciInstrumentation(),
 ];
 
 /**

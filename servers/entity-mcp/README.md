@@ -292,10 +292,16 @@ What is reported:
     `unauthorized` (the HTTP 401 challenge); `error` (HTTP 4xx/5xx other than
     401, a dropped connection, an unknown method or tool, or a `tools/call` that
     never reached its tool, such as one with invalid arguments).
+  - `ok` means the HTTP request succeeded and, for a `tools/call`, the tool ran
+    and returned no error result. A JSON-RPC error that the server answers with
+    HTTP 200 is still `ok`, except for the unknown method or tool and the
+    never-reached-its-tool cases above. A batch is one request labelled
+    `batch`: a failing tool inside it is not distinguished.
 - **DIAL Core calls.** `dial_core_client_duration` by `dial_core_outcome`
-  (`ok`, `http_error` with the status code, `timeout`, `error`). No path, query
-  or entity id is attached. `UndiciInstrumentation` also traces the call and
-  sends `traceparent` to Core; the query string is stripped from the span URL.
+  (`ok`, `http_error` with the status code, `timeout`, `error`); no path, query
+  or entity id is a metric label. `UndiciInstrumentation` also traces the call
+  and sends `traceparent` to Core. When traces are exported, the outbound span
+  carries the Core request URL (path and query), as in `ai-dial-chat`.
 - **HTTP.** Generic `http_server_request_duration` from `HttpInstrumentation`.
 - **Logs.** With a logs exporter on, every log line is also emitted as an
   OpenTelemetry log record with `trace_id`/`span_id` when a span is active.
@@ -303,9 +309,17 @@ What is reported:
   through the logger.
 - **Excluded.** `/health` (and `/metrics`) produce no span and no metric.
 
-Request headers, bearer tokens, cookies, request/response bodies and user
-identifiers are never put into span, metric or log attributes; no header
-capture is configured, and a test asserts it.
+No request header (so no bearer token or cookie) and no request or response
+body is put into a span, metric or log attribute: no header capture is
+configured, and a test asserts it. The standard attributes
+`HttpInstrumentation` and `UndiciInstrumentation` set are kept as in
+`ai-dial-chat`: the peer address and user agent on the server span, and the
+Core request URL (path and query) on the outbound span when traces are
+exported.
+
+If telemetry fails to start (for example the scrape port is taken), the server
+writes one `entity-mcp: telemetry disabled: <reason>` warning to `console` and
+starts normally without telemetry.
 
 On `SIGTERM` the server stops accepting connections, flushes the exporters for
 at most 5 seconds (an unreachable collector cannot hold the pod), then exits 0.

@@ -29,7 +29,7 @@ import { buildInstrumentations } from './sdk.ts';
 const SECRET = 'Bearer s3cr3t-token-value';
 const COOKIE = 'session=cookie-secret-value';
 const config = {
-  coreBaseUrl: 'https://core.example.com',
+  coreBaseUrl: '',
   port: 0,
   appHtmlPath: 'x',
   actionTemplates: {},
@@ -56,6 +56,7 @@ const readPoints = async (name: string) => {
 describe('MCP telemetry through the real request handler', () => {
   let baseUrl = '';
   let server: Server;
+  let core: Server;
 
   beforeAll(async () => {
     context.setGlobalContextManager(
@@ -72,6 +73,11 @@ describe('MCP telemetry through the real request handler', () => {
       'node:http',
     ) as typeof import('node:http');
     server = http.createServer();
+    core = http.createServer((_req, res) => {
+      res.writeHead(200, { 'content-type': 'application/json' }).end('[]');
+    });
+    await new Promise<void>((done) => core.listen(0, '127.0.0.1', done));
+    config.coreBaseUrl = `http://127.0.0.1:${(core.address() as AddressInfo).port}`;
     vi.spyOn(console, 'warn').mockImplementation(() => {});
     const { createRequestHandler } = await import('../handler.ts');
     server.on('request', createRequestHandler(config, '<html></html>'));
@@ -82,7 +88,9 @@ describe('MCP telemetry through the real request handler', () => {
   afterAll(async () => {
     instrumentations.forEach((instrumentation) => instrumentation.disable());
     server.closeAllConnections();
+    core.closeAllConnections();
     await new Promise((done) => server.close(done));
+    await new Promise((done) => core.close(done));
     await reader.shutdown();
     vi.restoreAllMocks();
   });
@@ -92,8 +100,8 @@ describe('MCP telemetry through the real request handler', () => {
     metricExporter.reset();
   });
 
-  const post = (body: unknown, headers: Record<string, string> = {}) =>
-    fetch(`${baseUrl}/mcp`, {
+  const post = async (body: unknown, headers: Record<string, string> = {}) => {
+    const response = await fetch(`${baseUrl}/mcp`, {
       method: 'POST',
       headers: {
         'content-type': 'application/json',
@@ -102,6 +110,9 @@ describe('MCP telemetry through the real request handler', () => {
       },
       body: JSON.stringify(body),
     });
+    await response.text();
+    return response;
+  };
 
   test('counts a credential-less tools/call as unauthorized under the bounded labels', async () => {
     const response = await post({
@@ -175,6 +186,14 @@ describe('MCP telemetry through the real request handler', () => {
 
     const spans = spanExporter.getFinishedSpans();
     expect(spans.length).toBeGreaterThan(0);
+    const corePort = new URL(config.coreBaseUrl).port;
+    expect(
+      spans.some(
+        (span) =>
+          span.kind === SpanKind.CLIENT &&
+          String(span.attributes['server.port']) === corePort,
+      ),
+    ).toBe(true);
     const metricAttributes = metricExporter
       .getMetrics()
       .flatMap((batch) => batch.scopeMetrics)
