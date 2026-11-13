@@ -107,6 +107,10 @@ tested like any other workspace, but not shipped.
 - Accessibility: native elements first (`button`, `ul`), `aria-expanded`/`aria-controls`
   on disclosure toggles, icons `aria-hidden` with text alternatives.
 - Use Context7 for library docs (ext-apps, Vite, Tailwind, React) instead of memory.
+- No `.trivyignore` and no other suppression of scanner findings. Fix
+  vulnerabilities at the source: dependency bumps or `package.json` `overrides`
+  for the npm tree, and the `Dockerfile` (pinned base image, `apk upgrade`,
+  npm removed from the runtime) for image findings.
 - No secrets, tokens or customer/client names in code, fixtures or docs.
 - Conventional commits, single line. Git operations only with explicit approval.
 
