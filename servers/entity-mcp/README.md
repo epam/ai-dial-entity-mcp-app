@@ -11,7 +11,9 @@ The Edit button is offered only for an entity in the caller's own bucket
 ## Authentication modes
 
 Two registrations are supported. Both end the same way: DIAL Core delivers a
-user token in `Authorization`. They differ in which token that is.
+user token in `Authorization`. They differ in which token that is. `NONE` below
+is the toolset's `authentication_type` set to `none`: the toolset has no OAuth
+client, so DIAL forwards the user's own session token.
 
 |                                   | Custom OAuth on the toolset (default, recommended)                                    | `NONE`, token forwarded (opt-in)                                              |
 | --------------------------------- | ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
